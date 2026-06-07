@@ -4,7 +4,7 @@ const friendLinkInput = document.getElementById("friendLinkInput");
 const verifyBtn = document.getElementById("verifyBtn");
 const statusText = document.getElementById("statusText");
 
-const API_BASE_URL = "https://pryzepot-production.up.railway.app";
+const API_BASE_URL = "http://137.184.210.72:3000";
 
 const username = localStorage.getItem("username");
 

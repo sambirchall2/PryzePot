@@ -3,7 +3,7 @@ const entryAmountDisplay = document.getElementById("entryAmountDisplay");
 const playerTagDisplay = document.getElementById("playerTagDisplay");
 const postMatchBtn = document.getElementById("postMatchBtn");
 
-const API_BASE_URL = "https://pryzepot-production.up.railway.app";
+const API_BASE_URL = "http://137.184.210.72:3000";
 
 const username = localStorage.getItem("username");
 const entryFee = localStorage.getItem("entryFee");

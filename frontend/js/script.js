@@ -38,7 +38,7 @@ signInButton.addEventListener("click", function () {
     signInButton.textContent = "LOADING...";
     signInButton.disabled = true;
 
-    let apiUrl = "https://pryzepot-production.up.railway.app/api/login";
+    let apiUrl = "http://137.184.210.72:3000/api/login";
 
     const requestBody = {
         email: email,
@@ -46,7 +46,7 @@ signInButton.addEventListener("click", function () {
     };
 
     if (isSignupMode) {
-        apiUrl = "https://pryzepot-production.up.railway.app/api/signup";
+        apiUrl = "http://137.184.210.72:3000/api/signup";
         requestBody.username = username;
     }
 
@@ -75,7 +75,7 @@ signInButton.addEventListener("click", function () {
         localStorage.setItem("balance", data.user.balance);
 
         fetch(
-            "https://pryzepot-production.up.railway.app/api/users/" +
+            "http://137.184.210.72:3000/api/users/" +
             data.user.username +
             "/profile"
         )
