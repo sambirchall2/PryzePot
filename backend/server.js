@@ -756,8 +756,10 @@ app.get("/api/users/:username/profile", async function (req, res) {
         user: result.data
     });
 });
-app.listen(3000, function () {
-    console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, function () {
+    console.log("Server running on port " + PORT);
 
     if (process.env.CLASH_API_KEY) {
         console.log("Clash API key loaded.");
