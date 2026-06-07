@@ -1,7 +1,7 @@
 const backBtn = document.getElementById("backBtn");
 const matchesContainer = document.getElementById("matchesContainer");
 
-const API_BASE_URL = "http://https://pryzepot-production.up.railway.app";
+const API_BASE_URL = "https://pryzepot-production.up.railway.app";
 
 const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");

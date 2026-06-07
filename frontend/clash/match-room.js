@@ -12,7 +12,7 @@ const instructionsCard = document.getElementById("instructionsCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyBtn = document.getElementById("verifyBtn");
 
-const API_BASE_URL = "http://https://pryzepot-production.up.railway.app";
+const API_BASE_URL = "https://pryzepot-production.up.railway.app";
 
 const currentMatchId = localStorage.getItem("currentMatchId");
 const currentUsername = localStorage.getItem("username");
