@@ -1,0 +1,67 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: white;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background:
+        radial-gradient(circle at top center, rgba(182,255,0,0.18), transparent 34%),
+        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+}
+
+.verify-page {
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 130px 22px 60px;
+    text-align: center;
+}
+
+.status-pill {
+    display: inline-block;
+    margin-bottom: 18px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: #b6ff00;
+    color: black;
+    font-size: 12px;
+    font-weight: 950;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: 0;
+    font-size: 38px;
+    font-weight: 950;
+}
+
+.subtitle {
+    margin: 12px 0 34px;
+    color: rgba(255,255,255,0.72);
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.loading-ring {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 26px;
+    border-radius: 50%;
+    border: 6px solid rgba(255,255,255,0.12);
+    border-top-color: #b6ff00;
+    animation: spin 1s linear infinite;
+}
+
+.verify-status {
+    color: #b6ff00;
+    font-weight: 850;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

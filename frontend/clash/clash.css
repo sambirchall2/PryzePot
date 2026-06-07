@@ -1,0 +1,133 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: white;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background:
+        radial-gradient(circle at top center, rgba(182, 255, 0, 0.14), transparent 35%),
+        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+    overflow-x: hidden;
+}
+
+.clash-page {
+    width: 100%;
+    max-width: 430px;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 54px 16px 28px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.back-btn {
+    position: fixed;
+    top: 18px;
+    left: calc(50% - 195px);
+    z-index: 20;
+
+    width: 38px;
+    height: 38px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+
+    font-size: 34px;
+    line-height: 28px;
+    cursor: pointer;
+}
+
+.clash-logo {
+    display: block;
+    width: 145px;
+    height: 76px;
+    object-fit: cover;
+    margin: 0 auto 26px;
+    border-radius: 12px;
+}
+
+.mode-card {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    height: 142px;
+
+    margin-bottom: 16px;
+
+    cursor: pointer;
+    overflow: hidden;
+
+    border-radius: 18px;
+    border: 1px solid rgba(182, 255, 0, 0.22);
+
+    background: rgba(0, 0, 0, 0.35);
+
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+
+    transition: transform 0.2s ease;
+}
+
+.mode-card:hover {
+    transform: scale(1.015);
+}
+
+.mode-card img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.disabled-card {
+    cursor: not-allowed;
+}
+
+.disabled-card img {
+    filter: brightness(0.55);
+}
+
+.coming-soon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+
+    padding: 7px 13px;
+
+    border-radius: 999px;
+
+    background: #b6ff00;
+    color: black;
+
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+}
+
+.season-overlay {
+    display: none;
+}
+
+@media (max-width: 430px) {
+    .back-btn {
+        left: 18px;
+    }
+
+    .clash-page {
+        padding: 54px 16px 28px;
+    }
+
+    .mode-card {
+        max-width: 100%;
+        height: 142px;
+        margin-bottom: 16px;
+    }
+}

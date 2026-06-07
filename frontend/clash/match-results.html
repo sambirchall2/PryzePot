@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Result | PryzePot</title>
+    <link rel="stylesheet" href="match-results.css">
+</head>
+<body>
+
+    <canvas id="confettiCanvas"></canvas>
+
+    <main class="result-page">
+
+        <div id="statusPill" class="status-pill">MATCH VERIFIED</div>
+
+        <h1 id="resultTitle">Winner Confirmed</h1>
+
+        <p id="resultSubtitle" class="subtitle">
+            Clash Royale battle log confirmed the winner.
+        </p>
+
+        <section class="result-card">
+            <p class="label">Winner</p>
+            <h2 id="winnerName">Loading...</h2>
+
+            <div class="divider"></div>
+
+            <p class="label loser-label">Loser</p>
+            <h3 id="loserName">Loading...</h3>
+        </section>
+
+        <button id="playAgainButton" class="primary-button">
+            PLAY AGAIN
+        </button>
+
+        <button id="backHomeButton" class="secondary-button">
+            BACK HOME
+        </button>
+
+    </main>
+
+    <script src="match-results.js"></script>
+
+</body>
+</html>

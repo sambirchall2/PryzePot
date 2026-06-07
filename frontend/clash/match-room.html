@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Ready | PryzePot</title>
+    <link rel="stylesheet" href="match-room.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="room-page">
+
+        <div id="statusBadge" class="status-badge waiting">
+            Searching For Opponent
+        </div>
+
+        <h1 id="roomTitle">Match Room</h1>
+
+        <p id="roomSubtitle" class="subtitle">
+            Waiting for another player to join.
+        </p>
+
+        <section class="hero-card">
+
+            <div class="game-label">Clash Royale</div>
+
+            <div class="entry-block">
+                <span>Entry Amount</span>
+                <strong id="entryDisplay">$0</strong>
+            </div>
+
+            <div class="timer-block">
+                <span id="timerLabel">Time Left To Join</span>
+                <strong id="timerDisplay">--:--</strong>
+            </div>
+
+            <div class="versus-area">
+
+                <div class="player-card">
+                    <span>PLAYER 1</span>
+                    <strong id="playerOneTag">Loading...</strong>
+                </div>
+
+                <div class="vs-badge">VS</div>
+
+                <div id="playerTwoCard" class="player-card waiting-card">
+                    <span>PLAYER 2</span>
+                    <strong id="playerTwoTag">Waiting...</strong>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section id="instructionsCard" class="instructions-card hidden">
+
+            <h2>Match Instructions</h2>
+
+            <div class="instruction-step">1. Tap Add Opponent In Clash</div>
+            <div class="instruction-step">2. Add your opponent as a friend</div>
+            <div class="instruction-step">3. Start a Friendly Battle</div>
+            <div class="instruction-step">4. Use Tournament Standard Rules</div>
+            <div class="instruction-step">5. Play Best Of 1</div>
+            <div class="instruction-step">6. Return To PryzePot and Verify Match</div>
+
+        </section>
+
+        <button id="openClashBtn" class="main-btn">
+            WAITING FOR OPPONENT
+        </button>
+
+        <button id="verifyBtn" class="secondary-btn">
+            WAITING FOR OPPONENT
+        </button>
+
+    </main>
+
+    <script src="match-room.js"></script>
+
+</body>
+</html>

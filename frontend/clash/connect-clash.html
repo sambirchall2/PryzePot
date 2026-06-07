@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Clash Royale | PryzePot</title>
+    <link rel="stylesheet" href="connect-clash.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="connect-page">
+
+        <h1>Connect Clash Royale</h1>
+
+        <p class="subtitle">
+            Add your player tag and friend invite link so opponents can add you without searching.
+        </p>
+
+        <div class="connect-box">
+
+            <label for="playerTagInput">Player Tag</label>
+            <input
+                id="playerTagInput"
+                type="text"
+                placeholder="#ABC123"
+            >
+
+            <label for="friendLinkInput">Friend Invite Link</label>
+            <input
+                id="friendLinkInput"
+                type="text"
+                placeholder="https://link.clashroyale.com/invite/friend/..."
+            >
+
+            <button id="verifyBtn" class="verify-btn">
+                VERIFY ACCOUNT
+            </button>
+
+            <p id="statusText" class="status-text">
+                Not connected
+            </p>
+
+        </div>
+
+    </main>
+
+    <script src="connect-clash.js"></script>
+
+</body>
+</html>

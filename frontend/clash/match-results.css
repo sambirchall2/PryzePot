@@ -1,0 +1,134 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+}
+
+#confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(200, 255, 0, 0.18), transparent 35%),
+        linear-gradient(180deg, #101827 0%, #05070d 75%);
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+.result-page {
+    min-height: 100vh;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.status-pill {
+    background: rgba(200, 255, 0, 0.15);
+    color: #c8ff00;
+    border: 1px solid rgba(200, 255, 0, 0.4);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 18px;
+}
+
+h1 {
+    font-size: 36px;
+    margin: 0 0 12px;
+}
+
+.subtitle {
+    max-width: 340px;
+    color: #b7c0d1;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.result-card {
+    width: 100%;
+    max-width: 360px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 22px;
+    padding: 28px 20px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+}
+
+.label {
+    color: #c8ff00;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 8px;
+}
+
+.loser-label {
+    margin-top: 24px;
+    color: #8f98aa;
+}
+
+.divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255,255,255,0.12);
+    margin: 24px 0;
+}
+
+h2 {
+    font-size: 34px;
+    margin: 0;
+    color: white;
+}
+
+h3 {
+    font-size: 24px;
+    margin: 0;
+    color: #cfd6e6;
+}
+
+button {
+    width: 100%;
+    max-width: 360px;
+    padding: 15px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.primary-button {
+    background: #c8ff00;
+    border: none;
+    color: #05070d;
+    box-shadow: 0 0 24px rgba(200,255,0,0.25);
+}
+
+.secondary-button {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.22);
+    color: white;
+}
+
+button:active {
+    transform: scale(0.98);
+}
