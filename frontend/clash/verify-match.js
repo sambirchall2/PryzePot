@@ -1,6 +1,6 @@
 const verifyStatus = document.getElementById("verifyStatus");
 
-const API_BASE_URL = "http://137.184.210.72:3000";
+const API_BASE_URL = "https://api.pryzepot.com";
 
 const selectedMatchId = localStorage.getItem("selectedMatchId");
 
