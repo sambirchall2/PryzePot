@@ -6,7 +6,15 @@ const supabase = require("./supabase");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://pryze-pot.vercel.app",
+    "https://pryzepot.com",
+    "https://www.pryzepot.com"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 const OPEN_MATCH_EXPIRATION_MINUTES = 10;
