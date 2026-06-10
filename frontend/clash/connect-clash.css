@@ -103,3 +103,17 @@ input {
 .status-text.connected {
     color: #b6ff00;
 }
+.link-warning {
+    margin-bottom: 20px;
+    padding: 12px;
+    border-radius: 12px;
+
+    background: rgba(255, 200, 0, 0.08);
+    border: 1px solid rgba(255, 200, 0, 0.25);
+
+    color: #ffd84d;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+}
