@@ -109,7 +109,9 @@ function findMatchingBattle(battles, match) {
 
         const battleTime = parseClashTime(battle.battleTime);
 
-        if (battleTime < match.created_at) continue;
+        const cutoffTime = match.verification_started_at || match.created_at;
+
+if (battleTime < cutoffTime) continue;
 
         const teamCrowns = teamPlayer.crowns || 0;
         const enemyCrowns = enemyPlayer.crowns || 0;
@@ -454,7 +456,7 @@ app.post("/api/matches/:id/join", async function (req, res) {
         });
         return;
     }
-
+    const verificationStartedAt = Date.now();
     const update = await supabase
         .from("matches")
         .update({
@@ -462,8 +464,10 @@ app.post("/api/matches/:id/join", async function (req, res) {
             opponent_tag: "#" + cleanTag(playerTag),
             opponent_friend_link: friendLink,
             status: "Match ready",
+            verification_started_at: verificationStartedAt,
             verify_expires_at:
-                Date.now() + ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000
+                verificationStartedAt +
+    ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000
         })
         .eq("id", matchId)
         .select()
