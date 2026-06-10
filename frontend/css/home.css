@@ -9,10 +9,14 @@ body {
     font-family: Arial, sans-serif;
 
     background:
-        radial-gradient(circle at top center, rgba(182, 255, 0, 0.18), transparent 42%),
-        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
-
-    overflow-x: hidden;
+        radial-gradient(circle at top center, rgba(182,255,0,0.30), transparent 60%),
+        radial-gradient(circle at center center, rgba(182,255,0,0.08), transparent 70%),
+        linear-gradient(
+            180deg,
+            #102016 0%,
+            #071006 40%,
+            #050505 100%
+        );
 }
 
 .app-shell {
@@ -232,12 +236,12 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 180px;
+    height: 450px;
     pointer-events: none;
 
     background: linear-gradient(
         to top,
-        rgba(182,255,0,0.08),
+        rgba(182,255,0,0.14),
         transparent
     );
 }
