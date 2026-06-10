@@ -108,6 +108,7 @@ function findMatchingBattle(battles, match) {
         if (!isCorrectPlayers) continue;
 
         
+        const battleTime = battle.battleTime;
         const battleId = [
     battle.battleTime,
     cleanTag(teamTag),
