@@ -203,3 +203,22 @@ body {
     font-weight: 900;
     color: #b6ff00;
 }
+@media (min-width: 768px) {
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 28px 0;
+    }
+
+    .app-shell {
+        width: 430px;
+        min-height: 900px;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(182, 255, 0, 0.22);
+        box-shadow:
+            0 0 40px rgba(182, 255, 0, 0.12),
+            0 30px 90px rgba(0, 0, 0, 0.65);
+    }
+}
