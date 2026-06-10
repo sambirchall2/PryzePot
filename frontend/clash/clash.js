@@ -16,6 +16,6 @@ if (onlineMode) {
 
 if (tournamentMode) {
     tournamentMode.addEventListener("click", function () {
-        alert("Season Zero Tournament page coming next.");
+        window.location.href = "tournament.html";
     });
 }
