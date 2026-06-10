@@ -107,7 +107,12 @@ function findMatchingBattle(battles, match) {
 
         if (!isCorrectPlayers) continue;
 
-        const battleTime = parseClashTime(battle.battleTime);
+        
+        const battleId = [
+    battle.battleTime,
+    cleanTag(teamTag),
+    cleanTag(enemyTag)
+].sort().join("-");
 
         const cutoffTime = match.verification_started_at || match.created_at;
 
@@ -120,7 +125,9 @@ if (battleTime < cutoffTime) continue;
             return {
                 found: true,
                 draw: true,
-                battle: battle
+                battle: battle,
+                battleId: battleId,
+                battleTime: battleTime 
             };
         }
 
@@ -132,7 +139,9 @@ if (battleTime < cutoffTime) continue;
             draw: false,
             winnerTag: winnerTag,
             loserTag: loserTag,
-            battle: battle
+            battle: battle,
+            battleId: battleId,
+            battleTime: battleTime
         };
     }
 
@@ -539,6 +548,22 @@ app.post("/api/matches/:id/verify", async function (req, res) {
     try {
         const creatorBattles = await getBattleLog(foundMatch.creator_tag);
         const result = findMatchingBattle(creatorBattles, foundMatch);
+        if (result.found && result.battleId) {
+    const usedBattle = await supabase
+        .from("match_results")
+        .select("*")
+        .eq("clash_battle_id", result.battleId)
+        .maybeSingle();
+
+    if (usedBattle.data) {
+        res.json({
+            success: false,
+            pending: true,
+            message: "This Clash battle was already used. Play a new match before verifying."
+        });
+        return;
+    }
+}
 
         if (!result.found) {
             res.json({
@@ -607,6 +632,7 @@ app.post("/api/matches/:id/verify", async function (req, res) {
             .from("match_results")
             .insert({
                 match_id: matchId,
+                clash_battle_id: result.battleId,
                 winner_username: winnerUsername,
                 winner_tag: winnerTag,
                 loser_username: loserUsername,
