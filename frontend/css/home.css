@@ -4,9 +4,15 @@
 
 body {
     margin: 0;
-    background: #020202;
+    min-height: 100vh;
     color: white;
     font-family: Arial, sans-serif;
+
+    background:
+        radial-gradient(circle at top center, rgba(182, 255, 0, 0.18), transparent 42%),
+        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+
+    overflow-x: hidden;
 }
 
 .app-shell {
