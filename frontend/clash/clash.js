@@ -10,7 +10,8 @@ if (backBtn) {
 
 if (onlineMode) {
     onlineMode.addEventListener("click", function () {
-        window.location.href = "online.html";
+        localStorage.setItem("afterConnectRedirect", "entry.html");
+        window.location.href = "connect-clash.html";
     });
 }
 

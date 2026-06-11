@@ -10,8 +10,7 @@ if (backBtn) {
 
 if (createMatchBtn) {
     createMatchBtn.addEventListener("click", function () {
-        localStorage.setItem("afterConnectRedirect", "entry.html");
-        window.location.href = "connect-clash.html";
+        window.location.href = "clash.html";
     });
 }
 
