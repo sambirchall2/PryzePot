@@ -354,68 +354,75 @@ app.get("/api/matches", async function (req, res) {
     });
 });
 
-app.post("/api/matches", async function (req, res) {
-    await expireOldMatches();
-
+app.post("/api/tournaments", async function (req, res) {
     const username = req.body.username;
     const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
+    const tournamentSize = req.body.tournamentSize;
     const entryFee = req.body.entryFee;
 
-    if (!username || !playerTag || !friendLink || !entryFee) {
+    if (!username || !playerTag || !tournamentSize || !entryFee) {
         res.json({
             success: false,
-            message: "Missing match information."
+            message: "Missing tournament information."
         });
         return;
     }
 
-    const now = Date.now();
+    if (![4, 8, 16].includes(Number(tournamentSize))) {
+        res.json({
+            success: false,
+            message: "Invalid tournament size."
+        });
+        return;
+    }
 
-    const result = await supabase
-        .from("matches")
+    const tournamentResult = await supabase
+        .from("tournaments")
         .insert({
-            game: "Clash Royale",
-            mode: "1v1 Friendly Battle",
-            entry_fee: entryFee,
-
             creator_username: username,
-            creator_tag: "#" + cleanTag(playerTag),
-            creator_friend_link: friendLink,
-
-            opponent_username: null,
-            opponent_tag: null,
-            opponent_friend_link: null,
-
-            status: "Waiting for opponent",
-
-            created_at: now,
-            expires_at: now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000,
-            verify_expires_at: null,
-
-            winner_username: null,
-            winner_tag: null,
-            loser_username: null,
-            loser_tag: null,
-            verified_at: null
+            game: "Clash Royale",
+            tournament_size: Number(tournamentSize),
+            entry_fee: Number(entryFee),
+            current_players: 1,
+            max_players: Number(tournamentSize),
+            status: "Open",
+            winner_username: null
         })
         .select()
         .single();
 
-    if (result.error) {
-        console.log("CREATE MATCH ERROR:", result.error);
+    if (tournamentResult.error) {
+        console.log("CREATE TOURNAMENT ERROR:", tournamentResult.error);
 
         res.json({
             success: false,
-            message: "Could not create match."
+            message: "Could not create tournament."
+        });
+        return;
+    }
+
+    const playerResult = await supabase
+        .from("tournament_players")
+        .insert({
+            tournament_id: tournamentResult.data.id,
+            username: username,
+            player_tag: "#" + cleanTag(playerTag)
+        });
+
+    if (playerResult.error) {
+        console.log("ADD TOURNAMENT PLAYER ERROR:", playerResult.error);
+
+        res.json({
+            success: false,
+            message: "Tournament created, but player could not be added."
         });
         return;
     }
 
     res.json({
         success: true,
-        message: "Match posted!",
-        match: dbMatchToFrontend(result.data)
+        message: "Tournament created!",
+        tournament: tournamentResult.data
     });
 });
 
