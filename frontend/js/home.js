@@ -20,7 +20,7 @@ const clashPlayBtn = document.getElementById("clashPlayBtn");
 
 if (clashPlayBtn) {
     clashPlayBtn.addEventListener("click", function () {
-        window.location.href = "../clash/clash.html";
+        window.location.href = "../clash/online.html";
     });
 }
 
@@ -28,7 +28,7 @@ const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {
     joinTournamentBtn.addEventListener("click", function () {
-        window.location.href = "../clash/clash.html";
+        window.location.href = "../clash/online.html";
     });
 }
 
