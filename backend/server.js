@@ -353,6 +353,135 @@ app.get("/api/matches", async function (req, res) {
         matches: result.data.map(dbMatchToFrontend)
     });
 });
+app.post("/api/matches", async function (req, res) {
+    await expireOldMatches();
+
+    const username = req.body.username;
+    const playerTag = req.body.playerTag;
+    const friendLink = req.body.friendLink;
+    const entryFee = req.body.entryFee;
+
+    if (!username || !playerTag || !friendLink || !entryFee) {
+        res.json({
+            success: false,
+            message: "Missing match information."
+        });
+        return;
+    }
+
+    const now = Date.now();
+
+    const result = await supabase
+        .from("matches")
+        .insert({
+            game: "Clash Royale",
+            mode: "1v1 Friendly Battle",
+            entry_fee: entryFee,
+
+            creator_username: username,
+            creator_tag: "#" + cleanTag(playerTag),
+            creator_friend_link: friendLink,
+
+            opponent_username: null,
+            opponent_tag: null,
+            opponent_friend_link: null,
+
+            status: "Waiting for opponent",
+
+            created_at: now,
+            expires_at: now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000,
+            verify_expires_at: null,
+
+            winner_username: null,
+            winner_tag: null,
+            loser_username: null,
+            loser_tag: null,
+            verified_at: null
+        })
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("CREATE MATCH ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not create match."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Match posted!",
+        match: dbMatchToFrontend(result.data)
+    });
+});
+
+app.post("/api/matches", async function (req, res) {
+    await expireOldMatches();
+
+    const username = req.body.username;
+    const playerTag = req.body.playerTag;
+    const friendLink = req.body.friendLink;
+    const entryFee = req.body.entryFee;
+
+    if (!username || !playerTag || !friendLink || !entryFee) {
+        res.json({
+            success: false,
+            message: "Missing match information."
+        });
+        return;
+    }
+
+    const now = Date.now();
+
+    const result = await supabase
+        .from("matches")
+        .insert({
+            game: "Clash Royale",
+            mode: "1v1 Friendly Battle",
+            entry_fee: entryFee,
+
+            creator_username: username,
+            creator_tag: "#" + cleanTag(playerTag),
+            creator_friend_link: friendLink,
+
+            opponent_username: null,
+            opponent_tag: null,
+            opponent_friend_link: null,
+
+            status: "Waiting for opponent",
+
+            created_at: now,
+            expires_at: now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000,
+            verify_expires_at: null,
+
+            winner_username: null,
+            winner_tag: null,
+            loser_username: null,
+            loser_tag: null,
+            verified_at: null
+        })
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("CREATE MATCH ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not create match."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Match posted!",
+        match: dbMatchToFrontend(result.data)
+    });
+});
 
 app.post("/api/tournaments", async function (req, res) {
     const username = req.body.username;
