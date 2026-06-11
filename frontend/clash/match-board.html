@@ -12,12 +12,46 @@
 
     <main class="board-page">
 
-        <h1>Open Matches</h1>
-        <p class="subtitle">
-            Join an open Clash Royale 1v1.
-        </p>
+        <div class="page-header">
+            <p class="eyebrow">CLASH ROYALE</p>
+            <h1>Join Game</h1>
+            <p class="subtitle">
+                Choose an open tournament or 1v1 match.
+            </p>
+        </div>
 
-        <div id="matchesContainer"></div>
+        <section class="featured-event">
+            <p class="section-label">FEATURED EVENT</p>
+
+            <div class="season-card">
+                <div>
+                    <h2>🏆 Season Zero Tournament</h2>
+
+                    <p>
+                        Free Entry • 128 Player Cap • Prize Rewards
+                    </p>
+
+                    <span>0 / 128 Players Registered</span>
+                    <span>June 13, 2026 • 8:00 PM EST</span>
+                </div>
+
+                <button class="season-join-btn">JOIN</button>
+            </div>
+        </section>
+
+        <section class="player-tournaments">
+            <p class="section-label">PLAYER TOURNAMENTS</p>
+
+            <div id="tournamentsContainer" class="empty-tournament-state">
+                No open player tournaments yet.
+            </div>
+        </section>
+
+        <section class="open-matches">
+            <p class="section-label">OPEN 1V1 MATCHES</p>
+
+            <div id="matchesContainer"></div>
+        </section>
 
     </main>
 
