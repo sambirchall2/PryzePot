@@ -9,6 +9,8 @@ const username = localStorage.getItem("username");
 const entryFee = localStorage.getItem("entryFee");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashFriendLink = localStorage.getItem("clashFriendLink");
+const createType = localStorage.getItem("createType");
+const tournamentSize = localStorage.getItem("tournamentSize");
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
@@ -31,9 +33,57 @@ if (!clashPlayerTag || !clashFriendLink) {
 entryAmountDisplay.textContent = "$" + entryFee;
 playerTagDisplay.textContent = clashPlayerTag;
 
+if (createType === "tournament" && tournamentSize) {
+    postMatchBtn.textContent = "POST TOURNAMENT";
+}
+
 postMatchBtn.addEventListener("click", function () {
     postMatchBtn.textContent = "POSTING...";
     postMatchBtn.disabled = true;
+
+    if (createType === "tournament" && tournamentSize) {
+        const tournamentData = {
+            username: username,
+            playerTag: clashPlayerTag,
+            tournamentSize: Number(tournamentSize),
+            entryFee: Number(entryFee)
+        };
+
+        fetch(API_BASE_URL + "/api/tournaments", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(tournamentData)
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (data.success === true) {
+                localStorage.setItem("currentTournamentId", data.tournament.id);
+
+                localStorage.removeItem("createType");
+                localStorage.removeItem("tournamentSize");
+
+                window.location.href = "match-board.html";
+            } else {
+                alert(data.message);
+                postMatchBtn.textContent = "POST TOURNAMENT";
+                postMatchBtn.disabled = false;
+            }
+        })
+        .catch(function (error) {
+            console.log("ERROR:", error);
+
+            alert("Could not post tournament. Make sure your backend server is running.");
+
+            postMatchBtn.textContent = "POST TOURNAMENT";
+            postMatchBtn.disabled = false;
+        });
+
+        return;
+    }
 
     const matchData = {
         username: username,
