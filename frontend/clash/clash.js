@@ -10,6 +10,9 @@ if (backBtn) {
 
 if (onlineMode) {
     onlineMode.addEventListener("click", function () {
+        localStorage.removeItem("createType");
+        localStorage.removeItem("tournamentSize");
+
         localStorage.setItem("afterConnectRedirect", "entry.html");
         window.location.href = "connect-clash.html";
     });
