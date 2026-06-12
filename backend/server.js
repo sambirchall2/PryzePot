@@ -417,71 +417,63 @@ app.post("/api/matches", async function (req, res) {
         match: dbMatchToFrontend(result.data)
     });
 });
-
-app.post("/api/matches", async function (req, res) {
-    await expireOldMatches();
-
+app.post("/api/tournaments/:id/cancel", async function (req, res) {
+    const tournamentId = Number(req.params.id);
     const username = req.body.username;
-    const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
-    const entryFee = req.body.entryFee;
 
-    if (!username || !playerTag || !friendLink || !entryFee) {
+    const tournamentResult = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("id", tournamentId)
+        .single();
+
+    if (tournamentResult.error || !tournamentResult.data) {
         res.json({
             success: false,
-            message: "Missing match information."
+            message: "Tournament not found."
         });
         return;
     }
 
-    const now = Date.now();
+    const tournament = tournamentResult.data;
 
-    const result = await supabase
-        .from("matches")
-        .insert({
-            game: "Clash Royale",
-            mode: "1v1 Friendly Battle",
-            entry_fee: entryFee,
-
-            creator_username: username,
-            creator_tag: "#" + cleanTag(playerTag),
-            creator_friend_link: friendLink,
-
-            opponent_username: null,
-            opponent_tag: null,
-            opponent_friend_link: null,
-
-            status: "Waiting for opponent",
-
-            created_at: now,
-            expires_at: now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000,
-            verify_expires_at: null,
-
-            winner_username: null,
-            winner_tag: null,
-            loser_username: null,
-            loser_tag: null,
-            verified_at: null
-        })
-        .select()
-        .single();
-
-    if (result.error) {
-        console.log("CREATE MATCH ERROR:", result.error);
-
+    if (tournament.creator_username !== username) {
         res.json({
             success: false,
-            message: "Could not create match."
+            message: "Only the tournament creator can cancel this tournament."
+        });
+        return;
+    }
+
+    if (tournament.status !== "Open") {
+        res.json({
+            success: false,
+            message: "This tournament can no longer be cancelled."
+        });
+        return;
+    }
+
+    const updateResult = await supabase
+        .from("tournaments")
+        .update({
+            status: "Cancelled"
+        })
+        .eq("id", tournamentId);
+
+    if (updateResult.error) {
+        res.json({
+            success: false,
+            message: "Could not cancel tournament."
         });
         return;
     }
 
     res.json({
         success: true,
-        message: "Match posted!",
-        match: dbMatchToFrontend(result.data)
+        message: "Tournament cancelled."
     });
 });
+
 
 app.post("/api/tournaments", async function (req, res) {
     
