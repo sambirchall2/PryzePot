@@ -18,6 +18,10 @@ if (!currentTournamentId) {
     window.location.href = "match-board.html";
 }
 
+function isUserInTournamentMatch(match) {
+    return match.player_one === username || match.player_two === username;
+}
+
 function renderBracket(matches) {
     if (!matches || matches.length === 0) {
         bracketSection.classList.add("hidden");
@@ -42,6 +46,21 @@ function renderBracket(matches) {
             roundName = "Final";
         }
 
+        let enterButton = "";
+
+        if (
+            match.status === "Ready" &&
+            isUserInTournamentMatch(match)
+        ) {
+            enterButton = `
+                <button
+                    class="enter-tournament-match-btn"
+                    data-match-id="${match.id}">
+                    ENTER MATCH
+                </button>
+            `;
+        }
+
         bracketCard.innerHTML = `
             <div class="bracket-round">${roundName}</div>
 
@@ -54,10 +73,25 @@ function renderBracket(matches) {
             <div class="bracket-status">
                 ${match.status}
             </div>
+
+            ${enterButton}
         `;
 
         bracketList.appendChild(bracketCard);
     });
+
+    document
+        .querySelectorAll(".enter-tournament-match-btn")
+        .forEach(function (button) {
+            button.addEventListener("click", function () {
+                localStorage.setItem(
+                    "currentTournamentMatchId",
+                    button.dataset.matchId
+                );
+
+                window.location.href = "tournament-match-room.html";
+            });
+        });
 }
 
 function renderTournamentRoom(tournament, players, matches) {

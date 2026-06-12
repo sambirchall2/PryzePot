@@ -1,0 +1,116 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: white;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+    background:
+        radial-gradient(circle at top center,
+            rgba(182,255,0,0.14),
+            transparent 35%),
+        linear-gradient(
+            180deg,
+            #102016 0%,
+            #07100c 45%,
+            #020202 100%
+        );
+}
+
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 90px 20px 60px;
+}
+
+.back-btn {
+    position: fixed;
+    top: 24px;
+    left: 22px;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-size: 40px;
+    line-height: 34px;
+    cursor: pointer;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 36px;
+    font-weight: 950;
+}
+
+.match-card {
+    background: #101010;
+    border: 1px solid #b7ff00;
+    border-radius: 18px;
+    padding: 22px;
+}
+
+.round-label {
+    color: #b7ff00;
+    font-weight: 950;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.players {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.player-box {
+    background: #151515;
+    border: 1px solid #333;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    font-weight: 900;
+}
+
+.vs {
+    text-align: center;
+    color: #b7ff00;
+    font-weight: 950;
+}
+
+.status-card {
+    background: #151515;
+    border: 1px solid rgba(183,255,0,0.35);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 18px;
+    font-weight: 800;
+}
+
+.primary-btn,
+.secondary-btn {
+    width: 100%;
+    height: 54px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 950;
+    cursor: pointer;
+    margin-top: 12px;
+}
+
+.primary-btn {
+    background: #b7ff00;
+    color: black;
+}
+
+.secondary-btn {
+    background: #202020;
+    color: white;
+    border: 1px solid rgba(183,255,0,0.5);
+}
