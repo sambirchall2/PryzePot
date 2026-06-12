@@ -629,11 +629,19 @@ app.get("/api/tournaments/:id", async function (req, res) {
         .select("*")
         .eq("tournament_id", tournamentId);
 
-    res.json({
-        success: true,
-        tournament: tournamentResult.data,
-        players: playersResult.data || []
-    });
+    const matchesResult = await supabase
+    .from("tournament_matches")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .order("round_number", { ascending: true })
+    .order("id", { ascending: true });
+
+res.json({
+    success: true,
+    tournament: tournamentResult.data,
+    players: playersResult.data || [],
+    matches: matchesResult.data || []
+});
 });
 app.post("/api/tournaments/:id/join", async function (req, res) {
     const tournamentId = Number(req.params.id);
