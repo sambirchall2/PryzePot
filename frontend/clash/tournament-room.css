@@ -47,11 +47,13 @@ h1 {
     margin-bottom: 0;
 }
 
-.players-section {
+.players-section,
+.bracket-section {
     margin-bottom: 25px;
 }
 
-.players-section h2 {
+.players-section h2,
+.bracket-section h2 {
     margin-bottom: 15px;
 }
 
@@ -68,6 +70,48 @@ h1 {
     color: #b7ff00;
 }
 
+.bracket-card {
+    background: #101010;
+    border: 1px solid rgba(183,255,0,0.35);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.bracket-round {
+    color: #b7ff00;
+    font-size: 13px;
+    font-weight: 950;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.bracket-matchup {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.bracket-matchup span {
+    flex: 1;
+}
+
+.bracket-matchup strong {
+    color: #b7ff00;
+    font-size: 13px;
+}
+
+.bracket-status {
+    margin-top: 10px;
+    color: rgba(255,255,255,0.65);
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .status-card {
     background: #101010;
     border: 1px solid #b7ff00;
@@ -75,8 +119,6 @@ h1 {
     padding: 16px;
     text-align: center;
     font-weight: bold;
-}
-.status-card {
     margin-bottom: 18px;
 }
 

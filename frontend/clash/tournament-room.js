@@ -6,6 +6,8 @@ const prizePoolDisplay = document.getElementById("prizePool");
 const playerList = document.getElementById("playerList");
 const statusCard = document.getElementById("statusCard");
 const cancelTournamentBtn = document.getElementById("cancelTournamentBtn");
+const bracketSection = document.getElementById("bracketSection");
+const bracketList = document.getElementById("bracketList");
 
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
@@ -16,7 +18,49 @@ if (!currentTournamentId) {
     window.location.href = "match-board.html";
 }
 
-function renderTournamentRoom(tournament, players) {
+function renderBracket(matches) {
+    if (!matches || matches.length === 0) {
+        bracketSection.classList.add("hidden");
+        bracketList.innerHTML = "";
+        return;
+    }
+
+    bracketSection.classList.remove("hidden");
+    bracketList.innerHTML = "";
+
+    matches.forEach(function (match, index) {
+        const bracketCard = document.createElement("div");
+        bracketCard.className = "bracket-card";
+
+        let roundName = "Round " + match.round_number;
+
+        if (match.round_number === 1) {
+            roundName = "Semifinal " + (index + 1);
+        }
+
+        if (match.round_number === 2) {
+            roundName = "Final";
+        }
+
+        bracketCard.innerHTML = `
+            <div class="bracket-round">${roundName}</div>
+
+            <div class="bracket-matchup">
+                <span>${match.player_one || "TBD"}</span>
+                <strong>VS</strong>
+                <span>${match.player_two || "TBD"}</span>
+            </div>
+
+            <div class="bracket-status">
+                ${match.status}
+            </div>
+        `;
+
+        bracketList.appendChild(bracketCard);
+    });
+}
+
+function renderTournamentRoom(tournament, players, matches) {
     currentTournament = tournament;
 
     const tournamentSize = Number(tournament.tournament_size);
@@ -43,10 +87,12 @@ function renderTournamentRoom(tournament, players) {
         playerList.appendChild(div);
     }
 
+    renderBracket(matches);
+
     if (tournament.status === "Open") {
         statusCard.textContent = "Waiting for tournament to fill...";
     } else if (tournament.status === "Full") {
-        statusCard.textContent = "Tournament full. Bracket coming next.";
+        statusCard.textContent = "Tournament full. Bracket is ready.";
     } else if (tournament.status === "Cancelled") {
         statusCard.textContent = "Tournament cancelled.";
     }
@@ -73,7 +119,11 @@ function loadTournamentRoom() {
                 return;
             }
 
-            renderTournamentRoom(data.tournament, data.players);
+            renderTournamentRoom(
+                data.tournament,
+                data.players,
+                data.matches || []
+            );
         })
         .catch(function (error) {
             console.log("TOURNAMENT ROOM ERROR:", error);
