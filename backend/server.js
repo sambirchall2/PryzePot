@@ -173,6 +173,46 @@ app.get("/api/test", function (req, res) {
         message: "Hello from PryzePot Backend"
     });
 });
+function shufflePlayers(players) {
+    return players.sort(function () {
+        return Math.random() - 0.5;
+    });
+}
+
+async function createTournamentBracket(tournamentId) {
+    const existingMatches = await supabase
+        .from("tournament_matches")
+        .select("*")
+        .eq("tournament_id", tournamentId);
+
+    if (existingMatches.data && existingMatches.data.length > 0) {
+        return;
+    }
+
+    const playersResult = await supabase
+        .from("tournament_players")
+        .select("*")
+        .eq("tournament_id", tournamentId);
+
+    const players = shufflePlayers(playersResult.data || []);
+
+    const bracketMatches = [];
+
+    for (let i = 0; i < players.length; i += 2) {
+        bracketMatches.push({
+            tournament_id: tournamentId,
+            round_number: 1,
+            player_one: players[i].username,
+            player_two: players[i + 1].username,
+            winner_username: null,
+            status: "Ready"
+        });
+    }
+
+    await supabase
+        .from("tournament_matches")
+        .insert(bracketMatches);
+}
 
 app.post("/api/signup", async function (req, res) {
     const username = req.body.username;
@@ -699,7 +739,9 @@ app.post("/api/tournaments/:id/join", async function (req, res) {
         });
         return;
     }
-
+    if (newStatus === "Full") {
+    await createTournamentBracket(tournamentId);
+}
     res.json({
         success: true,
         message: "Tournament joined!",
