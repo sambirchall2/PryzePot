@@ -4,14 +4,21 @@ const tournamentSizeDisplay = document.getElementById("tournamentSize");
 const entryFeeDisplay = document.getElementById("entryFee");
 const prizePoolDisplay = document.getElementById("prizePool");
 const playerList = document.getElementById("playerList");
+const statusCard = document.getElementById("statusCard");
+const cancelTournamentBtn = document.getElementById("cancelTournamentBtn");
 
 const currentTournamentId = localStorage.getItem("currentTournamentId");
+const username = localStorage.getItem("username");
+
+let currentTournament = null;
 
 if (!currentTournamentId) {
     window.location.href = "match-board.html";
 }
 
 function renderTournamentRoom(tournament, players) {
+    currentTournament = tournament;
+
     const tournamentSize = Number(tournament.tournament_size);
     const entryFee = Number(tournament.entry_fee);
     const prizePool = tournamentSize * entryFee;
@@ -35,6 +42,23 @@ function renderTournamentRoom(tournament, players) {
 
         playerList.appendChild(div);
     }
+
+    if (tournament.status === "Open") {
+        statusCard.textContent = "Waiting for tournament to fill...";
+    } else if (tournament.status === "Full") {
+        statusCard.textContent = "Tournament full. Bracket coming next.";
+    } else if (tournament.status === "Cancelled") {
+        statusCard.textContent = "Tournament cancelled.";
+    }
+
+    if (
+        tournament.creator_username === username &&
+        tournament.status === "Open"
+    ) {
+        cancelTournamentBtn.classList.remove("hidden");
+    } else {
+        cancelTournamentBtn.classList.add("hidden");
+    }
 }
 
 function loadTournamentRoom() {
@@ -56,6 +80,42 @@ function loadTournamentRoom() {
             alert("Could not load tournament room.");
         });
 }
+
+cancelTournamentBtn.addEventListener("click", function () {
+    if (!currentTournamentId || !username) {
+        alert("Missing tournament information.");
+        return;
+    }
+
+    const confirmed = confirm("Cancel this tournament?");
+
+    if (!confirmed) return;
+
+    fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId + "/cancel", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+    .then(function (response) {
+        return response.json();
+    })
+    .then(function (data) {
+        alert(data.message);
+
+        if (data.success) {
+            localStorage.removeItem("currentTournamentId");
+            window.location.href = "match-board.html";
+        }
+    })
+    .catch(function (error) {
+        console.log("CANCEL TOURNAMENT ERROR:", error);
+        alert("Could not cancel tournament.");
+    });
+});
 
 loadTournamentRoom();
 
