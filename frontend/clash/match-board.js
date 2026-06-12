@@ -55,9 +55,7 @@ function getVisibleMatches(matches) {
         const timeLeft = getMatchTimeLeft(match);
         if (timeLeft <= 0) return false;
 
-        if (match.status === "Waiting for opponent") {
-            return true;
-        }
+        if (match.status === "Waiting for opponent") return true;
 
         if (match.status === "Match ready" && isUserInMatch(match)) {
             return true;
@@ -118,29 +116,50 @@ function renderTournaments() {
         tournamentsContainer.appendChild(card);
     });
 
-    document
-        .querySelectorAll(".join-tournament-btn")
-        .forEach(function (button) {
-            button.addEventListener("click", function () {
-                if (!username) {
-                    window.location.href = "../html/index.html";
+    document.querySelectorAll(".join-tournament-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+            if (!username) {
+                window.location.href = "../html/index.html";
+                return;
+            }
+
+            if (!clashPlayerTag || !clashFriendLink) {
+                alert("Connect your Clash Royale account and friend link first.");
+                window.location.href = "connect-clash.html";
+                return;
+            }
+
+            const tournamentId = button.dataset.tournamentId;
+
+            fetch(API_BASE_URL + "/api/tournaments/" + tournamentId + "/join", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    playerTag: clashPlayerTag
+                })
+            })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (!data.success) {
+                    alert(data.message);
+                    loadTournaments();
                     return;
                 }
 
-                if (!clashPlayerTag || !clashFriendLink) {
-                    alert("Connect your Clash Royale account and friend link first.");
-                    window.location.href = "connect-clash.html";
-                    return;
-                }
-
-                localStorage.setItem(
-                    "currentTournamentId",
-                    button.dataset.tournamentId
-                );
-
+                localStorage.setItem("currentTournamentId", tournamentId);
                 window.location.href = "tournament-room.html";
+            })
+            .catch(function (error) {
+                console.log("TOURNAMENT JOIN ERROR:", error);
+                alert("Could not join tournament.");
             });
         });
+    });
 }
 
 function renderMatches() {
@@ -311,9 +330,7 @@ function loadTournaments() {
             return response.json();
         })
         .then(function (data) {
-            if (!data.success) {
-                return;
-            }
+            if (!data.success) return;
 
             loadedTournaments = data.tournaments;
             renderTournaments();
