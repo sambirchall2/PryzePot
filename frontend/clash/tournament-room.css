@@ -76,3 +76,26 @@ h1 {
     text-align: center;
     font-weight: bold;
 }
+.status-card {
+    margin-bottom: 18px;
+}
+
+.cancel-tournament-btn {
+    width: 100%;
+    height: 56px;
+
+    border: none;
+    border-radius: 14px;
+
+    background: #ff4444;
+    color: white;
+
+    font-size: 15px;
+    font-weight: 950;
+
+    cursor: pointer;
+}
+
+.hidden {
+    display: none;
+}
