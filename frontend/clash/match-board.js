@@ -1,5 +1,6 @@
 const backBtn = document.getElementById("backBtn");
 const matchesContainer = document.getElementById("matchesContainer");
+const tournamentsContainer = document.getElementById("tournamentsContainer");
 
 const API_BASE_URL = "https://api.pryzepot.com";
 
@@ -8,6 +9,7 @@ const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashFriendLink = localStorage.getItem("clashFriendLink");
 
 let loadedMatches = [];
+let loadedTournaments = [];
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
@@ -63,6 +65,82 @@ function getVisibleMatches(matches) {
 
         return false;
     });
+}
+
+function renderTournaments() {
+    if (!tournamentsContainer) return;
+
+    if (!loadedTournaments.length) {
+        tournamentsContainer.className = "empty-tournament-state";
+        tournamentsContainer.innerHTML = "No open player tournaments yet.";
+        return;
+    }
+
+    tournamentsContainer.className = "";
+    tournamentsContainer.innerHTML = "";
+
+    loadedTournaments.forEach(function (tournament) {
+        const card = document.createElement("div");
+        card.className = "match-card";
+
+        const prizePool =
+            Number(tournament.entry_fee) *
+            Number(tournament.max_players);
+
+        card.innerHTML = `
+            <div class="match-game">
+                Clash Royale Tournament
+            </div>
+
+            <div class="match-entry">
+                $${tournament.entry_fee}
+            </div>
+
+            <div class="match-mode">
+                ${tournament.current_players}/${tournament.max_players} Players Joined
+            </div>
+
+            <div class="match-status">
+                ${tournament.tournament_size} Player Tournament
+            </div>
+
+            <div class="match-timer">
+                Prize Pool: $${prizePool}
+            </div>
+
+            <button
+                class="join-tournament-btn"
+                data-tournament-id="${tournament.id}">
+                JOIN TOURNAMENT
+            </button>
+        `;
+
+        tournamentsContainer.appendChild(card);
+    });
+
+    document
+        .querySelectorAll(".join-tournament-btn")
+        .forEach(function (button) {
+            button.addEventListener("click", function () {
+                if (!username) {
+                    window.location.href = "../html/index.html";
+                    return;
+                }
+
+                if (!clashPlayerTag || !clashFriendLink) {
+                    alert("Connect your Clash Royale account and friend link first.");
+                    window.location.href = "connect-clash.html";
+                    return;
+                }
+
+                localStorage.setItem(
+                    "currentTournamentId",
+                    button.dataset.tournamentId
+                );
+
+                window.location.href = "tournament-room.html";
+            });
+        });
 }
 
 function renderMatches() {
@@ -227,6 +305,24 @@ function attachButtonListeners() {
     });
 }
 
+function loadTournaments() {
+    fetch(API_BASE_URL + "/api/tournaments")
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                return;
+            }
+
+            loadedTournaments = data.tournaments;
+            renderTournaments();
+        })
+        .catch(function (error) {
+            console.log("TOURNAMENT LOAD ERROR:", error);
+        });
+}
+
 function loadMatches() {
     fetch(API_BASE_URL + "/api/matches")
         .then(function (response) {
@@ -257,6 +353,7 @@ function loadMatches() {
 }
 
 loadMatches();
+loadTournaments();
 
 setInterval(function () {
     renderMatches();
@@ -264,4 +361,5 @@ setInterval(function () {
 
 setInterval(function () {
     loadMatches();
+    loadTournaments();
 }, 5000);

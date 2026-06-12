@@ -230,3 +230,20 @@ h1 {
     color: rgba(255,255,255,0.6);
     margin-top: 24px;
 }
+.join-tournament-btn {
+    width: 100%;
+    height: 56px;
+
+    margin-top: 18px;
+
+    border: none;
+    border-radius: 14px;
+
+    background: #b6ff00;
+    color: black;
+
+    font-size: 15px;
+    font-weight: 950;
+
+    cursor: pointer;
+}

@@ -603,6 +603,117 @@ app.get("/api/tournaments/:id", async function (req, res) {
         players: playersResult.data || []
     });
 });
+app.post("/api/tournaments/:id/join", async function (req, res) {
+    const tournamentId = Number(req.params.id);
+    const username = req.body.username;
+    const playerTag = req.body.playerTag;
+
+    if (!username || !playerTag) {
+        res.json({
+            success: false,
+            message: "Missing tournament join information."
+        });
+        return;
+    }
+
+    const tournamentResult = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("id", tournamentId)
+        .single();
+
+    if (tournamentResult.error || !tournamentResult.data) {
+        res.json({
+            success: false,
+            message: "Tournament not found."
+        });
+        return;
+    }
+
+    const tournament = tournamentResult.data;
+
+    if (tournament.status !== "Open") {
+        res.json({
+            success: false,
+            message: "This tournament is no longer open."
+        });
+        return;
+    }
+
+    if (Number(tournament.current_players) >= Number(tournament.max_players)) {
+        res.json({
+            success: false,
+            message: "This tournament is already full."
+        });
+        return;
+    }
+
+    const alreadyJoined = await supabase
+        .from("tournament_players")
+        .select("*")
+        .eq("tournament_id", tournamentId)
+        .eq("username", username)
+        .maybeSingle();
+
+    if (alreadyJoined.data) {
+        res.json({
+            success: true,
+            message: "You are already in this tournament.",
+            tournament: tournament
+        });
+        return;
+    }
+
+    const playerResult = await supabase
+        .from("tournament_players")
+        .insert({
+            tournament_id: tournamentId,
+            username: username,
+            player_tag: "#" + cleanTag(playerTag)
+        });
+
+    if (playerResult.error) {
+        console.log("JOIN TOURNAMENT PLAYER ERROR:", playerResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not join tournament."
+        });
+        return;
+    }
+
+    const newPlayerCount = Number(tournament.current_players) + 1;
+    const newStatus =
+        newPlayerCount >= Number(tournament.max_players)
+            ? "Full"
+            : "Open";
+
+    const updateResult = await supabase
+        .from("tournaments")
+        .update({
+            current_players: newPlayerCount,
+            status: newStatus
+        })
+        .eq("id", tournamentId)
+        .select()
+        .single();
+
+    if (updateResult.error) {
+        console.log("UPDATE TOURNAMENT COUNT ERROR:", updateResult.error);
+
+        res.json({
+            success: false,
+            message: "Joined tournament, but player count could not update."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Tournament joined!",
+        tournament: updateResult.data
+    });
+});
 app.post("/api/matches/:id/join", async function (req, res) {
     await expireOldMatches();
 
