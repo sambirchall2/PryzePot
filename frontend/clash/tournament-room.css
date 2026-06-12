@@ -1,0 +1,66 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #050505;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 25px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.tournament-card {
+    background: #101010;
+    border: 1px solid #b7ff00;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.row:last-child {
+    margin-bottom: 0;
+}
+
+.players-section {
+    margin-bottom: 25px;
+}
+
+.players-section h2 {
+    margin-bottom: 15px;
+}
+
+.player-slot {
+    background: #151515;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
+
+.player-slot.filled {
+    border-color: #b7ff00;
+    color: #b7ff00;
+}
+
+.status-card {
+    background: #101010;
+    border: 1px solid #b7ff00;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    font-weight: bold;
+}

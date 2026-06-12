@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Room | PryzePot</title>
+    <link rel="stylesheet" href="tournament-room.css">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Tournament Room</h1>
+
+    <div class="tournament-card">
+
+        <div class="row">
+            <span>Tournament Size</span>
+            <span id="tournamentSize">4 Players</span>
+        </div>
+
+        <div class="row">
+            <span>Entry Fee</span>
+            <span id="entryFee">$1</span>
+        </div>
+
+        <div class="row">
+            <span>Prize Pool</span>
+            <span id="prizePool">$4</span>
+        </div>
+
+    </div>
+
+    <div class="players-section">
+
+        <h2>Players Joined</h2>
+
+        <div id="playerList">
+
+            <div class="player-slot filled">
+                Player 1
+            </div>
+
+            <div class="player-slot">
+                Waiting...
+            </div>
+
+            <div class="player-slot">
+                Waiting...
+            </div>
+
+            <div class="player-slot">
+                Waiting...
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="status-card">
+        Waiting for tournament to fill...
+    </div>
+
+</div>
+
+<script src="tournament-room.js"></script>
+
+</body>
+</html>

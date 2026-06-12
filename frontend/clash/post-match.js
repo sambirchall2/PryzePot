@@ -66,7 +66,7 @@ postMatchBtn.addEventListener("click", function () {
                 localStorage.removeItem("createType");
                 localStorage.removeItem("tournamentSize");
 
-                window.location.href = "match-board.html";
+            window.location.href = "tournament-room.html";
             } else {
                 alert(data.message);
                 postMatchBtn.textContent = "POST TOURNAMENT";
