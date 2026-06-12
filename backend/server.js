@@ -863,7 +863,264 @@ app.post("/api/matches/:id/join", async function (req, res) {
         match: dbMatchToFrontend(update.data)
     });
 });
+app.post("/api/tournament-matches/:id/verify", async function (req, res) {
+    const tournamentMatchId = Number(req.params.id);
 
+    const found = await supabase
+        .from("tournament_matches")
+        .select("*")
+        .eq("id", tournamentMatchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({
+            success: false,
+            message: "Tournament match not found."
+        });
+        return;
+    }
+
+    const foundMatch = found.data;
+
+    if (foundMatch.status === "Completed") {
+        res.json({
+            success: true,
+            message: "Tournament match already verified.",
+            match: foundMatch
+        });
+        return;
+    }
+
+    if (foundMatch.status !== "Ready") {
+        res.json({
+            success: false,
+            message: "Tournament match is not ready for verification."
+        });
+        return;
+    }
+
+    if (!foundMatch.player_one_tag || !foundMatch.player_two_tag) {
+        res.json({
+            success: false,
+            message: "Tournament match is missing Clash tags."
+        });
+        return;
+    }
+
+    if (!process.env.CLASH_API_KEY) {
+        res.json({
+            success: false,
+            message: "Server is missing Clash Royale API key."
+        });
+        return;
+    }
+
+    try {
+        const fakeMatchForBattleCheck = {
+            creator_tag: foundMatch.player_one_tag,
+            opponent_tag: foundMatch.player_two_tag,
+            created_at: foundMatch.created_at,
+            verification_started_at: foundMatch.created_at
+        };
+
+        const playerOneBattles = await getBattleLog(foundMatch.player_one_tag);
+        const result = findMatchingBattle(playerOneBattles, fakeMatchForBattleCheck);
+
+        if (result.found && result.battleId) {
+            const usedInNormalMatch = await supabase
+                .from("match_results")
+                .select("*")
+                .eq("clash_battle_id", result.battleId)
+                .maybeSingle();
+
+            if (usedInNormalMatch.data) {
+                res.json({
+                    success: false,
+                    pending: true,
+                    message: "This Clash battle was already used. Play a new match before verifying."
+                });
+                return;
+            }
+
+            const usedInTournamentMatch = await supabase
+                .from("tournament_matches")
+                .select("*")
+                .eq("clash_battle_id", result.battleId)
+                .maybeSingle();
+
+            if (usedInTournamentMatch.data) {
+                res.json({
+                    success: false,
+                    pending: true,
+                    message: "This Clash battle was already used in a tournament."
+                });
+                return;
+            }
+        }
+
+        if (!result.found) {
+            res.json({
+                success: false,
+                pending: true,
+                message: "No matching Clash battle found yet. Try again in a minute."
+            });
+            return;
+        }
+
+        if (result.draw) {
+            res.json({
+                success: false,
+                pending: true,
+                message: "Battle found, but it was a draw. Play again."
+            });
+            return;
+        }
+
+        const playerOneClean = "#" + cleanTag(foundMatch.player_one_tag);
+        const playerTwoClean = "#" + cleanTag(foundMatch.player_two_tag);
+
+        let winnerUsername = null;
+        let winnerTag = null;
+        let loserUsername = null;
+        let loserTag = null;
+
+        if (result.winnerTag === playerOneClean) {
+            winnerUsername = foundMatch.player_one;
+            winnerTag = foundMatch.player_one_tag;
+            loserUsername = foundMatch.player_two;
+            loserTag = foundMatch.player_two_tag;
+        } else if (result.winnerTag === playerTwoClean) {
+            winnerUsername = foundMatch.player_two;
+            winnerTag = foundMatch.player_two_tag;
+            loserUsername = foundMatch.player_one;
+            loserTag = foundMatch.player_one_tag;
+        }
+
+        if (!winnerUsername) {
+            res.json({
+                success: false,
+                message: "Could not determine tournament winner."
+            });
+            return;
+        }
+
+        const completed = await supabase
+            .from("tournament_matches")
+            .update({
+                status: "Completed",
+                winner_username: winnerUsername,
+                winner_tag: winnerTag,
+                loser_username: loserUsername,
+                loser_tag: loserTag,
+                verified_at: Date.now(),
+                clash_battle_id: result.battleId
+            })
+            .eq("id", tournamentMatchId)
+            .select()
+            .single();
+
+        const roundMatchesResult = await supabase
+            .from("tournament_matches")
+            .select("*")
+            .eq("tournament_id", foundMatch.tournament_id)
+            .eq("round_number", foundMatch.round_number)
+            .order("id", { ascending: true });
+
+        const roundMatches = roundMatchesResult.data || [];
+
+        const allRoundCompleted =
+            roundMatches.length > 0 &&
+            roundMatches.every(function (match) {
+                return match.status === "Completed";
+            });
+
+        if (!allRoundCompleted) {
+            res.json({
+                success: true,
+                message: winnerUsername + " won. Waiting for other tournament match.",
+                match: completed.data
+            });
+            return;
+        }
+
+        if (Number(foundMatch.round_number) === 1) {
+            const existingFinal = await supabase
+                .from("tournament_matches")
+                .select("*")
+                .eq("tournament_id", foundMatch.tournament_id)
+                .eq("round_number", 2)
+                .maybeSingle();
+
+            if (!existingFinal.data) {
+                await supabase
+                    .from("tournament_matches")
+                    .insert({
+                        tournament_id: foundMatch.tournament_id,
+                        round_number: 2,
+
+                        player_one: roundMatches[0].winner_username,
+                        player_one_tag: roundMatches[0].winner_tag,
+
+                        player_two: roundMatches[1].winner_username,
+                        player_two_tag: roundMatches[1].winner_tag,
+
+                        winner_username: null,
+                        winner_tag: null,
+                        loser_username: null,
+                        loser_tag: null,
+
+                        verified_at: null,
+                        clash_battle_id: null,
+
+                        status: "Ready"
+                    });
+            }
+
+            res.json({
+                success: true,
+                message: winnerUsername + " won. Final is ready.",
+                match: completed.data
+            });
+            return;
+        }
+
+        if (Number(foundMatch.round_number) === 2) {
+            await supabase
+                .from("tournaments")
+                .update({
+                    winner_username: winnerUsername,
+                    status: "Completed"
+                })
+                .eq("id", foundMatch.tournament_id);
+
+            res.json({
+                success: true,
+                champion: true,
+                message: winnerUsername + " is the tournament champion!",
+                winnerUsername: winnerUsername,
+                winnerTag: winnerTag,
+                loserUsername: loserUsername,
+                loserTag: loserTag,
+                match: completed.data
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: winnerUsername + " won the tournament match!",
+            match: completed.data
+        });
+
+    } catch (error) {
+        console.log("TOURNAMENT VERIFY ERROR:", error);
+
+        res.json({
+            success: false,
+            message: "Could not verify tournament match through Clash Royale API."
+        });
+    }
+});
 app.post("/api/matches/:id/verify", async function (req, res) {
     await expireOldMatches();
 
