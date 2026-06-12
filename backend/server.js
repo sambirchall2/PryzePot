@@ -484,6 +484,7 @@ app.post("/api/matches", async function (req, res) {
 });
 
 app.post("/api/tournaments", async function (req, res) {
+    
     const username = req.body.username;
     const playerTag = req.body.playerTag;
     const tournamentSize = req.body.tournamentSize;
@@ -554,7 +555,54 @@ app.post("/api/tournaments", async function (req, res) {
         tournament: tournamentResult.data
     });
 });
+app.get("/api/tournaments", async function (req, res) {
+    const result = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("status", "Open")
+        .order("id", { ascending: false });
 
+    if (result.error) {
+        res.json({
+            success: false,
+            message: "Could not load tournaments."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        tournaments: result.data
+    });
+});
+app.get("/api/tournaments/:id", async function (req, res) {
+    const tournamentId = req.params.id;
+
+    const tournamentResult = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("id", tournamentId)
+        .single();
+
+    if (tournamentResult.error) {
+        res.json({
+            success: false,
+            message: "Tournament not found."
+        });
+        return;
+    }
+
+    const playersResult = await supabase
+        .from("tournament_players")
+        .select("*")
+        .eq("tournament_id", tournamentId);
+
+    res.json({
+        success: true,
+        tournament: tournamentResult.data,
+        players: playersResult.data || []
+    });
+});
 app.post("/api/matches/:id/join", async function (req, res) {
     await expireOldMatches();
 
