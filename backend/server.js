@@ -194,24 +194,51 @@ async function createTournamentBracket(tournamentId) {
         .select("*")
         .eq("tournament_id", tournamentId);
 
-    const players = shufflePlayers(playersResult.data || []);
+    if (playersResult.error || !playersResult.data) {
+        console.log("LOAD TOURNAMENT PLAYERS ERROR:", playersResult.error);
+        return;
+    }
+
+    const players = shufflePlayers(playersResult.data);
 
     const bracketMatches = [];
 
     for (let i = 0; i < players.length; i += 2) {
+        if (!players[i] || !players[i + 1]) continue;
+
         bracketMatches.push({
             tournament_id: tournamentId,
             round_number: 1,
+
             player_one: players[i].username,
+            player_one_tag: players[i].player_tag,
+
             player_two: players[i + 1].username,
+            player_two_tag: players[i + 1].player_tag,
+
             winner_username: null,
+            winner_tag: null,
+            loser_username: null,
+            loser_tag: null,
+
+            verified_at: null,
+            clash_battle_id: null,
+
             status: "Ready"
         });
     }
 
-    await supabase
+    if (bracketMatches.length === 0) {
+        return;
+    }
+
+    const insertResult = await supabase
         .from("tournament_matches")
         .insert(bracketMatches);
+
+    if (insertResult.error) {
+        console.log("CREATE TOURNAMENT BRACKET ERROR:", insertResult.error);
+    }
 }
 
 app.post("/api/signup", async function (req, res) {
