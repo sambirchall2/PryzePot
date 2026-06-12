@@ -64,7 +64,6 @@ postMatchBtn.addEventListener("click", function () {
                 localStorage.setItem("currentTournamentId", data.tournament.id);
 
                 localStorage.removeItem("createType");
-                localStorage.removeItem("tournamentSize");
 
             window.location.href = "tournament-room.html";
             } else {
