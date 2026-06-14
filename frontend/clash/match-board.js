@@ -137,9 +137,10 @@ function renderTournaments() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    username: username,
-                    playerTag: clashPlayerTag
-                })
+    username: username,
+    playerTag: clashPlayerTag,
+    friendLink: clashFriendLink
+})
             })
             .then(function (response) {
                 return response.json();

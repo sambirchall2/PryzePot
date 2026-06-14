@@ -207,25 +207,27 @@ async function createTournamentBracket(tournamentId) {
         if (!players[i] || !players[i + 1]) continue;
 
         bracketMatches.push({
-            tournament_id: tournamentId,
-            round_number: 1,
+    tournament_id: tournamentId,
+    round_number: 1,
 
-            player_one: players[i].username,
-            player_one_tag: players[i].player_tag,
+    player_one: players[i].username,
+    player_one_tag: players[i].player_tag,
+    player_one_friend_link: players[i].friend_link,
 
-            player_two: players[i + 1].username,
-            player_two_tag: players[i + 1].player_tag,
+    player_two: players[i + 1].username,
+    player_two_tag: players[i + 1].player_tag,
+    player_two_friend_link: players[i + 1].friend_link,
 
-            winner_username: null,
-            winner_tag: null,
-            loser_username: null,
-            loser_tag: null,
+    winner_username: null,
+    winner_tag: null,
+    loser_username: null,
+    loser_tag: null,
 
-            verified_at: null,
-            clash_battle_id: null,
+    verified_at: null,
+    clash_battle_id: null,
 
-            status: "Ready"
-        });
+    status: "Ready"
+});
     }
 
     if (bracketMatches.length === 0) {
@@ -674,6 +676,7 @@ app.post("/api/tournaments/:id/join", async function (req, res) {
     const tournamentId = Number(req.params.id);
     const username = req.body.username;
     const playerTag = req.body.playerTag;
+    const friendLink = req.body.friendLink;
 
     if (!username || !playerTag) {
         res.json({
@@ -736,7 +739,8 @@ app.post("/api/tournaments/:id/join", async function (req, res) {
         .insert({
             tournament_id: tournamentId,
             username: username,
-            player_tag: "#" + cleanTag(playerTag)
+            player_tag: "#" + cleanTag(playerTag),
+            friend_link: friendLink
         });
 
     if (playerResult.error) {

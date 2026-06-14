@@ -155,7 +155,7 @@ openClashBtn.addEventListener("click", function () {
         return;
     }
 
-    window.location.href = opponentFriendLink;
+    window.open(opponentFriendLink, "_blank");
 });
 
 verifyBtn.addEventListener("click", function () {
