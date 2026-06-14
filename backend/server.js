@@ -568,6 +568,7 @@ app.post("/api/tournaments", async function (req, res) {
     
     const username = req.body.username;
     const playerTag = req.body.playerTag;
+    const friendLink = req.body.friendLink;
     const tournamentSize = req.body.tournamentSize;
     const entryFee = req.body.entryFee;
 
@@ -613,12 +614,13 @@ app.post("/api/tournaments", async function (req, res) {
     }
 
     const playerResult = await supabase
-        .from("tournament_players")
-        .insert({
-            tournament_id: tournamentResult.data.id,
-            username: username,
-            player_tag: "#" + cleanTag(playerTag)
-        });
+    .from("tournament_players")
+    .insert({
+        tournament_id: tournamentResult.data.id,
+        username: username,
+        player_tag: "#" + cleanTag(playerTag),
+        friend_link: friendLink
+    });
 
     if (playerResult.error) {
         console.log("ADD TOURNAMENT PLAYER ERROR:", playerResult.error);

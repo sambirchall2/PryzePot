@@ -43,11 +43,12 @@ postMatchBtn.addEventListener("click", function () {
 
     if (createType === "tournament" && tournamentSize) {
         const tournamentData = {
-            username: username,
-            playerTag: clashPlayerTag,
-            tournamentSize: Number(tournamentSize),
-            entryFee: Number(entryFee)
-        };
+    username: username,
+    playerTag: clashPlayerTag,
+    friendLink: clashFriendLink,
+    tournamentSize: Number(tournamentSize),
+    entryFee: Number(entryFee)
+};
 
         fetch(API_BASE_URL + "/api/tournaments", {
             method: "POST",
