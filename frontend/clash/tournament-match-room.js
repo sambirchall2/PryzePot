@@ -90,9 +90,27 @@ function loadTournamentMatch() {
 }
 
 openClashBtn.addEventListener("click", function () {
-    alert(
-        "Add your opponent in Clash Royale, play the friendly battle, then come back and press VERIFY MATCH."
-    );
+
+    if (!currentMatch) {
+        alert("Match not loaded.");
+        return;
+    }
+
+    let opponentFriendLink = null;
+
+    if (username === currentMatch.player_one) {
+        opponentFriendLink = currentMatch.player_two_friend_link;
+    } else {
+        opponentFriendLink = currentMatch.player_one_friend_link;
+    }
+
+    if (!opponentFriendLink) {
+        alert("Opponent friend link not found.");
+        return;
+    }
+
+    window.open(opponentFriendLink, "_blank");
+
 });
 
 verifyMatchBtn.addEventListener("click", function () {
