@@ -47,6 +47,18 @@ function renderBracket(matches) {
         }
 
         let enterButton = "";
+        let winnerDisplay = "";
+
+if (
+    match.status === "Completed" &&
+    match.winner_username
+) {
+    winnerDisplay = `
+        <div class="bracket-winner">
+            Winner: ${match.winner_username}
+        </div>
+    `;
+}
 
         if (
             match.status === "Ready" &&
@@ -71,10 +83,12 @@ function renderBracket(matches) {
             </div>
 
             <div class="bracket-status">
-                ${match.status}
-            </div>
+    ${match.status}
+</div>
 
-            ${enterButton}
+${winnerDisplay}
+
+${enterButton}
         `;
 
         bracketList.appendChild(bracketCard);
@@ -123,13 +137,24 @@ function renderTournamentRoom(tournament, players, matches) {
 
     renderBracket(matches);
 
-    if (tournament.status === "Open") {
-        statusCard.textContent = "Waiting for tournament to fill...";
-    } else if (tournament.status === "Full") {
-        statusCard.textContent = "Tournament full. Bracket is ready.";
-    } else if (tournament.status === "Cancelled") {
-        statusCard.textContent = "Tournament cancelled.";
-    }
+const finalMatch = matches.find(function (match) {
+    return (
+        Number(match.round_number) === 2 &&
+        match.status === "Completed" &&
+        match.winner_username
+    );
+});
+
+if (finalMatch) {
+    statusCard.textContent =
+        "🏆 Tournament Champion: " + finalMatch.winner_username;
+} else if (tournament.status === "Open") {
+    statusCard.textContent = "Waiting for tournament to fill...";
+} else if (tournament.status === "Full") {
+    statusCard.textContent = "Tournament full. Bracket is ready.";
+} else if (tournament.status === "Cancelled") {
+    statusCard.textContent = "Tournament cancelled.";
+}
 
     if (
         tournament.creator_username === username &&

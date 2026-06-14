@@ -1,6 +1,6 @@
+const backHomeBtn = document.getElementById("backHomeBtn");
 const winnerName = document.getElementById("winnerName");
 const winnerTag = document.getElementById("winnerTag");
-const homeBtn = document.getElementById("homeBtn");
 
 const championData =
     JSON.parse(
@@ -13,9 +13,12 @@ winnerName.textContent =
 winnerTag.textContent =
     championData.winnerTag || "";
 
-homeBtn.addEventListener("click", function () {
-    localStorage.removeItem("currentTournamentId");
-    localStorage.removeItem("currentTournamentMatchId");
+if (backHomeBtn) {
+    backHomeBtn.addEventListener("click", function () {
+        localStorage.removeItem("currentTournamentId");
+        localStorage.removeItem("currentTournamentMatchId");
+        localStorage.removeItem("lastTournamentChampion");
 
-    window.location.href = "online.html";
-});
+        window.location.href = "home.html";
+    });
+}

@@ -141,3 +141,9 @@ h1 {
 .hidden {
     display: none;
 }
+.bracket-winner {
+    margin-top: 10px;
+    color: #b7ff00;
+    font-weight: 900;
+    font-size: 14px;
+}
