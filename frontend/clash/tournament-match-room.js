@@ -138,19 +138,25 @@ verifyMatchBtn.addEventListener("click", function () {
         alert(data.message);
 
         if (data.success) {
-            if (data.champion) {
-                localStorage.setItem(
-                    "lastTournamentChampion",
-                    JSON.stringify(data)
-                );
+    if (data.champion) {
+        localStorage.setItem(
+            "lastTournamentChampion",
+            JSON.stringify(data)
+        );
 
-                window.location.href = "tournament-winner.html";
-                return;
-            }
+        window.location.href = "tournament-winner.html";
+        return;
+    }
 
-            window.location.href = "tournament-room.html";
-            return;
-        }
+    if (data.message && data.message.includes("Final is ready")) {
+        alert("🔥 YOU ADVANCED TO THE FINAL! One more win for the crown.");
+    } else {
+        alert("✅ Match verified. Check the tournament room for the next matchup.");
+    }
+
+    window.location.href = "tournament-room.html";
+    return;
+}
 
         verifyMatchBtn.textContent = "VERIFY MATCH";
         verifyMatchBtn.disabled = false;
