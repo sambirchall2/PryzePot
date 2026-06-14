@@ -65,6 +65,44 @@ function getVisibleMatches(matches) {
     });
 }
 
+function autoJoinPendingTournament() {
+    const pendingTournamentId = localStorage.getItem("pendingTournamentId");
+
+    if (!pendingTournamentId) return;
+    if (!username || !clashPlayerTag || !clashFriendLink) return;
+
+    localStorage.removeItem("pendingTournamentId");
+
+    fetch(API_BASE_URL + "/api/tournaments/" + pendingTournamentId + "/join", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            playerTag: clashPlayerTag,
+            friendLink: clashFriendLink
+        })
+    })
+    .then(function (response) {
+        return response.json();
+    })
+    .then(function (data) {
+        if (!data.success) {
+            alert(data.message);
+            loadTournaments();
+            return;
+        }
+
+        localStorage.setItem("currentTournamentId", pendingTournamentId);
+        window.location.href = "tournament-room.html";
+    })
+    .catch(function (error) {
+        console.log("AUTO JOIN TOURNAMENT ERROR:", error);
+        alert("Could not join tournament.");
+    });
+}
+
 function renderTournaments() {
     if (!tournamentsContainer) return;
 
@@ -123,42 +161,11 @@ function renderTournaments() {
                 return;
             }
 
-            if (!clashPlayerTag || !clashFriendLink) {
-                alert("Connect your Clash Royale account and friend link first.");
-                window.location.href = "connect-clash.html";
-                return;
-            }
+            localStorage.setItem("pendingTournamentId", button.dataset.tournamentId);
+            localStorage.setItem("afterConnectRedirect", "match-board.html");
 
-            const tournamentId = button.dataset.tournamentId;
-
-            fetch(API_BASE_URL + "/api/tournaments/" + tournamentId + "/join", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-    username: username,
-    playerTag: clashPlayerTag,
-    friendLink: clashFriendLink
-})
-            })
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (data) {
-                if (!data.success) {
-                    alert(data.message);
-                    loadTournaments();
-                    return;
-                }
-
-                localStorage.setItem("currentTournamentId", tournamentId);
-                window.location.href = "tournament-room.html";
-            })
-            .catch(function (error) {
-                console.log("TOURNAMENT JOIN ERROR:", error);
-                alert("Could not join tournament.");
-            });
+            window.location.href = "connect-clash.html";
+            return;
         });
     });
 }
@@ -372,6 +379,7 @@ function loadMatches() {
 
 loadMatches();
 loadTournaments();
+autoJoinPendingTournament();
 
 setInterval(function () {
     renderMatches();
