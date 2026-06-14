@@ -87,9 +87,31 @@ async function getBattleLog(playerTag) {
     return data;
 }
 
+function normalizeTimeToMs(timeValue) {
+    if (!timeValue) return 0;
+
+    if (typeof timeValue === "number") {
+        return timeValue;
+    }
+
+    if (typeof timeValue === "string") {
+        if (timeValue.includes("T") && timeValue.includes(".")) {
+            return new Date(timeValue).getTime();
+        }
+
+        return parseClashTime(timeValue);
+    }
+
+    return 0;
+}
+
 function findMatchingBattle(battles, match) {
     const creatorTag = "#" + cleanTag(match.creator_tag);
     const opponentTag = "#" + cleanTag(match.opponent_tag);
+
+    const cutoffTime = normalizeTimeToMs(
+        match.verification_started_at || match.created_at
+    );
 
     for (const battle of battles) {
         if (!battle.team || !battle.opponent) continue;
@@ -107,17 +129,15 @@ function findMatchingBattle(battles, match) {
 
         if (!isCorrectPlayers) continue;
 
-        
-        const battleTime = battle.battleTime;
+        const battleTimeMs = parseClashTime(battle.battleTime);
+
+        if (battleTimeMs < cutoffTime) continue;
+
         const battleId = [
-    battle.battleTime,
-    cleanTag(teamTag),
-    cleanTag(enemyTag)
-].sort().join("-");
-
-        const cutoffTime = match.verification_started_at || match.created_at;
-
-if (battleTime < cutoffTime) continue;
+            battle.battleTime,
+            cleanTag(teamTag),
+            cleanTag(enemyTag)
+        ].sort().join("-");
 
         const teamCrowns = teamPlayer.crowns || 0;
         const enemyCrowns = enemyPlayer.crowns || 0;
@@ -128,7 +148,7 @@ if (battleTime < cutoffTime) continue;
                 draw: true,
                 battle: battle,
                 battleId: battleId,
-                battleTime: battleTime 
+                battleTime: battle.battleTime
             };
         }
 
@@ -142,7 +162,7 @@ if (battleTime < cutoffTime) continue;
             loserTag: loserTag,
             battle: battle,
             battleId: battleId,
-            battleTime: battleTime
+            battleTime: battle.battleTime
         };
     }
 
