@@ -39,7 +39,13 @@ if (savedTag) {
 
 verifyBtn.addEventListener("click", function () {
     const playerTag = playerTagInput.value.trim().toUpperCase();
-    const friendLink = friendLinkInput.value.trim();
+    const rawFriendLink = friendLinkInput.value.trim();
+
+const linkMatch = rawFriendLink.match(
+    /https:\/\/link\.clashroyale\.com\/invite\/friend\/[^\s]+/
+);
+
+const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
 
     if (!username) {
         alert("Please log in first.");
