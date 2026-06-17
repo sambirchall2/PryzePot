@@ -1448,7 +1448,48 @@ app.post("/api/users/save-clash", async function (req, res) {
         message: "Clash account saved."
     });
 });
+app.post("/api/users/save-profile", async function (req, res) {
+    const username = req.body.username;
+    const profilePicture = req.body.profilePicture;
+    const profileBanner = req.body.profileBanner;
+    const profileCompleted = req.body.profileCompleted;
 
+    if (!username) {
+        res.json({
+            success: false,
+            message: "Missing username."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({
+            profile_picture: profilePicture || "avatar1",
+            profile_banner: profileBanner || "banner1",
+            profile_completed: profileCompleted === true
+        })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE PROFILE ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not save profile."
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Profile saved.",
+        user: result.data
+    });
+});
 app.get("/api/users/:username/profile", async function (req, res) {
 
     const username = req.params.username;
