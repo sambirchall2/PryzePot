@@ -34,6 +34,34 @@ function updateProfilePreview() {
     });
 }
 
+function loadSavedProfile() {
+    fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success || !data.user) {
+                updateProfilePreview();
+                return;
+            }
+
+            selectedAvatar = data.user.profile_picture || "avatar1";
+            selectedBanner = data.user.profile_banner || "banner1";
+
+            localStorage.setItem("profilePicture", selectedAvatar);
+            localStorage.setItem("profileBanner", selectedBanner);
+            localStorage.setItem("profileCompleted", String(data.user.profile_completed || false));
+            localStorage.setItem("xp", data.user.xp || 0);
+            localStorage.setItem("level", data.user.level || 1);
+
+            updateProfilePreview();
+        })
+        .catch(function (error) {
+            console.log("LOAD PROFILE ERROR:", error);
+            updateProfilePreview();
+        });
+}
+
 function saveProfile(profileCompleted) {
     saveProfileBtn.textContent = "SAVING...";
     saveProfileBtn.disabled = true;
@@ -66,7 +94,6 @@ function saveProfile(profileCompleted) {
         localStorage.setItem("profilePicture", data.user.profile_picture || selectedAvatar);
         localStorage.setItem("profileBanner", data.user.profile_banner || selectedBanner);
         localStorage.setItem("profileCompleted", String(data.user.profile_completed));
-
         localStorage.setItem("xp", data.user.xp || 0);
         localStorage.setItem("level", data.user.level || 1);
 
@@ -104,12 +131,7 @@ saveProfileBtn.addEventListener("click", function () {
 skipProfileBtn.addEventListener("click", function () {
     selectedAvatar = "avatar1";
     selectedBanner = "banner1";
-
-    localStorage.setItem("profilePicture", "avatar1");
-    localStorage.setItem("profileBanner", "banner1");
-    localStorage.setItem("profileCompleted", "false");
-
     saveProfile(false);
 });
 
-updateProfilePreview();
+loadSavedProfile();

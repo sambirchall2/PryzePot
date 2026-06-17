@@ -11,48 +11,118 @@ body {
     background:
         radial-gradient(circle at top center, rgba(182,255,0,0.30), transparent 60%),
         radial-gradient(circle at center center, rgba(182,255,0,0.08), transparent 70%),
-        linear-gradient(
-            180deg,
-            #102016 0%,
-            #071006 40%,
-            #050505 100%
-        );
+        linear-gradient(180deg, #102016 0%, #071006 40%, #050505 100%);
+}
+
+.menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.menu-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 260px;
+    height: 100vh;
+    background: #050505;
+    border-right: 1px solid rgba(182,255,0,.25);
+    z-index: 60;
+    padding: 22px 16px;
+    transition: left .25s ease;
+    box-shadow: 20px 0 60px rgba(0,0,0,.65);
+}
+
+.side-menu.open {
+    left: 0;
+}
+
+.menu-header {
+    color: #b6ff00;
+    font-size: 24px;
+    font-weight: 900;
+    margin-bottom: 20px;
+}
+
+.menu-btn {
+    width: 100%;
+    height: 48px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(182,255,0,.18);
+    border-radius: 12px;
+    background: #101010;
+    color: white;
+    font-size: 14px;
+    font-weight: 900;
+    text-align: left;
+    padding: 0 14px;
+}
+
+.logout-btn {
+    color: #b6ff00;
 }
 
 .app-shell {
+    position: relative;
     width: 100%;
     max-width: 430px;
     min-height: 100vh;
     margin: 0 auto;
-
     background:
         radial-gradient(circle at top center, rgba(182,255,0,.16), transparent 38%),
         linear-gradient(180deg,#071006 0%,#050505 45%,#020202 100%);
-
     overflow-x: hidden;
+}
+
+.app-shell::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 450px;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(182,255,0,0.14), transparent);
 }
 
 .top-bar {
     height: 72px;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     padding: 0 16px;
-
     background: #050505;
+    position: relative;
+    z-index: 2;
 }
 
 .left-section,
 .right-section {
-    width: 40px;
-
+    width: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
+}
 
+.left-section {
     font-size: 28px;
+    cursor: pointer;
+}
+
+.right-section {
+    font-size: 12px;
+    font-weight: 900;
+    color: #b6ff00;
+    cursor: pointer;
 }
 
 .user-section {
@@ -68,11 +138,9 @@ body {
 
 .user-stats {
     margin-top: 4px;
-
     display: flex;
     justify-content: center;
     gap: 12px;
-
     color: #b6ff00;
     font-size: 12px;
     font-weight: 900;
@@ -80,92 +148,73 @@ body {
 
 .section-title {
     margin: 20px 16px 12px;
-
     font-size: 22px;
     font-weight: 900;
+    position: relative;
+    z-index: 1;
 }
 
 .games-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-
     gap: 8px;
-
     padding: 0 16px;
+    position: relative;
+    z-index: 1;
 }
 
 .game-card {
     background: #111;
-
     border-radius: 12px;
     overflow: hidden;
-
     border: 1px solid rgba(182,255,0,.15);
-
     position: relative;
 }
 
 .game-card img {
     width: 100%;
     height: 150px;
-
     object-fit: cover;
-
     display: block;
 }
 
 .game-card button {
     width: calc(100% - 12px);
-
     margin: 6px;
-
     height: 32px;
-
     border: none;
     border-radius: 8px;
-
     background: #b6ff00;
     color: black;
-
     font-size: 11px;
     font-weight: 900;
 }
 
 .coming-soon-banner {
     position: absolute;
-
     top: 6px;
     left: 6px;
-
     padding: 4px 8px;
-
     background: rgba(0,0,0,.9);
-
     color: #b6ff00;
-
     border-radius: 999px;
-
     font-size: 8px;
     font-weight: 900;
 }
 
 .quick-actions {
     display: grid;
-
     grid-template-columns: repeat(3, 1fr);
-
     gap: 10px;
-
     padding: 18px 16px;
+    position: relative;
+    z-index: 1;
 }
 
 .action-card {
     background: #111;
-
     border-radius: 12px;
-
     text-align: center;
-
     padding: 14px 6px;
 }
 
@@ -176,37 +225,30 @@ body {
 
 .action-card p {
     margin: 0;
-
     font-size: 12px;
     font-weight: 900;
 }
 
 .action-card span {
     display: block;
-
     margin-top: 4px;
-
     color: #b6ff00;
-
     font-size: 9px;
 }
 
 .tournament-card {
     margin: 0 16px 40px;
-
     border-radius: 12px;
-
     overflow: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 .tournament-card img {
     width: 100%;
     display: block;
-}#logoutBtn {
-    font-size: 12px;
-    font-weight: 900;
-    color: #b6ff00;
 }
+
 @media (min-width: 768px) {
     body {
         display: flex;
@@ -225,23 +267,4 @@ body {
             0 0 40px rgba(182, 255, 0, 0.12),
             0 30px 90px rgba(0, 0, 0, 0.65);
     }
-}
-.app-shell {
-    position: relative;
-}
-
-.app-shell::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 450px;
-    pointer-events: none;
-
-    background: linear-gradient(
-        to top,
-        rgba(182,255,0,0.14),
-        transparent
-    );
 }

@@ -9,11 +9,37 @@
 
 <body>
 
+<div id="menuOverlay" class="menu-overlay"></div>
+
+<div id="sideMenu" class="side-menu">
+
+    <div class="menu-header">
+        Menu
+    </div>
+
+    <button id="profileBtn" class="menu-btn">
+        Profile
+    </button>
+
+    <button class="menu-btn">
+        Friends (Coming Soon)
+    </button>
+
+    <button class="menu-btn">
+        Settings (Coming Soon)
+    </button>
+
+    <button id="menuLogoutBtn" class="menu-btn logout-btn">
+        Logout
+    </button>
+
+</div>
+
 <div class="app-shell">
 
     <div class="top-bar">
 
-        <div class="left-section">
+        <div id="menuToggle" class="left-section">
             ☰
         </div>
 
@@ -21,17 +47,17 @@
             <h2 id="usernameDisplay">Loading...</h2>
 
             <div class="user-stats">
-                <span>Level 1</span>
+                <span id="levelDisplay">Level 1</span>
 
                 <span class="coin-balance">
-    $<span id="balanceDisplay">0</span>
-</span>
+                    $<span id="balanceDisplay">0</span>
+                </span>
             </div>
         </div>
 
         <div id="logoutBtn" class="right-section">
-    Logout
-</div>
+            Logout
+        </div>
 
     </div>
 
