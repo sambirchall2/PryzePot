@@ -8,6 +8,8 @@ const statusCard = document.getElementById("statusCard");
 const cancelTournamentBtn = document.getElementById("cancelTournamentBtn");
 const bracketSection = document.getElementById("bracketSection");
 const bracketList = document.getElementById("bracketList");
+const advanceModal = document.getElementById("advanceModal");
+const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
@@ -23,9 +25,15 @@ function isUserInTournamentMatch(match) {
 }
 
 function getRoundTitle(roundNumber, totalRounds) {
-    if (roundNumber === totalRounds) return "Final";
-    if (roundNumber === totalRounds - 1) return "Semifinals";
-    if (roundNumber === totalRounds - 2) return "Quarterfinals";
+    const roundsLeft = totalRounds - roundNumber;
+
+    if (roundsLeft === 0) return "Championship";
+    if (roundsLeft === 1) return "Semifinals";
+    if (roundsLeft === 2) return "Quarterfinals";
+    if (roundsLeft === 3) return "Round of 16";
+    if (roundsLeft === 4) return "Round of 32";
+    if (roundsLeft === 5) return "Round of 64";
+    if (roundsLeft === 6) return "Round of 128";
 
     return "Round " + roundNumber;
 }
@@ -53,7 +61,6 @@ function renderBracket(matches) {
     bracketList.innerHTML = "";
 
     const totalRounds = getTotalRounds(matches);
-
     const matchesByRound = {};
 
     matches.forEach(function (match) {
@@ -89,10 +96,7 @@ function renderBracket(matches) {
             let enterButton = "";
             let winnerDisplay = "";
 
-            if (
-                match.status === "Completed" &&
-                match.winner_username
-            ) {
+            if (match.status === "Completed" && match.winner_username) {
                 winnerDisplay = `
                     <div class="bracket-winner">
                         Winner: ${match.winner_username}
@@ -100,10 +104,7 @@ function renderBracket(matches) {
                 `;
             }
 
-            if (
-                match.status === "Ready" &&
-                isUserInTournamentMatch(match)
-            ) {
+            if (match.status === "Ready" && isUserInTournamentMatch(match)) {
                 enterButton = `
                     <button
                         class="enter-tournament-match-btn"
@@ -182,31 +183,57 @@ function renderTournamentRoom(tournament, players, matches) {
 
     renderBracket(matches);
 
-const championMatch = matches
-    .filter(function (match) {
-        return (
-            match.status === "Completed" &&
-            match.winner_username
-        );
-    })
-    .sort(function (a, b) {
-        return Number(b.round_number) - Number(a.round_number);
-    })[0];
+    const userFinalMatch = matches.find(function (match) {
+    return (
+        isUserInTournamentMatch(match) &&
+        match.status === "Ready" &&
+        Number(match.round_number) === getTotalRounds(matches) &&
+        Number(match.round_number) > 1
+    );
+});
 
-if (
-    tournament.status === "Completed" &&
-    championMatch
-) {
-    statusCard.textContent =
-        "🏆 Tournament Champion: " +
-        championMatch.winner_username;
-} else if (tournament.status === "Open") {
-    statusCard.textContent = "Waiting for tournament to fill...";
-} else if (tournament.status === "Full") {
-    statusCard.textContent = "Tournament full. Bracket is ready.";
-} else if (tournament.status === "Cancelled") {
-    statusCard.textContent = "Tournament cancelled.";
-}
+    const alreadyShown =
+        localStorage.getItem("advancedTournamentMatch_" + currentTournamentId);
+
+    if (
+        userFinalMatch &&
+        alreadyShown !== String(userFinalMatch.id)
+    ) {
+        localStorage.setItem(
+            "advancedTournamentMatch_" + currentTournamentId,
+            String(userFinalMatch.id)
+        );
+
+        if (advanceModal) {
+            advanceModal.classList.remove("hidden");
+        }
+    }
+
+    const championMatch = matches
+        .filter(function (match) {
+            return (
+                match.status === "Completed" &&
+                match.winner_username
+            );
+        })
+        .sort(function (a, b) {
+            return Number(b.round_number) - Number(a.round_number);
+        })[0];
+
+    if (
+        tournament.status === "Completed" &&
+        championMatch
+    ) {
+        statusCard.textContent =
+            "🏆 Tournament Champion: " +
+            championMatch.winner_username;
+    } else if (tournament.status === "Open") {
+        statusCard.textContent = "Waiting for tournament to fill...";
+    } else if (tournament.status === "Full") {
+        statusCard.textContent = "Tournament full. Bracket is ready.";
+    } else if (tournament.status === "Cancelled") {
+        statusCard.textContent = "Tournament cancelled.";
+    }
 
     if (
         tournament.creator_username === username &&
@@ -277,6 +304,12 @@ cancelTournamentBtn.addEventListener("click", function () {
         alert("Could not cancel tournament.");
     });
 });
+
+if (advanceContinueBtn) {
+    advanceContinueBtn.addEventListener("click", function () {
+        advanceModal.classList.add("hidden");
+    });
+}
 
 loadTournamentRoom();
 
