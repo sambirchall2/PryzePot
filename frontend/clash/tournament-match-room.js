@@ -7,11 +7,12 @@ const playerTwoBox = document.getElementById("playerTwoBox");
 const statusCard = document.getElementById("statusCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyMatchBtn = document.getElementById("verifyMatchBtn");
+const advanceModal = document.getElementById("advanceModal");
+const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const currentTournamentMatchId = localStorage.getItem("currentTournamentMatchId");
 const username = localStorage.getItem("username");
-const clashFriendLink = localStorage.getItem("clashFriendLink");
 
 let currentMatch = null;
 
@@ -21,6 +22,12 @@ if (!currentTournamentId || !currentTournamentMatchId) {
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
+        window.location.href = "tournament-room.html";
+    });
+}
+
+if (advanceContinueBtn) {
+    advanceContinueBtn.addEventListener("click", function () {
         window.location.href = "tournament-room.html";
     });
 }
@@ -44,7 +51,11 @@ function renderTournamentMatch(match) {
         (match.player_two || "TBD") +
         (match.player_two_tag ? " (" + match.player_two_tag + ")" : "");
 
-    statusCard.textContent = match.status || "Ready";
+    if (match.status === "Completed" && match.winner_username) {
+        statusCard.textContent = "Winner: " + match.winner_username;
+    } else {
+        statusCard.textContent = match.status || "Ready";
+    }
 
     if (match.status === "Completed") {
         verifyMatchBtn.textContent = "MATCH COMPLETE";
@@ -56,41 +67,36 @@ function renderTournamentMatch(match) {
 }
 
 function loadTournamentMatch() {
-    fetch(
-        API_BASE_URL +
-        "/api/tournaments/" +
-        currentTournamentId
-    )
-    .then(function (response) {
-        return response.json();
-    })
-    .then(function (data) {
-        if (!data.success) {
-            alert(data.message);
-            window.location.href = "tournament-room.html";
-            return;
-        }
+    fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                alert(data.message);
+                window.location.href = "tournament-room.html";
+                return;
+            }
 
-        const foundMatch = (data.matches || []).find(function (match) {
-            return String(match.id) === String(currentTournamentMatchId);
+            const foundMatch = (data.matches || []).find(function (match) {
+                return String(match.id) === String(currentTournamentMatchId);
+            });
+
+            if (!foundMatch) {
+                alert("Tournament match not found.");
+                window.location.href = "tournament-room.html";
+                return;
+            }
+
+            renderTournamentMatch(foundMatch);
+        })
+        .catch(function (error) {
+            console.log("TOURNAMENT MATCH LOAD ERROR:", error);
+            alert("Could not load tournament match.");
         });
-
-        if (!foundMatch) {
-            alert("Tournament match not found.");
-            window.location.href = "tournament-room.html";
-            return;
-        }
-
-        renderTournamentMatch(foundMatch);
-    })
-    .catch(function (error) {
-        console.log("TOURNAMENT MATCH LOAD ERROR:", error);
-        alert("Could not load tournament match.");
-    });
 }
 
 openClashBtn.addEventListener("click", function () {
-
     if (!currentMatch) {
         alert("Match not loaded.");
         return;
@@ -109,8 +115,7 @@ openClashBtn.addEventListener("click", function () {
         return;
     }
 
-    window.open(opponentFriendLink, "_blank");
-
+    window.location.href = opponentFriendLink;
 });
 
 verifyMatchBtn.addEventListener("click", function () {
@@ -135,31 +140,36 @@ verifyMatchBtn.addEventListener("click", function () {
         return response.json();
     })
     .then(function (data) {
-        alert(data.message);
+        if (!data.success) {
+            alert(data.message);
 
-        if (data.success) {
-    if (data.champion) {
-        localStorage.setItem(
-            "lastTournamentChampion",
-            JSON.stringify(data)
-        );
+            verifyMatchBtn.textContent = "VERIFY MATCH";
+            verifyMatchBtn.disabled = false;
+            return;
+        }
 
-        window.location.href = "tournament-winner.html";
+        if (data.champion) {
+            localStorage.setItem(
+                "lastTournamentChampion",
+                JSON.stringify(data)
+            );
+
+            window.location.href = "tournament-winner.html";
+            return;
+        }
+
+        if (data.message && data.message.includes("Final is ready")) {
+            if (advanceModal) {
+                advanceModal.classList.remove("hidden");
+                return;
+            }
+
+            window.location.href = "tournament-room.html";
+            return;
+        }
+
+        window.location.href = "tournament-room.html";
         return;
-    }
-
-    if (data.message && data.message.includes("Final is ready")) {
-        alert("🔥 YOU ADVANCED TO THE FINAL! One more win for the crown.");
-    } else {
-        alert("✅ Match verified. Check the tournament room for the next matchup.");
-    }
-
-    window.location.href = "tournament-room.html";
-    return;
-}
-
-        verifyMatchBtn.textContent = "VERIFY MATCH";
-        verifyMatchBtn.disabled = false;
     })
     .catch(function (error) {
         console.log("TOURNAMENT VERIFY ERROR:", error);
