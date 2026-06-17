@@ -22,6 +22,26 @@ function isUserInTournamentMatch(match) {
     return match.player_one === username || match.player_two === username;
 }
 
+function getRoundTitle(roundNumber, totalRounds) {
+    if (roundNumber === totalRounds) return "Final";
+    if (roundNumber === totalRounds - 1) return "Semifinals";
+    if (roundNumber === totalRounds - 2) return "Quarterfinals";
+
+    return "Round " + roundNumber;
+}
+
+function getTotalRounds(matches) {
+    let highestRound = 1;
+
+    matches.forEach(function (match) {
+        if (Number(match.round_number) > highestRound) {
+            highestRound = Number(match.round_number);
+        }
+    });
+
+    return highestRound;
+}
+
 function renderBracket(matches) {
     if (!matches || matches.length === 0) {
         bracketSection.classList.add("hidden");
@@ -32,66 +52,91 @@ function renderBracket(matches) {
     bracketSection.classList.remove("hidden");
     bracketList.innerHTML = "";
 
-    matches.forEach(function (match, index) {
-        const bracketCard = document.createElement("div");
-        bracketCard.className = "bracket-card";
+    const totalRounds = getTotalRounds(matches);
 
-        let roundName = "Round " + match.round_number;
+    const matchesByRound = {};
 
-        if (match.round_number === 1) {
-            roundName = "Semifinal " + (index + 1);
+    matches.forEach(function (match) {
+        const roundNumber = Number(match.round_number);
+
+        if (!matchesByRound[roundNumber]) {
+            matchesByRound[roundNumber] = [];
         }
 
-        if (match.round_number === 2) {
-            roundName = "Final";
-        }
+        matchesByRound[roundNumber].push(match);
+    });
 
-        let enterButton = "";
-        let winnerDisplay = "";
+    Object.keys(matchesByRound).forEach(function (roundKey) {
+        const roundNumber = Number(roundKey);
+        const roundMatches = matchesByRound[roundNumber];
 
-if (
-    match.status === "Completed" &&
-    match.winner_username
-) {
-    winnerDisplay = `
-        <div class="bracket-winner">
-            Winner: ${match.winner_username}
-        </div>
-    `;
-}
+        const roundSection = document.createElement("div");
+        roundSection.className = "bracket-round-section";
 
-        if (
-            match.status === "Ready" &&
-            isUserInTournamentMatch(match)
-        ) {
-            enterButton = `
-                <button
-                    class="enter-tournament-match-btn"
-                    data-match-id="${match.id}">
-                    ENTER MATCH
-                </button>
-            `;
-        }
+        const roundTitle = getRoundTitle(roundNumber, totalRounds);
 
-        bracketCard.innerHTML = `
-            <div class="bracket-round">${roundName}</div>
-
-            <div class="bracket-matchup">
-                <span>${match.player_one || "TBD"}</span>
-                <strong>VS</strong>
-                <span>${match.player_two || "TBD"}</span>
+        roundSection.innerHTML = `
+            <div class="round-header">
+                <span>${roundTitle}</span>
+                <small>${roundMatches.length} Match${roundMatches.length === 1 ? "" : "es"}</small>
             </div>
-
-            <div class="bracket-status">
-    ${match.status}
-</div>
-
-${winnerDisplay}
-
-${enterButton}
         `;
 
-        bracketList.appendChild(bracketCard);
+        roundMatches.forEach(function (match, index) {
+            const bracketCard = document.createElement("div");
+            bracketCard.className = "bracket-card";
+
+            let enterButton = "";
+            let winnerDisplay = "";
+
+            if (
+                match.status === "Completed" &&
+                match.winner_username
+            ) {
+                winnerDisplay = `
+                    <div class="bracket-winner">
+                        Winner: ${match.winner_username}
+                    </div>
+                `;
+            }
+
+            if (
+                match.status === "Ready" &&
+                isUserInTournamentMatch(match)
+            ) {
+                enterButton = `
+                    <button
+                        class="enter-tournament-match-btn"
+                        data-match-id="${match.id}">
+                        ENTER MATCH
+                    </button>
+                `;
+            }
+
+            bracketCard.innerHTML = `
+                <div class="bracket-round">
+                    Match ${index + 1}
+                </div>
+
+                <div class="bracket-matchup">
+                    <span>${match.player_one || "TBD"}</span>
+                    <strong>VS</strong>
+                    <span>${match.player_two || "TBD"}</span>
+                </div>
+
+                <div class="bracket-status">
+                    ${match.status}
+                </div>
+
+                ${winnerDisplay}
+
+                ${enterButton}
+            `;
+
+            roundSection.appendChild(bracketCard);
+        });
+
+        bracketList.appendChild(roundSection);
     });
 
     document
@@ -137,17 +182,24 @@ function renderTournamentRoom(tournament, players, matches) {
 
     renderBracket(matches);
 
-const finalMatch = matches.find(function (match) {
-    return (
-        Number(match.round_number) === 2 &&
-        match.status === "Completed" &&
-        match.winner_username
-    );
-});
+const championMatch = matches
+    .filter(function (match) {
+        return (
+            match.status === "Completed" &&
+            match.winner_username
+        );
+    })
+    .sort(function (a, b) {
+        return Number(b.round_number) - Number(a.round_number);
+    })[0];
 
-if (finalMatch) {
+if (
+    tournament.status === "Completed" &&
+    championMatch
+) {
     statusCard.textContent =
-        "🏆 Tournament Champion: " + finalMatch.winner_username;
+        "🏆 Tournament Champion: " +
+        championMatch.winner_username;
 } else if (tournament.status === "Open") {
     statusCard.textContent = "Waiting for tournament to fill...";
 } else if (tournament.status === "Full") {
