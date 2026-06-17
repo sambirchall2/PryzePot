@@ -1,6 +1,8 @@
 const username = localStorage.getItem("username");
 const balance = localStorage.getItem("balance");
 const level = localStorage.getItem("level") || "1";
+const profilePicture = localStorage.getItem("profilePicture") || "avatar1";
+const profileBanner = localStorage.getItem("profileBanner") || "banner1";
 
 if (!username) {
     window.location.href = "index.html";
@@ -9,6 +11,8 @@ if (!username) {
 const usernameDisplay = document.getElementById("usernameDisplay");
 const balanceDisplay = document.getElementById("balanceDisplay");
 const levelDisplay = document.getElementById("levelDisplay");
+const homeAvatarImage = document.getElementById("homeAvatarImage");
+const homeBannerImage = document.getElementById("homeBannerImage");
 
 if (usernameDisplay) {
     usernameDisplay.textContent = username;
@@ -21,6 +25,52 @@ if (balanceDisplay) {
 if (levelDisplay) {
     levelDisplay.textContent = "Level " + level;
 }
+
+if (homeAvatarImage) {
+    homeAvatarImage.src = "../assets/profile/" + profilePicture + ".png";
+}
+
+if (homeBannerImage) {
+    homeBannerImage.src = "../assets/profile/" + profileBanner + ".png";
+}
+
+fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
+    .then(function (response) {
+        return response.json();
+    })
+    .then(function (data) {
+        if (!data.success || !data.user) {
+            return;
+        }
+
+        const user = data.user;
+
+        const savedAvatar = user.profile_picture || "avatar1";
+        const savedBanner = user.profile_banner || "banner1";
+        const savedLevel = user.level || 1;
+        const savedXp = user.xp || 0;
+
+        localStorage.setItem("profilePicture", savedAvatar);
+        localStorage.setItem("profileBanner", savedBanner);
+        localStorage.setItem("profileCompleted", String(user.profile_completed || false));
+        localStorage.setItem("level", savedLevel);
+        localStorage.setItem("xp", savedXp);
+
+        if (homeAvatarImage) {
+            homeAvatarImage.src = "../assets/profile/" + savedAvatar + ".png";
+        }
+
+        if (homeBannerImage) {
+            homeBannerImage.src = "../assets/profile/" + savedBanner + ".png";
+        }
+
+        if (levelDisplay) {
+            levelDisplay.textContent = "Level " + savedLevel;
+        }
+    })
+    .catch(function (error) {
+        console.log("HOME PROFILE LOAD ERROR:", error);
+    });
 
 const clashPlayBtn = document.getElementById("clashPlayBtn");
 
