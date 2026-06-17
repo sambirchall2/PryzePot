@@ -1046,97 +1046,128 @@ app.post("/api/tournament-matches/:id/verify", async function (req, res) {
             .single();
 
         const roundMatchesResult = await supabase
-            .from("tournament_matches")
-            .select("*")
-            .eq("tournament_id", foundMatch.tournament_id)
-            .eq("round_number", foundMatch.round_number)
-            .order("id", { ascending: true });
+    .from("tournament_matches")
+    .select("*")
+    .eq("tournament_id", foundMatch.tournament_id)
+    .eq("round_number", foundMatch.round_number)
+    .order("id", { ascending: true });
 
-        const roundMatches = roundMatchesResult.data || [];
+const roundMatches = roundMatchesResult.data || [];
 
-        const allRoundCompleted =
-            roundMatches.length > 0 &&
-            roundMatches.every(function (match) {
-                return match.status === "Completed";
-            });
+const allRoundCompleted =
+    roundMatches.length > 0 &&
+    roundMatches.every(function (match) {
+        return match.status === "Completed";
+    });
 
-        if (!allRoundCompleted) {
-            res.json({
-                success: true,
-                message: winnerUsername + " won. Waiting for other tournament match.",
-                match: completed.data
-            });
-            return;
-        }
+if (!allRoundCompleted) {
+    res.json({
+        success: true,
+        message: winnerUsername + " won. Waiting for other tournament match.",
+        match: completed.data
+    });
+    return;
+}
 
-        if (Number(foundMatch.round_number) === 1) {
-            const existingFinal = await supabase
-                .from("tournament_matches")
-                .select("*")
-                .eq("tournament_id", foundMatch.tournament_id)
-                .eq("round_number", 2)
-                .maybeSingle();
+const winners = roundMatches
+    .map(function (match) {
+        return {
+            username: match.winner_username,
+            tag: match.winner_tag,
+            friendLink: match.winner_username === match.player_one
+                ? match.player_one_friend_link
+                : match.player_two_friend_link
+        };
+    })
+    .filter(function (winner) {
+        return winner.username && winner.tag;
+    });
 
-            if (!existingFinal.data) {
-                await supabase
-                    .from("tournament_matches")
-                    .insert({
-                        tournament_id: foundMatch.tournament_id,
-                        round_number: 2,
+if (winners.length === 1) {
+    await supabase
+        .from("tournaments")
+        .update({
+            winner_username: winners[0].username,
+            status: "Completed"
+        })
+        .eq("id", foundMatch.tournament_id);
 
-                        player_one: roundMatches[0].winner_username,
-                        player_one_tag: roundMatches[0].winner_tag,
+    res.json({
+        success: true,
+        champion: true,
+        message: winners[0].username + " is the tournament champion!",
+        winnerUsername: winners[0].username,
+        winnerTag: winners[0].tag,
+        loserUsername: loserUsername,
+        loserTag: loserTag,
+        match: completed.data
+    });
+    return;
+}
 
-                        player_two: roundMatches[1].winner_username,
-                        player_two_tag: roundMatches[1].winner_tag,
+const nextRoundNumber = Number(foundMatch.round_number) + 1;
 
-                        winner_username: null,
-                        winner_tag: null,
-                        loser_username: null,
-                        loser_tag: null,
+const existingNextRound = await supabase
+    .from("tournament_matches")
+    .select("*")
+    .eq("tournament_id", foundMatch.tournament_id)
+    .eq("round_number", nextRoundNumber);
 
-                        verified_at: null,
-                        clash_battle_id: null,
+if (existingNextRound.data && existingNextRound.data.length > 0) {
+    res.json({
+        success: true,
+        message: winnerUsername + " won. Next round is already ready.",
+        match: completed.data
+    });
+    return;
+}
 
-                        status: "Ready"
-                    });
-            }
+const nextRoundMatches = [];
 
-            res.json({
-                success: true,
-                message: winnerUsername + " won. Final is ready.",
-                match: completed.data
-            });
-            return;
-        }
+for (let i = 0; i < winners.length; i += 2) {
+    if (!winners[i] || !winners[i + 1]) continue;
 
-        if (Number(foundMatch.round_number) === 2) {
-            await supabase
-                .from("tournaments")
-                .update({
-                    winner_username: winnerUsername,
-                    status: "Completed"
-                })
-                .eq("id", foundMatch.tournament_id);
+    nextRoundMatches.push({
+        tournament_id: foundMatch.tournament_id,
+        round_number: nextRoundNumber,
 
-            res.json({
-                success: true,
-                champion: true,
-                message: winnerUsername + " is the tournament champion!",
-                winnerUsername: winnerUsername,
-                winnerTag: winnerTag,
-                loserUsername: loserUsername,
-                loserTag: loserTag,
-                match: completed.data
-            });
-            return;
-        }
+        player_one: winners[i].username,
+        player_one_tag: winners[i].tag,
+        player_one_friend_link: winners[i].friendLink,
 
-        res.json({
-            success: true,
-            message: winnerUsername + " won the tournament match!",
-            match: completed.data
-        });
+        player_two: winners[i + 1].username,
+        player_two_tag: winners[i + 1].tag,
+        player_two_friend_link: winners[i + 1].friendLink,
+
+        winner_username: null,
+        winner_tag: null,
+        loser_username: null,
+        loser_tag: null,
+
+        verified_at: null,
+        clash_battle_id: null,
+
+        status: "Ready"
+    });
+}
+
+if (nextRoundMatches.length > 0) {
+    await supabase
+        .from("tournament_matches")
+        .insert(nextRoundMatches);
+}
+
+const nextRoundLabel =
+    winners.length === 2
+        ? "Final is ready."
+        : "Next round is ready.";
+
+res.json({
+    success: true,
+    message: winnerUsername + " won. " + nextRoundLabel,
+    match: completed.data
+});
+return;
 
     } catch (error) {
         console.log("TOURNAMENT VERIFY ERROR:", error);
