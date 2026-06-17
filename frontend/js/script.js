@@ -20,6 +20,39 @@ showSignupLink.addEventListener("click", function (event) {
     }
 });
 
+function resetButton() {
+    signInButton.textContent = isSignupMode ? "CREATE ACCOUNT" : "SIGN IN";
+    signInButton.disabled = false;
+}
+
+function clearClashStorage() {
+    localStorage.removeItem("clashPlayerTag");
+    localStorage.removeItem("clashPlayerName");
+    localStorage.removeItem("clashFriendLink");
+    localStorage.removeItem("clashTrophies");
+    localStorage.removeItem("clashExpLevel");
+}
+
+function saveProfileToLocalStorage(user) {
+    localStorage.setItem("profilePicture", user.profile_picture || "avatar1");
+    localStorage.setItem("profileBanner", user.profile_banner || "banner1");
+    localStorage.setItem("profileCompleted", String(user.profile_completed || false));
+    localStorage.setItem("xp", user.xp || 0);
+    localStorage.setItem("level", user.level || 1);
+}
+
+function saveClashToLocalStorage(user) {
+    if (user.clash_tag) {
+        localStorage.setItem("clashPlayerTag", user.clash_tag);
+        localStorage.setItem("clashPlayerName", user.clash_name || "");
+        localStorage.setItem("clashFriendLink", user.clash_friend_link || "");
+        localStorage.setItem("clashTrophies", user.clash_trophies || 0);
+        localStorage.setItem("clashExpLevel", user.clash_exp_level || 0);
+    } else {
+        clearClashStorage();
+    }
+}
+
 signInButton.addEventListener("click", function () {
     const username = usernameInput.value.trim();
     const email = document.getElementById("emailInput").value.trim();
@@ -63,11 +96,7 @@ signInButton.addEventListener("click", function () {
     .then(function (data) {
         if (!data.success) {
             alert(data.message);
-
-            signInButton.textContent =
-                isSignupMode ? "CREATE ACCOUNT" : "SIGN IN";
-
-            signInButton.disabled = false;
+            resetButton();
             return;
         }
 
@@ -83,57 +112,28 @@ signInButton.addEventListener("click", function () {
             return response.json();
         })
         .then(function (profileData) {
-            if (
-                profileData.success &&
-                profileData.user.clash_tag
-            ) {
-                localStorage.setItem(
-                    "clashPlayerTag",
-                    profileData.user.clash_tag
-                );
-
-                localStorage.setItem(
-                    "clashPlayerName",
-                    profileData.user.clash_name || ""
-                );
-
-                localStorage.setItem(
-                    "clashFriendLink",
-                    profileData.user.clash_friend_link || ""
-                );
-
-                localStorage.setItem(
-                    "clashTrophies",
-                    profileData.user.clash_trophies || 0
-                );
-
-                localStorage.setItem(
-                    "clashExpLevel",
-                    profileData.user.clash_exp_level || 0
-                );
-            } else {
-                localStorage.removeItem("clashPlayerTag");
-                localStorage.removeItem("clashPlayerName");
-                localStorage.removeItem("clashFriendLink");
-                localStorage.removeItem("clashTrophies");
-                localStorage.removeItem("clashExpLevel");
+            if (!profileData.success || !profileData.user) {
+                window.location.href = "../html/profile-setup.html";
+                return;
             }
 
-            window.location.href = "../html/home.html";
+            saveClashToLocalStorage(profileData.user);
+            saveProfileToLocalStorage(profileData.user);
+
+            if (profileData.user.profile_completed) {
+                window.location.href = "../html/home.html";
+            } else {
+                window.location.href = "../html/profile-setup.html";
+            }
         })
         .catch(function (error) {
             console.log("PROFILE LOAD ERROR:", error);
-            window.location.href = "../html/home.html";
+            window.location.href = "../html/profile-setup.html";
         });
     })
     .catch(function (error) {
         console.log("LOGIN ERROR:", error);
-
         alert("Something went wrong logging in.");
-
-        signInButton.textContent =
-            isSignupMode ? "CREATE ACCOUNT" : "SIGN IN";
-
-        signInButton.disabled = false;
+        resetButton();
     });
 });
