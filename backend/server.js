@@ -1627,9 +1627,65 @@ app.get("/api/users/:username/profile", async function (req, res) {
         return;
     }
 
+    const user = result.data;
+    const xp = Number(user.xp) || 0;
+    const level = calculateLevelFromXp(xp);
+
+    const levelThresholds = {
+        1: 0,
+        2: 100,
+        3: 250,
+        4: 450,
+        5: 700,
+        6: 1000,
+        7: 1350,
+        8: 1750,
+        9: 2100,
+        10: 2500,
+        20: 8000,
+        30: 18000,
+        40: 35000,
+        50: 60000,
+        75: 150000,
+        100: 300000
+    };
+
+    let currentLevelXp = levelThresholds[level] || 0;
+    let nextLevel = level + 1;
+    let nextLevelXp = levelThresholds[nextLevel];
+
+    if (!nextLevelXp) {
+        nextLevelXp = currentLevelXp + 500;
+    }
+
+    if (level >= 100) {
+        nextLevel = 100;
+        nextLevelXp = 300000;
+        currentLevelXp = 300000;
+    }
+
+    const progressXp = Math.max(0, xp - currentLevelXp);
+    const neededXp = Math.max(1, nextLevelXp - currentLevelXp);
+    const progressPercent = level >= 100
+        ? 100
+        : Math.min(100, Math.floor((progressXp / neededXp) * 100));
+
     res.json({
         success: true,
-        user: result.data
+        user: {
+            ...user,
+            level: level,
+            xp_progress: {
+                current_xp: xp,
+                current_level: level,
+                current_level_xp: currentLevelXp,
+                next_level: nextLevel,
+                next_level_xp: nextLevelXp,
+                progress_xp: progressXp,
+                needed_xp: neededXp,
+                progress_percent: progressPercent
+            }
+        }
     });
 });
 const PORT = process.env.PORT || 3000;
