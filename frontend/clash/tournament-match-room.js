@@ -2,8 +2,17 @@ const API_BASE_URL = "https://api.pryzepot.com";
 
 const backBtn = document.getElementById("backBtn");
 const roundLabel = document.getElementById("roundLabel");
-const playerOneBox = document.getElementById("playerOneBox");
-const playerTwoBox = document.getElementById("playerTwoBox");
+
+const playerOneBanner = document.getElementById("playerOneBanner");
+const playerOneAvatar = document.getElementById("playerOneAvatar");
+const playerOneName = document.getElementById("playerOneName");
+const playerOneLevel = document.getElementById("playerOneLevel");
+
+const playerTwoBanner = document.getElementById("playerTwoBanner");
+const playerTwoAvatar = document.getElementById("playerTwoAvatar");
+const playerTwoName = document.getElementById("playerTwoName");
+const playerTwoLevel = document.getElementById("playerTwoLevel");
+
 const statusCard = document.getElementById("statusCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyMatchBtn = document.getElementById("verifyMatchBtn");
@@ -15,9 +24,66 @@ const currentTournamentMatchId = localStorage.getItem("currentTournamentMatchId"
 const username = localStorage.getItem("username");
 
 let currentMatch = null;
+const profileCache = {};
 
 if (!currentTournamentId || !currentTournamentMatchId) {
     window.location.href = "tournament-room.html";
+}
+
+function getDefaultProfile(usernameValue) {
+    return {
+        username: usernameValue || "Player",
+        profile_picture: "avatar1",
+        profile_banner: "banner1",
+        level: 1
+    };
+}
+
+async function getUserProfile(usernameValue) {
+    if (!usernameValue) {
+        return getDefaultProfile("Player");
+    }
+
+    if (profileCache[usernameValue]) {
+        return profileCache[usernameValue];
+    }
+
+    try {
+        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
+        const data = await response.json();
+
+        if (!data.success || !data.user) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+            return profileCache[usernameValue];
+        }
+
+        profileCache[usernameValue] = data.user;
+        return data.user;
+    } catch (error) {
+        console.log("TOURNAMENT MATCH PROFILE LOAD ERROR:", error);
+        profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        return profileCache[usernameValue];
+    }
+}
+
+function setPlayerCard(side, usernameValue, profile) {
+    const avatar = profile.profile_picture || "avatar1";
+    const banner = profile.profile_banner || "banner1";
+    const level = profile.level || 1;
+
+    if (side === "one") {
+        playerOneName.textContent = usernameValue || "Player One";
+        playerOneLevel.textContent = "Level " + level;
+        playerOneAvatar.src = "../assets/profile/" + avatar + ".png";
+        playerOneBanner.src = "../assets/profile/" + banner + ".png";
+    }
+
+    if (side === "two") {
+        playerTwoName.textContent = usernameValue || "Player Two";
+        playerTwoLevel.textContent = "Level " + level;
+        playerTwoAvatar.src = "../assets/profile/" + avatar + ".png";
+        playerTwoBanner.src = "../assets/profile/" + banner + ".png";
+    }
 }
 
 if (backBtn) {
@@ -32,7 +98,7 @@ if (advanceContinueBtn) {
     });
 }
 
-function renderTournamentMatch(match) {
+async function renderTournamentMatch(match) {
     currentMatch = match;
 
     if (Number(match.round_number) === 1) {
@@ -43,13 +109,11 @@ function renderTournamentMatch(match) {
         roundLabel.textContent = "Round " + match.round_number;
     }
 
-    playerOneBox.textContent =
-        (match.player_one || "TBD") +
-        (match.player_one_tag ? " (" + match.player_one_tag + ")" : "");
+    const playerOneProfile = await getUserProfile(match.player_one);
+    const playerTwoProfile = await getUserProfile(match.player_two);
 
-    playerTwoBox.textContent =
-        (match.player_two || "TBD") +
-        (match.player_two_tag ? " (" + match.player_two_tag + ")" : "");
+    setPlayerCard("one", match.player_one, playerOneProfile);
+    setPlayerCard("two", match.player_two, playerTwoProfile);
 
     if (match.status === "Completed" && match.winner_username) {
         statusCard.textContent = "Winner: " + match.winner_username;
@@ -169,7 +233,6 @@ verifyMatchBtn.addEventListener("click", function () {
         }
 
         window.location.href = "tournament-room.html";
-        return;
     })
     .catch(function (error) {
         console.log("TOURNAMENT VERIFY ERROR:", error);

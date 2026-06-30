@@ -5,15 +5,8 @@ body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 
     background:
-        radial-gradient(circle at top center,
-            rgba(182,255,0,0.14),
-            transparent 35%),
-        linear-gradient(
-            180deg,
-            #102016 0%,
-            #07100c 45%,
-            #020202 100%
-        );
+        radial-gradient(circle at top center, rgba(182,255,0,0.14), transparent 35%),
+        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
 }
 
 .container {
@@ -45,10 +38,11 @@ h1 {
 }
 
 .match-card {
-    background: #101010;
+    background: rgba(8,12,8,0.88);
     border: 1px solid #b7ff00;
-    border-radius: 18px;
-    padding: 22px;
+    border-radius: 22px;
+    padding: 18px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.42);
 }
 
 .round-label {
@@ -57,39 +51,119 @@ h1 {
     letter-spacing: 1px;
     text-transform: uppercase;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .players {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
-.player-box {
-    background: #151515;
-    border: 1px solid #333;
-    border-radius: 14px;
+.tournament-player-card {
+    min-height: 130px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(183,255,0,.28);
+    background: #050505;
+}
+
+.player-banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.player-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.86), rgba(0,0,0,.28)),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.76));
+}
+
+.player-content {
+    position: relative;
+    z-index: 2;
+    min-height: 130px;
     padding: 16px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.player-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #b7ff00;
+    box-shadow: 0 0 18px rgba(183,255,0,.42);
+    background: #050505;
+    flex-shrink: 0;
+}
+
+.player-content p {
+    margin: 0 0 6px;
+    color: #b7ff00;
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 1.4px;
+}
+
+.player-content h2 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 950;
+    max-width: 230px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.player-content span {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.72);
+    border: 1px solid rgba(183,255,0,.28);
+    color: #b7ff00;
+    font-size: 11px;
     font-weight: 900;
 }
 
 .vs {
     text-align: center;
-    color: #b7ff00;
+    color: #050505;
+    background: #b7ff00;
+    width: 42px;
+    height: 42px;
+    margin: -2px auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-weight: 950;
+    box-shadow: 0 0 24px rgba(183,255,0,.28);
+    z-index: 3;
 }
 
 .status-card {
-    background: #151515;
+    background: rgba(0,0,0,.50);
     border: 1px solid rgba(183,255,0,0.35);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 14px;
     text-align: center;
     margin-bottom: 18px;
-    font-weight: 800;
+    font-weight: 900;
 }
 
 .primary-btn,
@@ -114,6 +188,13 @@ h1 {
     color: white;
     border: 1px solid rgba(183,255,0,0.5);
 }
+
+.primary-btn:disabled,
+.secondary-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
 .advance-modal {
     position: fixed;
     inset: 0;
