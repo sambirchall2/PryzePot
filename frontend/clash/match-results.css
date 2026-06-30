@@ -274,3 +274,73 @@ button:active {
     border-radius: 999px;
     transition: width 1.1s ease;
 }
+.level-up-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+}
+
+.level-up-box {
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    border-radius: 28px;
+    padding: 38px 22px;
+    background:
+        radial-gradient(circle at top, rgba(182,255,0,.24), transparent 55%),
+        #080c08;
+    border: 2px solid #b6ff00;
+    box-shadow: 0 0 45px rgba(182,255,0,.35);
+    animation: levelPop .45s ease;
+}
+
+.level-up-box p {
+    margin: 0;
+    color: #b6ff00;
+    font-size: 16px;
+    font-weight: 950;
+    letter-spacing: 2px;
+}
+
+.level-up-box h2 {
+    margin: 12px 0;
+    font-size: 52px;
+    color: white;
+    text-shadow: 0 0 22px rgba(182,255,0,.55);
+}
+
+.level-up-box span {
+    color: rgba(255,255,255,.78);
+    font-weight: 800;
+}
+
+#levelUpContinueBtn {
+    margin-top: 26px;
+    width: 100%;
+    height: 54px;
+    border: none;
+    border-radius: 14px;
+    background: #b6ff00;
+    color: #050505;
+    font-weight: 950;
+}
+
+@keyframes levelPop {
+    from {
+        transform: scale(.75);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.hidden {
+    display: none;
+}

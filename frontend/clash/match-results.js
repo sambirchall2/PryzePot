@@ -18,6 +18,10 @@ const resultXpText = document.getElementById("resultXpText");
 const resultNextLevelText = document.getElementById("resultNextLevelText");
 const resultXpFill = document.getElementById("resultXpFill");
 
+const levelUpModal = document.getElementById("levelUpModal");
+const levelUpNumber = document.getElementById("levelUpNumber");
+const levelUpContinueBtn = document.getElementById("levelUpContinueBtn");
+
 const playAgainButton = document.getElementById("playAgainButton");
 const backHomeButton = document.getElementById("backHomeButton");
 
@@ -70,13 +74,22 @@ function launchConfetti() {
 }
 
 function getProfileImage(profile, type) {
-    if (!profile) return type === "banner" ? "banner1" : "avatar1";
-    if (type === "banner") return profile.profile_banner || "banner1";
+    if (!profile) {
+        return type === "banner" ? "banner1" : "avatar1";
+    }
+
+    if (type === "banner") {
+        return profile.profile_banner || "banner1";
+    }
+
     return profile.profile_picture || "avatar1";
 }
 
 function getProfileLevel(profile) {
-    if (!profile || !profile.level) return 1;
+    if (!profile || !profile.level) {
+        return 1;
+    }
+
     return profile.level;
 }
 
@@ -94,6 +107,7 @@ function updateResultXpBar(xpAmount) {
 
             if (xpBurst) {
                 xpBurst.textContent = "+" + xpAmount + " XP";
+
                 setTimeout(function () {
                     xpBurst.classList.add("show");
                 }, 200);
@@ -113,6 +127,18 @@ function updateResultXpBar(xpAmount) {
                 setTimeout(function () {
                     resultXpFill.style.width = progress.progress_percent + "%";
                 }, 450);
+            }
+
+            const leveledUp =
+                progress.progress_xp < xpAmount &&
+                progress.current_level > 1;
+
+            if (leveledUp && levelUpModal && levelUpNumber) {
+                levelUpNumber.textContent = "LEVEL " + progress.current_level;
+
+                setTimeout(function () {
+                    levelUpModal.classList.remove("hidden");
+                }, 1400);
             }
         })
         .catch(function (error) {
@@ -147,11 +173,17 @@ if (!savedMatch) {
     winnerLevel.textContent = "Level " + getProfileLevel(winnerProfile);
     loserLevel.textContent = "Level " + getProfileLevel(loserProfile);
 
-    winnerAvatar.src = "../assets/profile/" + getProfileImage(winnerProfile, "avatar") + ".png";
-    winnerBanner.src = "../assets/profile/" + getProfileImage(winnerProfile, "banner") + ".png";
+    winnerAvatar.src =
+        "../assets/profile/" + getProfileImage(winnerProfile, "avatar") + ".png";
 
-    loserAvatar.src = "../assets/profile/" + getProfileImage(loserProfile, "avatar") + ".png";
-    loserBanner.src = "../assets/profile/" + getProfileImage(loserProfile, "banner") + ".png";
+    winnerBanner.src =
+        "../assets/profile/" + getProfileImage(winnerProfile, "banner") + ".png";
+
+    loserAvatar.src =
+        "../assets/profile/" + getProfileImage(loserProfile, "avatar") + ".png";
+
+    loserBanner.src =
+        "../assets/profile/" + getProfileImage(loserProfile, "banner") + ".png";
 
     if (
         currentUsername &&
@@ -159,14 +191,24 @@ if (!savedMatch) {
         currentUsername === match.winnerUsername
     ) {
         resultTitle.textContent = "🏆 Victory";
-        resultSubtitle.textContent = "You earned +30 XP. Battle verified through Clash Royale.";
+        resultSubtitle.textContent =
+            "You earned +30 XP. Battle verified through Clash Royale.";
+
         updateResultXpBar(30);
         launchConfetti();
     } else {
         resultTitle.textContent = "Defeat";
-        resultSubtitle.textContent = "You earned +10 XP. Every match builds your PryzePot level.";
+        resultSubtitle.textContent =
+            "You earned +10 XP. Every match builds your PryzePot level.";
+
         updateResultXpBar(10);
     }
+}
+
+if (levelUpContinueBtn) {
+    levelUpContinueBtn.addEventListener("click", function () {
+        levelUpModal.classList.add("hidden");
+    });
 }
 
 playAgainButton.addEventListener("click", function () {
