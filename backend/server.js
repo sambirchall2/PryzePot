@@ -36,7 +36,71 @@ function parseClashTime(clashTime) {
         clashTime.substring(9)
     ).getTime();
 }
+function getXpForEntryFee(entryFee) {
+    const fee = Number(entryFee);
 
+    if (fee === 1) return 10;
+    if (fee === 2) return 20;
+    if (fee === 5) return 50;
+    if (fee === 10) return 100;
+    if (fee === 50) return 500;
+    if (fee === 100) return 1000;
+
+    return 10;
+}
+
+function calculateLevelFromXp(xp) {
+    const totalXp = Number(xp) || 0;
+
+    if (totalXp >= 11000) return 10;
+    if (totalXp >= 8000) return 9;
+    if (totalXp >= 5500) return 8;
+    if (totalXp >= 3500) return 7;
+    if (totalXp >= 2000) return 6;
+    if (totalXp >= 1000) return 5;
+    if (totalXp >= 500) return 4;
+    if (totalXp >= 250) return 3;
+    if (totalXp >= 100) return 2;
+
+    return 1;
+}
+
+async function awardXpToUser(username, xpAmount) {
+    if (!username || !xpAmount) {
+        return null;
+    }
+
+    const userResult = await supabase
+        .from("users")
+        .select("*")
+        .eq("username", username)
+        .maybeSingle();
+
+    if (!userResult.data) {
+        return null;
+    }
+
+    const currentXp = Number(userResult.data.xp) || 0;
+    const newXp = currentXp + Number(xpAmount);
+    const newLevel = calculateLevelFromXp(newXp);
+
+    const updateResult = await supabase
+        .from("users")
+        .update({
+            xp: newXp,
+            level: newLevel
+        })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (updateResult.error) {
+        console.log("AWARD XP ERROR:", updateResult.error);
+        return null;
+    }
+
+    return updateResult.data;
+}
 function dbMatchToFrontend(match) {
     return {
         id: match.id,
@@ -1227,22 +1291,23 @@ app.post("/api/matches/:id/verify", async function (req, res) {
     try {
         const creatorBattles = await getBattleLog(foundMatch.creator_tag);
         const result = findMatchingBattle(creatorBattles, foundMatch);
-        if (result.found && result.battleId) {
-    const usedBattle = await supabase
-        .from("match_results")
-        .select("*")
-        .eq("clash_battle_id", result.battleId)
-        .maybeSingle();
 
-    if (usedBattle.data) {
-        res.json({
-            success: false,
-            pending: true,
-            message: "This Clash battle was already used. Play a new match before verifying."
-        });
-        return;
-    }
-}
+        if (result.found && result.battleId) {
+            const usedBattle = await supabase
+                .from("match_results")
+                .select("*")
+                .eq("clash_battle_id", result.battleId)
+                .maybeSingle();
+
+            if (usedBattle.data) {
+                res.json({
+                    success: false,
+                    pending: true,
+                    message: "This Clash battle was already used. Play a new match before verifying."
+                });
+                return;
+            }
+        }
 
         if (!result.found) {
             res.json({
@@ -1318,11 +1383,19 @@ app.post("/api/matches/:id/verify", async function (req, res) {
                 loser_tag: loserTag
             });
 
+        const xpEarned = getXpForEntryFee(foundMatch.entry_fee);
+
+        const winnerXpProfile = await awardXpToUser(winnerUsername, xpEarned);
+        const loserXpProfile = await awardXpToUser(loserUsername, xpEarned);
+
         res.json({
             success: true,
             message: winnerUsername + " won the match!",
             winnerUsername: winnerUsername,
             loserUsername: loserUsername,
+            xpEarned: xpEarned,
+            winnerProfile: winnerXpProfile,
+            loserProfile: loserXpProfile,
             match: dbMatchToFrontend(completed.data)
         });
 
