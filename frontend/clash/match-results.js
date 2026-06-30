@@ -1,3 +1,5 @@
+const API_BASE_URL = "https://api.pryzepot.com";
+
 const resultTitle = document.getElementById("resultTitle");
 const resultSubtitle = document.getElementById("resultSubtitle");
 
@@ -11,6 +13,11 @@ const loserLevel = document.getElementById("loserLevel");
 const loserAvatar = document.getElementById("loserAvatar");
 const loserBanner = document.getElementById("loserBanner");
 
+const xpBurst = document.getElementById("xpBurst");
+const resultXpText = document.getElementById("resultXpText");
+const resultNextLevelText = document.getElementById("resultNextLevelText");
+const resultXpFill = document.getElementById("resultXpFill");
+
 const playAgainButton = document.getElementById("playAgainButton");
 const backHomeButton = document.getElementById("backHomeButton");
 
@@ -19,10 +26,7 @@ const currentUsername = localStorage.getItem("username");
 
 function launchConfetti() {
     const canvas = document.getElementById("confettiCanvas");
-
-    if (!canvas) {
-        return;
-    }
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
 
@@ -66,23 +70,54 @@ function launchConfetti() {
 }
 
 function getProfileImage(profile, type) {
-    if (!profile) {
-        return type === "banner" ? "banner1" : "avatar1";
-    }
-
-    if (type === "banner") {
-        return profile.profile_banner || "banner1";
-    }
-
+    if (!profile) return type === "banner" ? "banner1" : "avatar1";
+    if (type === "banner") return profile.profile_banner || "banner1";
     return profile.profile_picture || "avatar1";
 }
 
 function getProfileLevel(profile) {
-    if (!profile || !profile.level) {
-        return 1;
-    }
-
+    if (!profile || !profile.level) return 1;
     return profile.level;
+}
+
+function updateResultXpBar(xpAmount) {
+    if (!currentUsername) return;
+
+    fetch(API_BASE_URL + "/api/users/" + currentUsername + "/profile")
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success || !data.user || !data.user.xp_progress) return;
+
+            const progress = data.user.xp_progress;
+
+            if (xpBurst) {
+                xpBurst.textContent = "+" + xpAmount + " XP";
+                setTimeout(function () {
+                    xpBurst.classList.add("show");
+                }, 200);
+            }
+
+            if (resultXpText) {
+                resultXpText.textContent =
+                    progress.current_xp + " / " + progress.next_level_xp + " XP";
+            }
+
+            if (resultNextLevelText) {
+                resultNextLevelText.textContent =
+                    "Lvl " + progress.next_level;
+            }
+
+            if (resultXpFill) {
+                setTimeout(function () {
+                    resultXpFill.style.width = progress.progress_percent + "%";
+                }, 450);
+            }
+        })
+        .catch(function (error) {
+            console.log("RESULT XP LOAD ERROR:", error);
+        });
 }
 
 if (!savedMatch) {
@@ -91,6 +126,8 @@ if (!savedMatch) {
 
     winnerName.textContent = "-";
     loserName.textContent = "-";
+
+    if (xpBurst) xpBurst.textContent = "+0 XP";
 } else {
     const match = JSON.parse(savedMatch);
 
@@ -123,10 +160,12 @@ if (!savedMatch) {
     ) {
         resultTitle.textContent = "🏆 Victory";
         resultSubtitle.textContent = "You earned +30 XP. Battle verified through Clash Royale.";
+        updateResultXpBar(30);
         launchConfetti();
     } else {
-        resultTitle.textContent = "Match Complete";
-        resultSubtitle.textContent = "You earned +10 XP. The winner was verified automatically.";
+        resultTitle.textContent = "Defeat";
+        resultSubtitle.textContent = "You earned +10 XP. Every match builds your PryzePot level.";
+        updateResultXpBar(10);
     }
 }
 
