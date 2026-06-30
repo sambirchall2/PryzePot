@@ -11,6 +11,11 @@ if (!username) {
 const usernameDisplay = document.getElementById("usernameDisplay");
 const balanceDisplay = document.getElementById("balanceDisplay");
 const levelDisplay = document.getElementById("levelDisplay");
+
+const xpDisplay = document.getElementById("xpDisplay");
+const nextLevelDisplay = document.getElementById("nextLevelDisplay");
+const xpFill = document.getElementById("xpFill");
+
 const homeAvatarImage = document.getElementById("homeAvatarImage");
 const homeBannerImage = document.getElementById("homeBannerImage");
 
@@ -49,6 +54,41 @@ fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
         const savedBanner = user.profile_banner || "banner1";
         const savedLevel = user.level || 1;
         const savedXp = user.xp || 0;
+        const xpNeededPerLevel = [
+    0,
+    100,
+    250,
+    500,
+    1000,
+    2000,
+    3500,
+    5500,
+    8000,
+    11000,
+    15000
+];
+
+const currentLevel = Number(savedLevel);
+
+const currentLevelXp = xpNeededPerLevel[currentLevel - 1] || 0;
+const nextLevelXp = xpNeededPerLevel[currentLevel] || currentLevelXp + 5000;
+
+const progress = savedXp - currentLevelXp;
+const needed = nextLevelXp - currentLevelXp;
+
+const percent = Math.min(100, Math.max(0, (progress / needed) * 100));
+
+if (xpFill) {
+    xpFill.style.width = percent + "%";
+}
+
+if (xpDisplay) {
+    xpDisplay.textContent = savedXp + " XP";
+}
+
+if (nextLevelDisplay) {
+    nextLevelDisplay.textContent = nextLevelXp + " XP";
+}
 
         localStorage.setItem("profilePicture", savedAvatar);
         localStorage.setItem("profileBanner", savedBanner);
