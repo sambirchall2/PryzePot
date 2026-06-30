@@ -8,76 +8,97 @@
 </head>
 <body>
 
-    <button id="backBtn" class="back-btn">‹</button>
+<button id="backBtn" class="back-btn">‹</button>
 
-    <main class="room-page">
+<main class="room-page">
 
-        <div id="statusBadge" class="status-badge waiting">
-            Searching For Opponent
-        </div>
+    <div id="statusBadge" class="status-badge waiting">
+        Searching For Opponent
+    </div>
 
-        <h1 id="roomTitle">Match Room</h1>
+    <h1 id="roomTitle">Match Room</h1>
 
-        <p id="roomSubtitle" class="subtitle">
-            Waiting for another player to join.
-        </p>
+    <p id="roomSubtitle" class="subtitle">
+        Waiting for another player to join.
+    </p>
 
-        <section class="hero-card">
+    <section class="hero-card">
 
-            <div class="game-label">Clash Royale</div>
+        <div class="game-label">Clash Royale</div>
 
-            <div class="entry-block">
-                <span>Entry Amount</span>
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Entry</span>
                 <strong id="entryDisplay">$0</strong>
             </div>
 
-            <div class="timer-block">
-                <span id="timerLabel">Time Left To Join</span>
-                <strong id="timerDisplay">--:--</strong>
+            <div class="info-pill">
+                <span>Prize Pool</span>
+                <strong id="prizeDisplay">$0</strong>
             </div>
+        </div>
 
-            <div class="versus-area">
+        <div class="timer-block">
+            <span id="timerLabel">Time Left To Join</span>
+            <strong id="timerDisplay">--:--</strong>
+        </div>
 
-                <div class="player-card">
+        <div class="versus-area">
+
+            <div id="playerOneCard" class="profile-player-card">
+                <img id="playerOneBanner" class="player-banner" src="../assets/profile/banner1.png" alt="Player Banner">
+                <div class="player-overlay"></div>
+
+                <div class="player-content">
+                    <img id="playerOneAvatar" class="player-avatar" src="../assets/profile/avatar1.png" alt="Player One">
                     <span>PLAYER 1</span>
-                    <strong id="playerOneTag">Loading...</strong>
+                    <strong id="playerOneName">Loading...</strong>
+                    <p id="playerOneLevel">Level 1</p>
                 </div>
-
-                <div class="vs-badge">VS</div>
-
-                <div id="playerTwoCard" class="player-card waiting-card">
-                    <span>PLAYER 2</span>
-                    <strong id="playerTwoTag">Waiting...</strong>
-                </div>
-
             </div>
 
-        </section>
+            <div class="vs-badge">VS</div>
 
-        <section id="instructionsCard" class="instructions-card hidden">
+            <div id="playerTwoCard" class="profile-player-card waiting-card">
+                <img id="playerTwoBanner" class="player-banner" src="../assets/profile/banner1.png" alt="Player Banner">
+                <div class="player-overlay"></div>
 
-            <h2>Match Instructions</h2>
+                <div class="player-content">
+                    <img id="playerTwoAvatar" class="player-avatar" src="../assets/profile/avatar1.png" alt="Player Two">
+                    <span>PLAYER 2</span>
+                    <strong id="playerTwoName">Waiting...</strong>
+                    <p id="playerTwoLevel">Waiting</p>
+                </div>
+            </div>
 
-            <div class="instruction-step">1. Tap Add Opponent In Clash</div>
-            <div class="instruction-step">2. Add your opponent as a friend</div>
-            <div class="instruction-step">3. Start a Friendly Battle</div>
-            <div class="instruction-step">4. Use Tournament Standard Rules</div>
-            <div class="instruction-step">5. Play Best Of 1</div>
-            <div class="instruction-step">6. Return To PryzePot and Verify Match</div>
+        </div>
 
-        </section>
+    </section>
 
-        <button id="openClashBtn" class="main-btn">
-            WAITING FOR OPPONENT
-        </button>
+    <section id="instructionsCard" class="instructions-card hidden">
 
-        <button id="verifyBtn" class="secondary-btn">
-            WAITING FOR OPPONENT
-        </button>
+        <h2>Match Instructions</h2>
 
-    </main>
+        <div class="instruction-step">1. Tap Add Opponent In Clash</div>
+        <div class="instruction-step">2. Add your opponent as a friend</div>
+        <div class="instruction-step">3. Start a Friendly Battle</div>
+        <div class="instruction-step">4. Use Tournament Standard Rules</div>
+        <div class="instruction-step">5. Play Best Of 1</div>
+        <div class="instruction-step">6. Return To PryzePot and Verify Match</div>
 
-    <script src="match-room.js"></script>
+    </section>
+
+    <button id="openClashBtn" class="main-btn">
+        WAITING FOR OPPONENT
+    </button>
+
+    <button id="verifyBtn" class="secondary-btn">
+        WAITING FOR OPPONENT
+    </button>
+
+</main>
+
+<script src="match-room.js"></script>
 
 </body>
 </html>

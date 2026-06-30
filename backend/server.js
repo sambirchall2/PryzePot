@@ -1477,9 +1477,32 @@ app.get("/api/matches/:id", async function (req, res) {
         return;
     }
 
+    const match = dbMatchToFrontend(found.data);
+
+    const creatorProfile = await supabase
+        .from("users")
+        .select("username, profile_picture, profile_banner, level, xp")
+        .eq("username", match.creatorUsername)
+        .maybeSingle();
+
+    let opponentProfile = {
+        data: null
+    };
+
+    if (match.opponentUsername) {
+        opponentProfile = await supabase
+            .from("users")
+            .select("username, profile_picture, profile_banner, level, xp")
+            .eq("username", match.opponentUsername)
+            .maybeSingle();
+    }
+
+    match.creatorProfile = creatorProfile.data || null;
+    match.opponentProfile = opponentProfile.data || null;
+
     res.json({
         success: true,
-        match: dbMatchToFrontend(found.data)
+        match: match
     });
 });
 app.post("/api/users/save-clash", async function (req, res) {
