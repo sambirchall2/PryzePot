@@ -2,14 +2,7 @@ const backBtn = document.getElementById("backBtn");
 const entryGrid = document.getElementById("entryGrid");
 const continueBtn = document.getElementById("continueBtn");
 
-const entryFees = [
-    { amount: 1, xp: 25 },
-    { amount: 2, xp: 35 },
-    { amount: 5, xp: 50 },
-    { amount: 10, xp: 75 },
-    { amount: 50, xp: 125 },
-    { amount: 100, xp: 200 }
-];
+const entryFees = [1, 2, 5, 10, 50, 100];
 
 let selectedEntry = null;
 
@@ -19,20 +12,19 @@ if (backBtn) {
     });
 }
 
-entryFees.forEach(function (entry) {
+entryFees.forEach(function (amount) {
     const card = document.createElement("button");
 
     card.type = "button";
     card.className = "entry-card";
 
     card.innerHTML = `
-        <div class="entry-amount">$${entry.amount}</div>
+        <div class="entry-amount">$${amount}</div>
         <div class="entry-label">ENTRY</div>
-        <div class="entry-xp">+${entry.xp} XP</div>
     `;
 
     card.addEventListener("click", function () {
-        selectedEntry = entry.amount;
+        selectedEntry = amount;
 
         document.querySelectorAll(".entry-card").forEach(function (item) {
             item.classList.remove("selected");
@@ -41,7 +33,7 @@ entryFees.forEach(function (entry) {
         card.classList.add("selected");
 
         localStorage.setItem("entryFee", selectedEntry);
-        localStorage.setItem("entryXp", entry.xp);
+        localStorage.removeItem("entryXp");
 
         continueBtn.disabled = false;
         continueBtn.textContent = "CONTINUE WITH $" + selectedEntry;
