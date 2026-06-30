@@ -1,91 +1,17 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
     color: white;
-
     font-family: "Segoe UI", sans-serif;
-
     background:
-        radial-gradient(circle at top center,
-            rgba(182,255,0,0.14),
-            transparent 35%),
-        linear-gradient(
-            180deg,
-            #102016 0%,
-            #07100c 45%,
-            #020202 100%
-        );
+        radial-gradient(circle at top center, rgba(182,255,0,0.22), transparent 38%),
+        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
 }
 
-.champion-card {
-    width: 90%;
-    max-width: 500px;
-
-    text-align: center;
-
-    background: #101010;
-    border: 2px solid #b7ff00;
-
-    border-radius: 20px;
-
-    padding: 40px 20px;
-}
-
-.trophy {
-    font-size: 70px;
-    margin-bottom: 20px;
-}
-
-.winner-name {
-    font-size: 36px;
-    font-weight: 900;
-    color: #b7ff00;
-    margin-top: 20px;
-}
-
-.winner-tag {
-    margin-top: 10px;
-    opacity: 0.8;
-}
-
-.home-btn {
-    margin-top: 30px;
-
-    width: 100%;
-    height: 56px;
-
-    border: none;
-    border-radius: 14px;
-
-    background: #b7ff00;
-    color: black;
-
-    font-weight: 900;
-
-    cursor: pointer;
-}
-.back-home-btn {
-    width: 100%;
-    height: 56px;
-
-    border: none;
-    border-radius: 14px;
-
-    background: #b7ff00;
-    color: #000;
-
-    font-size: 15px;
-    font-weight: 900;
-
-    cursor: pointer;
-
-    margin-top: 20px;
-}
 #confettiCanvas {
     position: fixed;
     inset: 0;
@@ -93,4 +19,176 @@ body {
     height: 100%;
     pointer-events: none;
     z-index: 9999;
+}
+
+.winner-page {
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 34px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.champion-card {
+    width: 100%;
+    text-align: center;
+    background: rgba(8,12,8,0.9);
+    border: 2px solid #b7ff00;
+    border-radius: 26px;
+    padding: 26px 16px 20px;
+    box-shadow:
+        0 0 32px rgba(183,255,0,0.18),
+        0 30px 80px rgba(0,0,0,0.55);
+}
+
+.trophy {
+    font-size: 76px;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 18px rgba(183,255,0,0.25));
+}
+
+.eyebrow {
+    margin: 0;
+    color: #b7ff00;
+    font-size: 12px;
+    font-weight: 950;
+    letter-spacing: 1.6px;
+}
+
+h1 {
+    margin: 8px 0 20px;
+    font-size: 42px;
+    font-weight: 950;
+    letter-spacing: -1px;
+}
+
+.champion-profile-card {
+    min-height: 190px;
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    background: #050505;
+    border: 1px solid rgba(183,255,0,.32);
+    box-shadow: 0 0 24px rgba(183,255,0,.12);
+}
+
+.winner-banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.winner-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.86), rgba(0,0,0,.22)),
+        linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.78));
+}
+
+.winner-content {
+    position: relative;
+    z-index: 2;
+    min-height: 190px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+}
+
+.winner-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #b7ff00;
+    background: #050505;
+    box-shadow: 0 0 24px rgba(183,255,0,.48);
+    flex-shrink: 0;
+}
+
+.winner-name {
+    font-size: 30px;
+    font-weight: 950;
+    line-height: 1;
+    color: white;
+    text-shadow: 0 2px 12px rgba(0,0,0,.9);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.winner-level {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.72);
+    border: 1px solid rgba(183,255,0,.35);
+    color: #b7ff00;
+    font-size: 12px;
+    font-weight: 950;
+}
+
+.winner-tag {
+    margin-top: 8px;
+    color: rgba(255,255,255,.68);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.reward-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.reward-box {
+    padding: 14px 10px;
+    border-radius: 16px;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(183,255,0,.22);
+}
+
+.reward-box span {
+    display: block;
+    color: rgba(255,255,255,.62);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.reward-box strong {
+    display: block;
+    margin-top: 6px;
+    color: #b7ff00;
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.back-home-btn {
+    width: 100%;
+    height: 56px;
+    border: none;
+    border-radius: 14px;
+    background: #b7ff00;
+    color: #000;
+    font-size: 15px;
+    font-weight: 950;
+    cursor: pointer;
+    margin-top: 18px;
+    box-shadow: 0 0 24px rgba(183,255,0,.25);
+}
+
+.back-home-btn:active {
+    transform: scale(0.98);
 }

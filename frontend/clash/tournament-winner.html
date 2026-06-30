@@ -8,20 +8,43 @@
 </head>
 <body>
 
-<div class="container">
+<canvas id="confettiCanvas"></canvas>
+
+<main class="winner-page">
 
     <div class="champion-card">
 
         <div class="trophy">🏆</div>
 
-        <h1>TOURNAMENT CHAMPION</h1>
+        <p class="eyebrow">TOURNAMENT COMPLETE</p>
 
-        <div id="winnerName" class="winner-name">
-            Champion
+        <h1>CHAMPION</h1>
+
+        <div class="champion-profile-card">
+            <img id="winnerBanner" class="winner-banner" src="../assets/profile/banner1.png" alt="Champion Banner">
+            <div class="winner-overlay"></div>
+
+            <div class="winner-content">
+                <img id="winnerAvatar" class="winner-avatar" src="../assets/profile/avatar1.png" alt="Champion Avatar">
+
+                <div>
+                    <div id="winnerName" class="winner-name">Champion</div>
+                    <div id="winnerLevel" class="winner-level">Level 1</div>
+                    <div id="winnerTag" class="winner-tag">#TAG</div>
+                </div>
+            </div>
         </div>
 
-        <div id="winnerTag" class="winner-tag">
-            #TAG
+        <div class="reward-row">
+            <div class="reward-box">
+                <span>Status</span>
+                <strong>Champion</strong>
+            </div>
+
+            <div class="reward-box">
+                <span>Reward</span>
+                <strong>Glory</strong>
+            </div>
         </div>
 
         <button id="backHomeBtn" class="back-home-btn">
@@ -30,9 +53,9 @@
 
     </div>
 
-</div>
+</main>
 
 <script src="tournament-winner.js"></script>
-<canvas id="confettiCanvas"></canvas>
+
 </body>
 </html>

@@ -1,18 +1,48 @@
+const API_BASE_URL = "https://api.pryzepot.com";
+
 const backHomeBtn = document.getElementById("backHomeBtn");
+
 const winnerName = document.getElementById("winnerName");
 const winnerTag = document.getElementById("winnerTag");
+const winnerLevel = document.getElementById("winnerLevel");
+const winnerAvatar = document.getElementById("winnerAvatar");
+const winnerBanner = document.getElementById("winnerBanner");
+
 const confettiCanvas = document.getElementById("confettiCanvas");
 
-const championData =
-    JSON.parse(
-        localStorage.getItem("lastTournamentChampion") || "{}"
-    );
+const championData = JSON.parse(
+    localStorage.getItem("lastTournamentChampion") || "{}"
+);
 
-winnerName.textContent =
-    championData.winnerUsername || "Champion";
+const championUsername = championData.winnerUsername || "Champion";
 
-winnerTag.textContent =
-    championData.winnerTag || "";
+winnerName.textContent = championUsername;
+winnerTag.textContent = championData.winnerTag || "";
+
+function loadChampionProfile() {
+    if (!championData.winnerUsername) {
+        return;
+    }
+
+    fetch(API_BASE_URL + "/api/users/" + championData.winnerUsername + "/profile")
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success || !data.user) {
+                return;
+            }
+
+            const user = data.user;
+
+            winnerLevel.textContent = "Level " + (user.level || 1);
+            winnerAvatar.src = "../assets/profile/" + (user.profile_picture || "avatar1") + ".png";
+            winnerBanner.src = "../assets/profile/" + (user.profile_banner || "banner1") + ".png";
+        })
+        .catch(function (error) {
+            console.log("CHAMPION PROFILE LOAD ERROR:", error);
+        });
+}
 
 if (backHomeBtn) {
     backHomeBtn.addEventListener("click", function () {
@@ -20,7 +50,7 @@ if (backHomeBtn) {
         localStorage.removeItem("currentTournamentMatchId");
         localStorage.removeItem("lastTournamentChampion");
 
-        window.location.href = "../home.html";
+        window.location.href = "../html/home.html";
     });
 }
 
@@ -34,13 +64,14 @@ function startConfetti() {
 
     const pieces = [];
 
-    for (let i = 0; i < 140; i++) {
+    for (let i = 0; i < 160; i++) {
         pieces.push({
             x: Math.random() * confettiCanvas.width,
             y: Math.random() * confettiCanvas.height - confettiCanvas.height,
             size: Math.random() * 8 + 4,
             speed: Math.random() * 4 + 2,
-            rotation: Math.random() * 360
+            rotation: Math.random() * 360,
+            color: Math.random() > 0.5 ? "#b7ff00" : "#ffffff"
         });
     }
 
@@ -52,7 +83,7 @@ function startConfetti() {
             ctx.translate(piece.x, piece.y);
             ctx.rotate(piece.rotation);
 
-            ctx.fillStyle = Math.random() > 0.5 ? "#b7ff00" : "#ffffff";
+            ctx.fillStyle = piece.color;
             ctx.fillRect(
                 -piece.size / 2,
                 -piece.size / 2,
@@ -77,4 +108,5 @@ function startConfetti() {
     drawConfetti();
 }
 
+loadChampionProfile();
 startConfetti();
