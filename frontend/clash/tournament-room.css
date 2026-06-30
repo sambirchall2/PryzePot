@@ -257,3 +257,100 @@ h1 {
 .hidden {
     display: none;
 }
+.tournament-player-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(8,12,8,0.9);
+    border: 1px solid rgba(183,255,0,0.22);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.tournament-player-card.filled {
+    border-color: rgba(183,255,0,0.65);
+}
+
+.tournament-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #b7ff00;
+    box-shadow: 0 0 12px rgba(183,255,0,0.32);
+}
+
+.tournament-player-info {
+    flex: 1;
+}
+
+.tournament-player-name {
+    font-size: 15px;
+    font-weight: 950;
+    color: white;
+}
+
+.tournament-player-level {
+    margin-top: 3px;
+    color: #b7ff00;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.bracket-player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.34);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.bracket-player-row.winner {
+    border-color: #b7ff00;
+    box-shadow: 0 0 14px rgba(183,255,0,0.20);
+}
+
+.bracket-player-row.loser {
+    opacity: 0.45;
+}
+
+.bracket-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #b7ff00;
+    flex-shrink: 0;
+}
+
+.bracket-player-text {
+    min-width: 0;
+}
+
+.bracket-player-name {
+    font-size: 13px;
+    font-weight: 950;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bracket-player-level {
+    margin-top: 2px;
+    color: #b7ff00;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.bracket-vs {
+    color: #b7ff00;
+    font-size: 12px;
+    font-weight: 950;
+    flex-shrink: 0;
+}

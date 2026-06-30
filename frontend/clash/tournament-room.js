@@ -15,9 +15,46 @@ const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
 
 let currentTournament = null;
+let profileCache = {};
 
 if (!currentTournamentId) {
     window.location.href = "match-board.html";
+}
+
+function getDefaultProfile(usernameValue) {
+    return {
+        username: usernameValue || "Player",
+        profile_picture: "avatar1",
+        profile_banner: "banner1",
+        level: 1
+    };
+}
+
+async function getUserProfile(usernameValue) {
+    if (!usernameValue) {
+        return getDefaultProfile("Player");
+    }
+
+    if (profileCache[usernameValue]) {
+        return profileCache[usernameValue];
+    }
+
+    try {
+        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
+        const data = await response.json();
+
+        if (!data.success || !data.user) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+            return profileCache[usernameValue];
+        }
+
+        profileCache[usernameValue] = data.user;
+        return data.user;
+    } catch (error) {
+        console.log("TOURNAMENT PROFILE LOAD ERROR:", error);
+        profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        return profileCache[usernameValue];
+    }
 }
 
 function isUserInTournamentMatch(match) {
@@ -50,7 +87,67 @@ function getTotalRounds(matches) {
     return highestRound;
 }
 
-function renderBracket(matches) {
+function buildPlayerCard(usernameValue, profile, isFilled) {
+    const avatar = profile.profile_picture || "avatar1";
+    const level = profile.level || 1;
+
+    return `
+        <div class="tournament-player-card ${isFilled ? "filled" : ""}">
+            <img
+                class="tournament-avatar"
+                src="../assets/profile/${avatar}.png"
+                alt="${usernameValue || "Waiting"}"
+            >
+
+            <div class="tournament-player-info">
+                <div class="tournament-player-name">
+                    ${usernameValue || "Waiting..."}
+                </div>
+
+                <div class="tournament-player-level">
+                    ${isFilled ? "Level " + level : "Open Slot"}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function buildBracketPlayer(usernameValue, profile, match, side) {
+    const avatar = profile.profile_picture || "avatar1";
+    const level = profile.level || 1;
+
+    let resultClass = "";
+
+    if (match.status === "Completed" && match.winner_username) {
+        if (match.winner_username === usernameValue) {
+            resultClass = "winner";
+        } else {
+            resultClass = "loser";
+        }
+    }
+
+    return `
+        <div class="bracket-player-row ${resultClass}">
+            <img
+                class="bracket-avatar"
+                src="../assets/profile/${avatar}.png"
+                alt="${usernameValue || "TBD"}"
+            >
+
+            <div class="bracket-player-text">
+                <div class="bracket-player-name">
+                    ${usernameValue || "TBD"}
+                </div>
+
+                <div class="bracket-player-level">
+                    ${usernameValue ? "Level " + level : "Waiting"}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+async function renderBracket(matches) {
     if (!matches || matches.length === 0) {
         bracketSection.classList.add("hidden");
         bracketList.innerHTML = "";
@@ -73,7 +170,7 @@ function renderBracket(matches) {
         matchesByRound[roundNumber].push(match);
     });
 
-    Object.keys(matchesByRound).forEach(function (roundKey) {
+    for (const roundKey of Object.keys(matchesByRound)) {
         const roundNumber = Number(roundKey);
         const roundMatches = matchesByRound[roundNumber];
 
@@ -89,7 +186,12 @@ function renderBracket(matches) {
             </div>
         `;
 
-        roundMatches.forEach(function (match, index) {
+        for (let index = 0; index < roundMatches.length; index++) {
+            const match = roundMatches[index];
+
+            const playerOneProfile = await getUserProfile(match.player_one);
+            const playerTwoProfile = await getUserProfile(match.player_two);
+
             const bracketCard = document.createElement("div");
             bracketCard.className = "bracket-card";
 
@@ -120,9 +222,11 @@ function renderBracket(matches) {
                 </div>
 
                 <div class="bracket-matchup">
-                    <span>${match.player_one || "TBD"}</span>
-                    <strong>VS</strong>
-                    <span>${match.player_two || "TBD"}</span>
+                    ${buildBracketPlayer(match.player_one, playerOneProfile, match, "one")}
+
+                    <strong class="bracket-vs">VS</strong>
+
+                    ${buildBracketPlayer(match.player_two, playerTwoProfile, match, "two")}
                 </div>
 
                 <div class="bracket-status">
@@ -135,10 +239,10 @@ function renderBracket(matches) {
             `;
 
             roundSection.appendChild(bracketCard);
-        });
+        }
 
         bracketList.appendChild(roundSection);
-    });
+    }
 
     document
         .querySelectorAll(".enter-tournament-match-btn")
@@ -154,7 +258,7 @@ function renderBracket(matches) {
         });
 }
 
-function renderTournamentRoom(tournament, players, matches) {
+async function renderTournamentRoom(tournament, players, matches) {
     currentTournament = tournament;
 
     const tournamentSize = Number(tournament.tournament_size);
@@ -168,29 +272,25 @@ function renderTournamentRoom(tournament, players, matches) {
     playerList.innerHTML = "";
 
     for (let i = 0; i < tournamentSize; i++) {
-        const div = document.createElement("div");
-
         if (players[i]) {
-            div.className = "player-slot filled";
-            div.textContent = players[i].username;
+            const profile = await getUserProfile(players[i].username);
+            playerList.innerHTML += buildPlayerCard(players[i].username, profile, true);
         } else {
-            div.className = "player-slot";
-            div.textContent = "Waiting...";
+            const profile = getDefaultProfile("Waiting...");
+            playerList.innerHTML += buildPlayerCard(null, profile, false);
         }
-
-        playerList.appendChild(div);
     }
 
-    renderBracket(matches);
+    await renderBracket(matches);
 
     const userFinalMatch = matches.find(function (match) {
-    return (
-        isUserInTournamentMatch(match) &&
-        match.status === "Ready" &&
-        Number(match.round_number) === getTotalRounds(matches) &&
-        Number(match.round_number) > 1
-    );
-});
+        return (
+            isUserInTournamentMatch(match) &&
+            match.status === "Ready" &&
+            Number(match.round_number) === getTotalRounds(matches) &&
+            Number(match.round_number) > 1
+        );
+    });
 
     const alreadyShown =
         localStorage.getItem("advancedTournamentMatch_" + currentTournamentId);
