@@ -22,15 +22,17 @@ body {
     margin: 0;
     min-height: 100vh;
     background:
-        radial-gradient(circle at top, rgba(200, 255, 0, 0.18), transparent 35%),
-        linear-gradient(180deg, #101827 0%, #05070d 75%);
+        radial-gradient(circle at top, rgba(182,255,0,0.18), transparent 35%),
+        linear-gradient(180deg, #102016 0%, #050505 75%);
     font-family: Arial, sans-serif;
     color: white;
 }
 
 .result-page {
     min-height: 100vh;
-    padding: 28px;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 28px 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -39,88 +41,178 @@ body {
 }
 
 .status-pill {
-    background: rgba(200, 255, 0, 0.15);
-    color: #c8ff00;
-    border: 1px solid rgba(200, 255, 0, 0.4);
+    background: rgba(182,255,0,0.15);
+    color: #b6ff00;
+    border: 1px solid rgba(182,255,0,0.4);
     padding: 8px 16px;
     border-radius: 999px;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 900;
     letter-spacing: 1px;
     margin-bottom: 18px;
 }
 
 h1 {
-    font-size: 36px;
+    font-size: 34px;
     margin: 0 0 12px;
 }
 
 .subtitle {
     max-width: 340px;
-    color: #b7c0d1;
-    margin-bottom: 24px;
+    color: rgba(255,255,255,.72);
+    margin: 0 0 24px;
     line-height: 1.5;
 }
 
 .result-card {
     width: 100%;
-    max-width: 360px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 22px;
-    padding: 28px 20px;
+    background: rgba(8,12,8,0.86);
+    border: 1px solid rgba(182,255,0,.24);
+    border-radius: 24px;
+    padding: 16px;
     margin-bottom: 24px;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 22px 60px rgba(0,0,0,.42);
+}
+
+.result-player-card {
+    min-height: 138px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    background: #050505;
+    border: 1px solid rgba(182,255,0,.28);
+}
+
+.result-banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.result-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.86), rgba(0,0,0,.30)),
+        linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.78));
+}
+
+.result-content {
+    position: relative;
+    z-index: 2;
+    min-height: 138px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+}
+
+.result-avatar {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #b6ff00;
+    box-shadow: 0 0 18px rgba(182,255,0,.42);
+    background: #050505;
+    flex-shrink: 0;
 }
 
 .label {
-    color: #c8ff00;
-    font-size: 13px;
+    color: #b6ff00;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0 0 8px;
+    letter-spacing: 1.4px;
+    font-weight: 950;
+    margin: 0 0 6px;
 }
 
 .loser-label {
-    margin-top: 24px;
-    color: #8f98aa;
+    color: rgba(255,255,255,.65);
+}
+
+h2,
+h3 {
+    margin: 0;
+    font-weight: 950;
+    line-height: 1;
+    max-width: 230px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+h2 {
+    font-size: 27px;
+    color: white;
+}
+
+h3 {
+    font-size: 23px;
+    color: #d7deec;
+}
+
+.result-content span {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.72);
+    border: 1px solid rgba(182,255,0,.28);
+    color: #b6ff00;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.xp-reward {
+    display: inline-block;
+    margin-left: 6px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #b6ff00;
+    color: #050505;
+    font-size: 11px;
+    font-weight: 950;
+}
+
+.loser-xp {
+    background: rgba(255,255,255,.14);
+    color: white;
+}
+
+.loser-card {
+    opacity: .82;
 }
 
 .divider {
     width: 100%;
     height: 1px;
     background: rgba(255,255,255,0.12);
-    margin: 24px 0;
-}
-
-h2 {
-    font-size: 34px;
-    margin: 0;
-    color: white;
-}
-
-h3 {
-    font-size: 24px;
-    margin: 0;
-    color: #cfd6e6;
+    margin: 14px 0;
 }
 
 button {
     width: 100%;
-    max-width: 360px;
+    max-width: 394px;
     padding: 15px;
     border-radius: 14px;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 900;
     cursor: pointer;
     margin-top: 10px;
 }
 
 .primary-button {
-    background: #c8ff00;
+    background: #b6ff00;
     border: none;
-    color: #05070d;
-    box-shadow: 0 0 24px rgba(200,255,0,0.25);
+    color: #050505;
+    box-shadow: 0 0 24px rgba(182,255,0,0.25);
 }
 
 .secondary-button {

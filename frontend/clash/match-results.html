@@ -8,39 +8,67 @@
 </head>
 <body>
 
-    <canvas id="confettiCanvas"></canvas>
+<canvas id="confettiCanvas"></canvas>
 
-    <main class="result-page">
+<main class="result-page">
 
-        <div id="statusPill" class="status-pill">MATCH VERIFIED</div>
+    <div id="statusPill" class="status-pill">MATCH VERIFIED</div>
 
-        <h1 id="resultTitle">Winner Confirmed</h1>
+    <h1 id="resultTitle">Winner Confirmed</h1>
 
-        <p id="resultSubtitle" class="subtitle">
-            Clash Royale battle log confirmed the winner.
-        </p>
+    <p id="resultSubtitle" class="subtitle">
+        Clash Royale battle log confirmed the winner.
+    </p>
 
-        <section class="result-card">
-            <p class="label">Winner</p>
-            <h2 id="winnerName">Loading...</h2>
+    <section class="result-card">
 
-            <div class="divider"></div>
+        <div class="result-player-card winner-card">
+            <img id="winnerBanner" class="result-banner" src="../assets/profile/banner1.png" alt="Winner Banner">
+            <div class="result-overlay"></div>
 
-            <p class="label loser-label">Loser</p>
-            <h3 id="loserName">Loading...</h3>
-        </section>
+            <div class="result-content">
+                <img id="winnerAvatar" class="result-avatar" src="../assets/profile/avatar1.png" alt="Winner Avatar">
 
-        <button id="playAgainButton" class="primary-button">
-            PLAY AGAIN
-        </button>
+                <div>
+                    <p class="label">Winner</p>
+                    <h2 id="winnerName">Loading...</h2>
+                    <span id="winnerLevel">Level 1</span>
+                    <strong class="xp-reward">+30 XP</strong>
+                </div>
+            </div>
+        </div>
 
-        <button id="backHomeButton" class="secondary-button">
-            BACK HOME
-        </button>
+        <div class="divider"></div>
 
-    </main>
+        <div class="result-player-card loser-card">
+            <img id="loserBanner" class="result-banner" src="../assets/profile/banner1.png" alt="Loser Banner">
+            <div class="result-overlay"></div>
 
-    <script src="match-results.js"></script>
+            <div class="result-content">
+                <img id="loserAvatar" class="result-avatar" src="../assets/profile/avatar1.png" alt="Loser Avatar">
+
+                <div>
+                    <p class="label loser-label">Loser</p>
+                    <h3 id="loserName">Loading...</h3>
+                    <span id="loserLevel">Level 1</span>
+                    <strong class="xp-reward loser-xp">+10 XP</strong>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <button id="playAgainButton" class="primary-button">
+        PLAY AGAIN
+    </button>
+
+    <button id="backHomeButton" class="secondary-button">
+        BACK HOME
+    </button>
+
+</main>
+
+<script src="match-results.js"></script>
 
 </body>
 </html>
