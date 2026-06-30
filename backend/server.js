@@ -36,29 +36,49 @@ function parseClashTime(clashTime) {
         clashTime.substring(9)
     ).getTime();
 }
-function getXpForEntryFee(entryFee) {
-    const fee = Number(entryFee);
+function getMatchXpForResult(resultType) {
+    if (resultType === "win") return 30;
+    if (resultType === "loss") return 10;
+    if (resultType === "draw") return 15;
 
-    if (fee === 1) return 10;
-    if (fee === 2) return 20;
-    if (fee === 5) return 50;
-    if (fee === 10) return 100;
-    if (fee === 50) return 500;
-    if (fee === 100) return 1000;
-
-    return 10;
+    return 0;
 }
 
 function calculateLevelFromXp(xp) {
     const totalXp = Number(xp) || 0;
 
-    if (totalXp >= 11000) return 10;
-    if (totalXp >= 8000) return 9;
-    if (totalXp >= 5500) return 8;
-    if (totalXp >= 3500) return 7;
-    if (totalXp >= 2000) return 6;
-    if (totalXp >= 1000) return 5;
-    if (totalXp >= 500) return 4;
+    const levelThresholds = [
+        0,       // Level 1
+        100,     // Level 2
+        250,     // Level 3
+        450,     // Level 4
+        700,     // Level 5
+        1000,    // Level 6
+        1350,    // Level 7
+        1750,    // Level 8
+        2100,    // Level 9
+        2500,    // Level 10
+        8000,    // Level 20 range
+        18000,   // Level 30 range
+        35000,   // Level 40 range
+        60000,   // Level 50 range
+        150000,  // Level 75 range
+        300000   // Level 100
+    ];
+
+    if (totalXp >= 300000) return 100;
+    if (totalXp >= 150000) return 75;
+    if (totalXp >= 60000) return 50;
+    if (totalXp >= 35000) return 40;
+    if (totalXp >= 18000) return 30;
+    if (totalXp >= 8000) return 20;
+    if (totalXp >= 2500) return 10;
+    if (totalXp >= 2100) return 9;
+    if (totalXp >= 1750) return 8;
+    if (totalXp >= 1350) return 7;
+    if (totalXp >= 1000) return 6;
+    if (totalXp >= 700) return 5;
+    if (totalXp >= 450) return 4;
     if (totalXp >= 250) return 3;
     if (totalXp >= 100) return 2;
 
@@ -1383,21 +1403,23 @@ app.post("/api/matches/:id/verify", async function (req, res) {
                 loser_tag: loserTag
             });
 
-        const xpEarned = getXpForEntryFee(foundMatch.entry_fee);
+        const winnerXpEarned = getMatchXpForResult("win");
+const loserXpEarned = getMatchXpForResult("loss");
 
-        const winnerXpProfile = await awardXpToUser(winnerUsername, xpEarned);
-        const loserXpProfile = await awardXpToUser(loserUsername, xpEarned);
+const winnerXpProfile = await awardXpToUser(winnerUsername, winnerXpEarned);
+const loserXpProfile = await awardXpToUser(loserUsername, loserXpEarned);
 
         res.json({
-            success: true,
-            message: winnerUsername + " won the match!",
-            winnerUsername: winnerUsername,
-            loserUsername: loserUsername,
-            xpEarned: xpEarned,
-            winnerProfile: winnerXpProfile,
-            loserProfile: loserXpProfile,
-            match: dbMatchToFrontend(completed.data)
-        });
+    success: true,
+    message: winnerUsername + " won the match!",
+    winnerUsername: winnerUsername,
+    loserUsername: loserUsername,
+    winnerXpEarned: winnerXpEarned,
+    loserXpEarned: loserXpEarned,
+    winnerProfile: winnerXpProfile,
+    loserProfile: loserXpProfile,
+    match: dbMatchToFrontend(completed.data)
+});
 
     } catch (error) {
         console.log("VERIFY ERROR:", error);
