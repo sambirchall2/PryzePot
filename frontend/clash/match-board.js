@@ -441,10 +441,6 @@ loadTournaments();
 autoJoinPendingTournament();
 
 setInterval(function () {
-    renderMatches();
-}, 1000);
-
-setInterval(function () {
     loadMatches();
     loadTournaments();
 }, 5000);
