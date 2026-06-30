@@ -19,17 +19,9 @@ const xpFill = document.getElementById("xpFill");
 const homeAvatarImage = document.getElementById("homeAvatarImage");
 const homeBannerImage = document.getElementById("homeBannerImage");
 
-if (usernameDisplay) {
-    usernameDisplay.textContent = username;
-}
-
-if (balanceDisplay) {
-    balanceDisplay.textContent = balance || "0";
-}
-
-if (levelDisplay) {
-    levelDisplay.textContent = "Level " + level;
-}
+if (usernameDisplay) usernameDisplay.textContent = username;
+if (balanceDisplay) balanceDisplay.textContent = balance || "0";
+if (levelDisplay) levelDisplay.textContent = "Level " + level;
 
 if (homeAvatarImage) {
     homeAvatarImage.src = "../assets/profile/" + profilePicture + ".png";
@@ -39,14 +31,34 @@ if (homeBannerImage) {
     homeBannerImage.src = "../assets/profile/" + profileBanner + ".png";
 }
 
+function updateXpBar(user) {
+    const xpProgress = user.xp_progress;
+
+    if (!xpProgress) {
+        return;
+    }
+
+    if (xpFill) {
+        xpFill.style.width = xpProgress.progress_percent + "%";
+    }
+
+    if (xpDisplay) {
+        xpDisplay.textContent =
+            xpProgress.current_xp + " / " + xpProgress.next_level_xp + " XP";
+    }
+
+    if (nextLevelDisplay) {
+        nextLevelDisplay.textContent =
+            "Lvl " + xpProgress.next_level;
+    }
+}
+
 fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
     .then(function (response) {
         return response.json();
     })
     .then(function (data) {
-        if (!data.success || !data.user) {
-            return;
-        }
+        if (!data.success || !data.user) return;
 
         const user = data.user;
 
@@ -54,41 +66,6 @@ fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
         const savedBanner = user.profile_banner || "banner1";
         const savedLevel = user.level || 1;
         const savedXp = user.xp || 0;
-        const xpNeededPerLevel = [
-    0,
-    100,
-    250,
-    500,
-    1000,
-    2000,
-    3500,
-    5500,
-    8000,
-    11000,
-    15000
-];
-
-const currentLevel = Number(savedLevel);
-
-const currentLevelXp = xpNeededPerLevel[currentLevel - 1] || 0;
-const nextLevelXp = xpNeededPerLevel[currentLevel] || currentLevelXp + 5000;
-
-const progress = savedXp - currentLevelXp;
-const needed = nextLevelXp - currentLevelXp;
-
-const percent = Math.min(100, Math.max(0, (progress / needed) * 100));
-
-if (xpFill) {
-    xpFill.style.width = percent + "%";
-}
-
-if (xpDisplay) {
-    xpDisplay.textContent = savedXp + " XP";
-}
-
-if (nextLevelDisplay) {
-    nextLevelDisplay.textContent = nextLevelXp + " XP";
-}
 
         localStorage.setItem("profilePicture", savedAvatar);
         localStorage.setItem("profileBanner", savedBanner);
@@ -107,6 +84,8 @@ if (nextLevelDisplay) {
         if (levelDisplay) {
             levelDisplay.textContent = "Level " + savedLevel;
         }
+
+        updateXpBar(user);
     })
     .catch(function (error) {
         console.log("HOME PROFILE LOAD ERROR:", error);
@@ -184,10 +163,5 @@ function logout() {
 const logoutBtn = document.getElementById("logoutBtn");
 const menuLogoutBtn = document.getElementById("menuLogoutBtn");
 
-if (logoutBtn) {
-    logoutBtn.addEventListener("click", logout);
-}
-
-if (menuLogoutBtn) {
-    menuLogoutBtn.addEventListener("click", logout);
-}
+if (logoutBtn) logoutBtn.addEventListener("click", logout);
+if (menuLogoutBtn) menuLogoutBtn.addEventListener("click", logout);
