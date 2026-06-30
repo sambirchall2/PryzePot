@@ -247,3 +247,34 @@ h1 {
 
     cursor: pointer;
 }
+.match-player-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.match-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #b6ff00;
+    box-shadow: 0 0 14px rgba(182,255,0,.35);
+}
+
+.match-player-info {
+    flex: 1;
+}
+
+.match-player-name {
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.match-player-level {
+    margin-top: 4px;
+    color: #b6ff00;
+    font-size: 12px;
+    font-weight: 900;
+}

@@ -9,6 +9,43 @@ const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashFriendLink = localStorage.getItem("clashFriendLink");
 
 let loadedMatches = [];
+const profileCache = {};
+
+function getDefaultProfile(usernameValue) {
+    return {
+        username: usernameValue || "Player",
+        profile_picture: "avatar1",
+        profile_banner: "banner1",
+        level: 1
+    };
+}
+
+async function getUserProfile(usernameValue) {
+    if (!usernameValue) {
+        return getDefaultProfile("Player");
+    }
+
+    if (profileCache[usernameValue]) {
+        return profileCache[usernameValue];
+    }
+
+    try {
+        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
+        const data = await response.json();
+
+        if (!data.success || !data.user) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+            return profileCache[usernameValue];
+        }
+
+        profileCache[usernameValue] = data.user;
+        return data.user;
+    } catch (error) {
+        console.log("PROFILE LOAD ERROR:", error);
+        profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        return profileCache[usernameValue];
+    }
+}
 let loadedTournaments = [];
 
 if (backBtn) {
@@ -170,7 +207,7 @@ function renderTournaments() {
     });
 }
 
-function renderMatches() {
+async function renderMatches() {
     const visibleMatches = getVisibleMatches(loadedMatches);
 
     if (visibleMatches.length === 0) {
@@ -184,8 +221,12 @@ function renderMatches() {
 
     matchesContainer.innerHTML = "";
 
-    visibleMatches.forEach(function (match) {
+    for (const match of visibleMatches) {
         const timeLeft = getMatchTimeLeft(match);
+        const creatorProfile = await getUserProfile(match.creatorUsername);
+
+        const avatar = creatorProfile.profile_picture || "avatar1";
+        const level = creatorProfile.level || 1;
 
         const matchCard = document.createElement("div");
         matchCard.className = "match-card";
@@ -228,6 +269,24 @@ function renderMatches() {
                 Clash Royale
             </div>
 
+            <div class="match-player-row">
+                <img
+                    class="match-avatar"
+                    src="../assets/profile/${avatar}.png"
+                    alt="${match.creatorUsername}"
+                >
+
+                <div class="match-player-info">
+                    <div class="match-player-name">
+                        ${match.creatorUsername}
+                    </div>
+
+                    <div class="match-player-level">
+                        Level ${level}
+                    </div>
+                </div>
+            </div>
+
             <div class="match-entry">
                 $${match.entryFee}
             </div>
@@ -248,7 +307,7 @@ function renderMatches() {
         `;
 
         matchesContainer.appendChild(matchCard);
-    });
+    }
 
     attachButtonListeners();
 }
