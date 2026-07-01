@@ -1740,6 +1740,353 @@ app.get("/api/users/:username/profile", async function (req, res) {
         }
     });
 });
+function normalizeFriendPair(usernameOne, usernameTwo) {
+    const names = [usernameOne, usernameTwo].sort();
+
+    return {
+        userOne: names[0],
+        userTwo: names[1]
+    };
+}
+
+app.post("/api/friends/request", async function (req, res) {
+    const senderUsername = req.body.senderUsername;
+    const receiverUsername = req.body.receiverUsername;
+
+    if (!senderUsername || !receiverUsername) {
+        res.json({
+            success: false,
+            message: "Missing friend request information."
+        });
+        return;
+    }
+
+    if (senderUsername === receiverUsername) {
+        res.json({
+            success: false,
+            message: "You cannot add yourself."
+        });
+        return;
+    }
+
+    const receiverResult = await supabase
+        .from("users")
+        .select("username")
+        .eq("username", receiverUsername)
+        .maybeSingle();
+
+    if (!receiverResult.data) {
+        res.json({
+            success: false,
+            message: "Player not found."
+        });
+        return;
+    }
+
+    const pair = normalizeFriendPair(senderUsername, receiverUsername);
+
+    const existingFriend = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_one", pair.userOne)
+        .eq("user_two", pair.userTwo)
+        .maybeSingle();
+
+    if (existingFriend.data) {
+        res.json({
+            success: false,
+            message: "You are already friends."
+        });
+        return;
+    }
+
+    const existingRequest = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("sender_username", senderUsername)
+        .eq("receiver_username", receiverUsername)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (existingRequest.data) {
+        res.json({
+            success: false,
+            message: "Friend request already sent."
+        });
+        return;
+    }
+
+    const reverseRequest = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("sender_username", receiverUsername)
+        .eq("receiver_username", senderUsername)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (reverseRequest.data) {
+        res.json({
+            success: false,
+            message: "This player already sent you a friend request."
+        });
+        return;
+    }
+
+    const insertResult = await supabase
+        .from("friend_requests")
+        .insert({
+            sender_username: senderUsername,
+            receiver_username: receiverUsername,
+            status: "pending"
+        })
+        .select()
+        .single();
+
+    if (insertResult.error) {
+        console.log("SEND FRIEND REQUEST ERROR:", insertResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not send friend request."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Friend request sent.",
+        request: insertResult.data
+    });
+});
+
+app.get("/api/friends/requests/:username", async function (req, res) {
+    const username = req.params.username;
+
+    const result = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("receiver_username", username)
+        .eq("status", "pending")
+        .order("id", { ascending: false });
+
+    if (result.error) {
+        res.json({
+            success: false,
+            message: "Could not load friend requests."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        requests: result.data || []
+    });
+});
+
+app.post("/api/friends/requests/:id/accept", async function (req, res) {
+    const requestId = Number(req.params.id);
+    const username = req.body.username;
+
+    const requestResult = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("id", requestId)
+        .maybeSingle();
+
+    if (!requestResult.data) {
+        res.json({
+            success: false,
+            message: "Friend request not found."
+        });
+        return;
+    }
+
+    const request = requestResult.data;
+
+    if (request.receiver_username !== username) {
+        res.json({
+            success: false,
+            message: "You cannot accept this request."
+        });
+        return;
+    }
+
+    if (request.status !== "pending") {
+        res.json({
+            success: false,
+            message: "This request is no longer pending."
+        });
+        return;
+    }
+
+    const pair = normalizeFriendPair(
+        request.sender_username,
+        request.receiver_username
+    );
+
+    const friendResult = await supabase
+        .from("friends")
+        .insert({
+            user_one: pair.userOne,
+            user_two: pair.userTwo
+        });
+
+    if (friendResult.error) {
+        console.log("CREATE FRIEND ERROR:", friendResult.error);
+    }
+
+    await supabase
+        .from("friend_requests")
+        .update({
+            status: "accepted",
+            updated_at: Date.now()
+        })
+        .eq("id", requestId);
+
+    res.json({
+        success: true,
+        message: "Friend request accepted."
+    });
+});
+
+app.post("/api/friends/requests/:id/decline", async function (req, res) {
+    const requestId = Number(req.params.id);
+    const username = req.body.username;
+
+    const requestResult = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("id", requestId)
+        .maybeSingle();
+
+    if (!requestResult.data) {
+        res.json({
+            success: false,
+            message: "Friend request not found."
+        });
+        return;
+    }
+
+    const request = requestResult.data;
+
+    if (request.receiver_username !== username) {
+        res.json({
+            success: false,
+            message: "You cannot decline this request."
+        });
+        return;
+    }
+
+    await supabase
+        .from("friend_requests")
+        .update({
+            status: "declined",
+            updated_at: Date.now()
+        })
+        .eq("id", requestId);
+
+    res.json({
+        success: true,
+        message: "Friend request declined."
+    });
+});
+
+app.get("/api/friends/:username", async function (req, res) {
+    const username = req.params.username;
+
+    const result = await supabase
+        .from("friends")
+        .select("*")
+        .or("user_one.eq." + username + ",user_two.eq." + username)
+        .order("id", { ascending: false });
+
+    if (result.error) {
+        res.json({
+            success: false,
+            message: "Could not load friends."
+        });
+        return;
+    }
+
+    const friends = (result.data || []).map(function (friendship) {
+        return friendship.user_one === username
+            ? friendship.user_two
+            : friendship.user_one;
+    });
+
+    res.json({
+        success: true,
+        friends: friends
+    });
+});
+
+app.get("/api/friends/status/:viewerUsername/:profileUsername", async function (req, res) {
+    const viewerUsername = req.params.viewerUsername;
+    const profileUsername = req.params.profileUsername;
+
+    if (viewerUsername === profileUsername) {
+        res.json({
+            success: true,
+            status: "self"
+        });
+        return;
+    }
+
+    const pair = normalizeFriendPair(viewerUsername, profileUsername);
+
+    const friendResult = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_one", pair.userOne)
+        .eq("user_two", pair.userTwo)
+        .maybeSingle();
+
+    if (friendResult.data) {
+        res.json({
+            success: true,
+            status: "friends"
+        });
+        return;
+    }
+
+    const sentRequest = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("sender_username", viewerUsername)
+        .eq("receiver_username", profileUsername)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (sentRequest.data) {
+        res.json({
+            success: true,
+            status: "request_sent"
+        });
+        return;
+    }
+
+    const receivedRequest = await supabase
+        .from("friend_requests")
+        .select("*")
+        .eq("sender_username", profileUsername)
+        .eq("receiver_username", viewerUsername)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (receivedRequest.data) {
+        res.json({
+            success: true,
+            status: "request_received",
+            requestId: receivedRequest.data.id
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        status: "none"
+    });
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {

@@ -21,6 +21,13 @@ if (!currentTournamentId) {
     window.location.href = "match-board.html";
 }
 
+function openProfile(usernameValue) {
+    if (!usernameValue) return;
+
+    window.location.href =
+        "../html/profile.html?user=" + encodeURIComponent(usernameValue);
+}
+
 function getDefaultProfile(usernameValue) {
     return {
         username: usernameValue || "Player",
@@ -40,7 +47,7 @@ async function getUserProfile(usernameValue) {
     }
 
     try {
-        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
+        const response = await fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(usernameValue) + "/profile");
         const data = await response.json();
 
         if (!data.success || !data.user) {
@@ -112,11 +119,12 @@ function buildPlayerCard(usernameValue, profile, isFilled) {
     `;
 }
 
-function buildBracketPlayer(usernameValue, profile, match, side) {
+function buildBracketPlayer(usernameValue, profile, match, tournamentIsComplete) {
     const avatar = profile.profile_picture || "avatar1";
     const level = profile.level || 1;
 
     let resultClass = "";
+    let clickableClass = "";
 
     if (match.status === "Completed" && match.winner_username) {
         if (match.winner_username === usernameValue) {
@@ -126,8 +134,14 @@ function buildBracketPlayer(usernameValue, profile, match, side) {
         }
     }
 
+    if (tournamentIsComplete && usernameValue) {
+        clickableClass = " clickable-profile";
+    }
+
     return `
-        <div class="bracket-player-row ${resultClass}">
+        <div
+            class="bracket-player-row ${resultClass}${clickableClass}"
+            data-profile-username="${usernameValue || ""}">
             <img
                 class="bracket-avatar"
                 src="../assets/profile/${avatar}.png"
@@ -147,7 +161,7 @@ function buildBracketPlayer(usernameValue, profile, match, side) {
     `;
 }
 
-async function renderBracket(matches) {
+async function renderBracket(matches, tournament) {
     if (!matches || matches.length === 0) {
         bracketSection.classList.add("hidden");
         bracketList.innerHTML = "";
@@ -156,6 +170,8 @@ async function renderBracket(matches) {
 
     bracketSection.classList.remove("hidden");
     bracketList.innerHTML = "";
+
+    const tournamentIsComplete = tournament && tournament.status === "Completed";
 
     const totalRounds = getTotalRounds(matches);
     const matchesByRound = {};
@@ -222,11 +238,11 @@ async function renderBracket(matches) {
                 </div>
 
                 <div class="bracket-matchup">
-                    ${buildBracketPlayer(match.player_one, playerOneProfile, match, "one")}
+                    ${buildBracketPlayer(match.player_one, playerOneProfile, match, tournamentIsComplete)}
 
                     <strong class="bracket-vs">VS</strong>
 
-                    ${buildBracketPlayer(match.player_two, playerTwoProfile, match, "two")}
+                    ${buildBracketPlayer(match.player_two, playerTwoProfile, match, tournamentIsComplete)}
                 </div>
 
                 <div class="bracket-status">
@@ -256,6 +272,17 @@ async function renderBracket(matches) {
                 window.location.href = "tournament-match-room.html";
             });
         });
+
+    document
+        .querySelectorAll(".clickable-profile")
+        .forEach(function (row) {
+            row.style.cursor = "pointer";
+
+            row.addEventListener("click", function () {
+                const clickedUsername = row.dataset.profileUsername;
+                openProfile(clickedUsername);
+            });
+        });
 }
 
 async function renderTournamentRoom(tournament, players, matches) {
@@ -281,7 +308,7 @@ async function renderTournamentRoom(tournament, players, matches) {
         }
     }
 
-    await renderBracket(matches);
+    await renderBracket(matches, tournament);
 
     const userFinalMatch = matches.find(function (match) {
         return (
