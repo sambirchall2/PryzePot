@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends | PryzePot</title>
+
+    <link rel="stylesheet" href="../css/friends.css">
+</head>
+
+<body>
+
+<div class="page">
+
+    <div class="top-bar">
+
+        <button id="backButton" class="back-button">
+            ←
+        </button>
+
+        <h1>Friends</h1>
+
+    </div>
+
+    <div class="search-section">
+
+        <h2>Search Players</h2>
+
+        <input
+            id="searchInput"
+            type="text"
+            placeholder="Search username..."
+            autocomplete="off"
+        >
+
+        <div id="searchResults" class="search-results">
+
+        </div>
+
+    </div>
+
+    <div class="friends-section">
+
+        <h2>Your Friends</h2>
+
+        <div id="friendsList">
+
+            <div class="loading-card">
+                Loading...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="../js/friends.js"></script>
+
+</body>
+</html>
