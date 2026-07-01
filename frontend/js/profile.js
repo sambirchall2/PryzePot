@@ -20,7 +20,6 @@ const xpFill = document.getElementById("xpFill");
 
 const lifetimeWinnings = document.getElementById("lifetimeWinnings");
 const record = document.getElementById("record");
-const tournamentMatchWins = document.getElementById("tournamentMatchWins");
 const tournamentWins = document.getElementById("tournamentWins");
 
 const profileActionButton = document.getElementById("profileActionButton");
@@ -71,9 +70,6 @@ function loadProfile() {
 
             record.textContent =
                 (stats.one_v_one_wins || 0) + " / " + (stats.one_v_one_losses || 0);
-
-            tournamentMatchWins.textContent =
-                stats.tournament_match_wins || 0;
 
             tournamentWins.textContent =
                 stats.tournament_wins || 0;
