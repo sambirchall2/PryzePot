@@ -132,7 +132,8 @@ if (menuOverlay) {
 
 if (profileBtn) {
     profileBtn.addEventListener("click", function () {
-        window.location.href = "profile-setup.html";
+        window.location.href =
+            "profile.html?user=" + encodeURIComponent(username);
     });
 }
 
@@ -165,3 +166,9 @@ const menuLogoutBtn = document.getElementById("menuLogoutBtn");
 
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (menuLogoutBtn) menuLogoutBtn.addEventListener("click", logout);
+if (profileBtn) {
+    profileBtn.addEventListener("click", function () {
+        window.location.href =
+            "profile.html?user=" + encodeURIComponent(username);
+    });
+}
