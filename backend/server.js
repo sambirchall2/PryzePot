@@ -1608,6 +1608,41 @@ app.post("/api/users/save-profile", async function (req, res) {
         user: result.data
     });
 });
+app.get("/api/users/search/:query", async function (req, res) {
+
+    const query = req.params.query.trim();
+
+    if (!query || query.length < 2) {
+        res.json({
+            success: true,
+            users: []
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .select("username, profile_picture, level")
+        .ilike("username", query + "%")
+        .limit(15);
+
+    if (result.error) {
+        console.log(result.error);
+
+        res.json({
+            success: false,
+            users: []
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        users: result.data || []
+    });
+
+});
 app.get("/api/users/:username/profile", async function (req, res) {
     const username = req.params.username;
 
@@ -2087,41 +2122,7 @@ app.get("/api/friends/status/:viewerUsername/:profileUsername", async function (
         status: "none"
     });
 });
-app.get("/api/users/search/:query", async function (req, res) {
 
-    const query = req.params.query.trim();
-
-    if (!query || query.length < 2) {
-        res.json({
-            success: true,
-            users: []
-        });
-        return;
-    }
-
-    const result = await supabase
-        .from("users")
-        .select("username, profile_picture, level")
-        .ilike("username", query + "%")
-        .limit(15);
-
-    if (result.error) {
-        console.log(result.error);
-
-        res.json({
-            success: false,
-            users: []
-        });
-
-        return;
-    }
-
-    res.json({
-        success: true,
-        users: result.data || []
-    });
-
-});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {
