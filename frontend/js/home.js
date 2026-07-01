@@ -201,3 +201,8 @@ if (notificationBell) {
 
 loadNotificationCount();
 setInterval(loadNotificationCount, 15000);
+if (friendsBtn) {
+    friendsBtn.addEventListener("click", function () {
+        window.location.href = "friends.html";
+    });
+}
