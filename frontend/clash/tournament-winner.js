@@ -1,6 +1,7 @@
 const API_BASE_URL = "https://api.pryzepot.com";
 
 const backHomeBtn = document.getElementById("backHomeBtn");
+const championProfileCard = document.getElementById("championProfileCard");
 
 const winnerName = document.getElementById("winnerName");
 const winnerTag = document.getElementById("winnerTag");
@@ -19,12 +20,19 @@ const championUsername = championData.winnerUsername || "Champion";
 winnerName.textContent = championUsername;
 winnerTag.textContent = championData.winnerTag || "";
 
+function openChampionProfile() {
+    if (!championData.winnerUsername) return;
+
+    window.location.href =
+        "../html/profile.html?user=" + encodeURIComponent(championData.winnerUsername);
+}
+
 function loadChampionProfile() {
     if (!championData.winnerUsername) {
         return;
     }
 
-    fetch(API_BASE_URL + "/api/users/" + championData.winnerUsername + "/profile")
+    fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(championData.winnerUsername) + "/profile")
         .then(function (response) {
             return response.json();
         })
@@ -42,6 +50,14 @@ function loadChampionProfile() {
         .catch(function (error) {
             console.log("CHAMPION PROFILE LOAD ERROR:", error);
         });
+}
+
+if (championProfileCard) {
+    championProfileCard.style.cursor = "pointer";
+
+    championProfileCard.addEventListener("click", function () {
+        openChampionProfile();
+    });
 }
 
 if (backHomeBtn) {

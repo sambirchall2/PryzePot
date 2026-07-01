@@ -192,3 +192,10 @@ h1 {
 .back-home-btn:active {
     transform: scale(0.98);
 }
+.tap-profile-text {
+    margin: 10px 0 18px;
+    color: #b8c0cc;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
