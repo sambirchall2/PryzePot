@@ -29,6 +29,148 @@ function formatMoney(value) {
     return "$" + Number(value || 0).toLocaleString();
 }
 
+function setButtonLoading(text) {
+    profileActionButton.disabled = true;
+    profileActionButton.textContent = text;
+}
+
+function resetButton() {
+    profileActionButton.disabled = false;
+}
+
+function loadFriendStatus() {
+    if (viewedUsername === loggedInUsername) {
+        profileActionButton.textContent = "Edit Profile";
+        profileActionButton.disabled = false;
+
+        profileActionButton.onclick = function () {
+            window.location.href = "profile-setup.html";
+        };
+
+        return;
+    }
+
+    fetch(
+        API_BASE_URL +
+        "/api/friends/status/" +
+        encodeURIComponent(loggedInUsername) +
+        "/" +
+        encodeURIComponent(viewedUsername)
+    )
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                profileActionButton.textContent = "Add Friend";
+                profileActionButton.disabled = false;
+                return;
+            }
+
+            if (data.status === "friends") {
+                profileActionButton.textContent = "Friends";
+                profileActionButton.disabled = true;
+                return;
+            }
+
+            if (data.status === "request_sent") {
+                profileActionButton.textContent = "Request Sent";
+                profileActionButton.disabled = true;
+                return;
+            }
+
+            if (data.status === "request_received") {
+                profileActionButton.textContent = "Accept Friend";
+                profileActionButton.disabled = false;
+
+                profileActionButton.onclick = function () {
+                    acceptFriendRequest(data.requestId);
+                };
+
+                return;
+            }
+
+            profileActionButton.textContent = "Add Friend";
+            profileActionButton.disabled = false;
+
+            profileActionButton.onclick = function () {
+                sendFriendRequest();
+            };
+        })
+        .catch(function (error) {
+            console.log("FRIEND STATUS ERROR:", error);
+
+            profileActionButton.textContent = "Add Friend";
+            profileActionButton.disabled = false;
+
+            profileActionButton.onclick = function () {
+                sendFriendRequest();
+            };
+        });
+}
+
+function sendFriendRequest() {
+    setButtonLoading("Sending...");
+
+    fetch(API_BASE_URL + "/api/friends/request", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            senderUsername: loggedInUsername,
+            receiverUsername: viewedUsername
+        })
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            alert(data.message);
+
+            loadFriendStatus();
+        })
+        .catch(function (error) {
+            console.log("SEND FRIEND REQUEST ERROR:", error);
+            alert("Could not send friend request.");
+            resetButton();
+            loadFriendStatus();
+        });
+}
+
+function acceptFriendRequest(requestId) {
+    if (!requestId) {
+        alert("Missing friend request.");
+        return;
+    }
+
+    setButtonLoading("Accepting...");
+
+    fetch(API_BASE_URL + "/api/friends/requests/" + requestId + "/accept", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: loggedInUsername
+        })
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            alert(data.message);
+
+            loadFriendStatus();
+        })
+        .catch(function (error) {
+            console.log("ACCEPT FRIEND ERROR:", error);
+            alert("Could not accept friend request.");
+            resetButton();
+            loadFriendStatus();
+        });
+}
+
 function loadProfile() {
     fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(viewedUsername) + "/profile")
         .then(function (response) {
@@ -74,19 +216,7 @@ function loadProfile() {
             tournamentWins.textContent =
                 stats.tournament_wins || 0;
 
-            if (user.username === loggedInUsername) {
-                profileActionButton.textContent = "Edit Profile";
-
-                profileActionButton.onclick = function () {
-                    window.location.href = "profile-setup.html";
-                };
-            } else {
-                profileActionButton.textContent = "Add Friend";
-
-                profileActionButton.onclick = function () {
-                    alert("Friends system coming next.");
-                };
-            }
+            loadFriendStatus();
         })
         .catch(function (error) {
             console.log("PROFILE LOAD ERROR:", error);
