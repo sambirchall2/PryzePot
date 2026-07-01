@@ -213,14 +213,40 @@ verifyMatchBtn.addEventListener("click", function () {
         }
 
         if (data.champion) {
+    fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (tournamentData) {
+            const tournament = tournamentData.tournament || {};
+
+            const entryFee = Number(tournament.entry_fee || 0);
+            const tournamentSize = Number(tournament.tournament_size || 0);
+            const prizePool = entryFee * tournamentSize;
+
+            localStorage.setItem(
+                "lastTournamentChampion",
+                JSON.stringify({
+                    ...data,
+                    entryFee: entryFee,
+                    tournamentSize: tournamentSize,
+                    prizePool: prizePool
+                })
+            );
+
+            window.location.href = "tournament-winner.html";
+        })
+        .catch(function () {
             localStorage.setItem(
                 "lastTournamentChampion",
                 JSON.stringify(data)
             );
 
             window.location.href = "tournament-winner.html";
-            return;
-        }
+        });
+
+    return;
+}
 
         if (data.message && data.message.includes("Final is ready")) {
             if (advanceModal) {

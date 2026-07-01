@@ -8,6 +8,7 @@ const winnerTag = document.getElementById("winnerTag");
 const winnerLevel = document.getElementById("winnerLevel");
 const winnerAvatar = document.getElementById("winnerAvatar");
 const winnerBanner = document.getElementById("winnerBanner");
+const rewardAmount = document.getElementById("rewardAmount");
 
 const confettiCanvas = document.getElementById("confettiCanvas");
 
@@ -19,6 +20,13 @@ const championUsername = championData.winnerUsername || "Champion";
 
 winnerName.textContent = championUsername;
 winnerTag.textContent = championData.winnerTag || "";
+if (rewardAmount) {
+    if (championData.prizePool && Number(championData.prizePool) > 0) {
+        rewardAmount.textContent = "$" + Number(championData.prizePool).toLocaleString();
+    } else {
+        rewardAmount.textContent = "Glory";
+    }
+}
 
 function openChampionProfile() {
     if (!championData.winnerUsername) return;
