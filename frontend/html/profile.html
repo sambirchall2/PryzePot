@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PryzePot Profile</title>
+
+    <link rel="stylesheet" href="../css/profile.css">
+</head>
+
+<body>
+
+<div class="profile-page">
+
+    <div class="profile-banner">
+
+        <img
+            id="profileBanner"
+            class="banner-image"
+            src="../assets/profile/banner1.png"
+            alt="Banner">
+
+        <button id="backButton" class="back-button">
+            ← Back
+        </button>
+
+    </div>
+
+    <div class="profile-header">
+
+        <img
+            id="profileAvatar"
+            class="profile-avatar"
+            src="../assets/profile/avatar1.png"
+            alt="Avatar">
+
+        <h1 id="profileUsername">
+            Loading...
+        </h1>
+
+        <div id="profileLevel" class="profile-level">
+            Level 1
+        </div>
+
+    </div>
+
+    <div class="xp-card">
+
+        <div class="xp-top">
+
+            <span id="xpCurrent">
+                0 XP
+            </span>
+
+            <span id="xpNext">
+                Level 2
+            </span>
+
+        </div>
+
+        <div class="xp-bar">
+
+            <div id="xpFill" class="xp-fill"></div>
+
+        </div>
+
+    </div>
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+                Lifetime Winnings
+            </div>
+
+            <div id="lifetimeWinnings" class="stat-value">
+                $0
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+                1v1 Wins
+            </div>
+
+            <div id="wins" class="stat-value">
+                0
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+                1v1 Losses
+            </div>
+
+            <div id="losses" class="stat-value">
+                0
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+                Tournament Match Wins
+            </div>
+
+            <div id="tournamentMatchWins" class="stat-value">
+                0
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+                Tournament Wins
+            </div>
+
+            <div id="tournamentWins" class="stat-value">
+                0
+            </div>
+
+        </div>
+
+    </div>
+
+    <button
+        id="profileActionButton"
+        class="profile-action-button">
+        Edit Profile
+    </button>
+
+</div>
+
+<script src="../js/profile.js"></script>
+
+</body>
+
+</html>

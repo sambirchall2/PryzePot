@@ -1609,12 +1609,13 @@ app.post("/api/users/save-profile", async function (req, res) {
     });
 });
 app.get("/api/users/:username/profile", async function (req, res) {
-
     const username = req.params.username;
 
     const result = await supabase
         .from("users")
-        .select("*")
+        .select(
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at"
+        )
         .eq("username", username)
         .maybeSingle();
 
@@ -1623,7 +1624,6 @@ app.get("/api/users/:username/profile", async function (req, res) {
             success: false,
             message: "User not found."
         });
-
         return;
     }
 
@@ -1666,15 +1666,67 @@ app.get("/api/users/:username/profile", async function (req, res) {
 
     const progressXp = Math.max(0, xp - currentLevelXp);
     const neededXp = Math.max(1, nextLevelXp - currentLevelXp);
-    const progressPercent = level >= 100
-        ? 100
-        : Math.min(100, Math.floor((progressXp / neededXp) * 100));
+    const progressPercent =
+        level >= 100
+            ? 100
+            : Math.min(100, Math.floor((progressXp / neededXp) * 100));
+
+    const normalWins = await supabase
+        .from("match_results")
+        .select("id")
+        .eq("winner_username", username);
+
+    const normalLosses = await supabase
+        .from("match_results")
+        .select("id")
+        .eq("loser_username", username);
+
+    const tournamentMatchWins = await supabase
+        .from("tournament_matches")
+        .select("id")
+        .eq("winner_username", username)
+        .eq("status", "Completed");
+
+    const tournamentWins = await supabase
+        .from("tournaments")
+        .select("id")
+        .eq("winner_username", username)
+        .eq("status", "Completed");
+
+    const completedWins = await supabase
+        .from("matches")
+        .select("entry_fee")
+        .eq("winner_username", username)
+        .eq("status", "Completed");
+
+    let lifetimeWinnings = 0;
+
+    if (completedWins.data) {
+        completedWins.data.forEach(function (match) {
+            lifetimeWinnings += Number(match.entry_fee || 0) * 2;
+        });
+    }
 
     res.json({
         success: true,
         user: {
-            ...user,
+            username: user.username,
+            balance: user.balance || 0,
+            profile_picture: user.profile_picture || "avatar1",
+            profile_banner: user.profile_banner || "banner1",
+            profile_completed: user.profile_completed || false,
+            xp: xp,
             level: level,
+            created_at: user.created_at,
+
+            stats: {
+                lifetime_winnings: lifetimeWinnings,
+                one_v_one_wins: normalWins.data ? normalWins.data.length : 0,
+                one_v_one_losses: normalLosses.data ? normalLosses.data.length : 0,
+                tournament_match_wins: tournamentMatchWins.data ? tournamentMatchWins.data.length : 0,
+                tournament_wins: tournamentWins.data ? tournamentWins.data.length : 0
+            },
+
             xp_progress: {
                 current_xp: xp,
                 current_level: level,
