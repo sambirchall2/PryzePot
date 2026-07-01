@@ -3,6 +3,8 @@ const balance = localStorage.getItem("balance");
 const level = localStorage.getItem("level") || "1";
 const profilePicture = localStorage.getItem("profilePicture") || "avatar1";
 const profileBanner = localStorage.getItem("profileBanner") || "banner1";
+const notificationBell = document.getElementById("notificationBell");
+const notificationCount = document.getElementById("notificationCount");
 
 if (!username) {
     window.location.href = "index.html";
@@ -166,9 +168,36 @@ const menuLogoutBtn = document.getElementById("menuLogoutBtn");
 
 if (logoutBtn) logoutBtn.addEventListener("click", logout);
 if (menuLogoutBtn) menuLogoutBtn.addEventListener("click", logout);
-if (profileBtn) {
-    profileBtn.addEventListener("click", function () {
-        window.location.href =
-            "profile.html?user=" + encodeURIComponent(username);
+
+function loadNotificationCount() {
+    if (!username || !notificationCount) return;
+
+    fetch("https://api.pryzepot.com/api/friends/requests/" + encodeURIComponent(username))
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) return;
+
+            const count = data.requests ? data.requests.length : 0;
+
+            if (count > 0) {
+                notificationCount.textContent = count;
+                notificationCount.classList.remove("hidden");
+            } else {
+                notificationCount.classList.add("hidden");
+            }
+        })
+        .catch(function (error) {
+            console.log("NOTIFICATION COUNT ERROR:", error);
+        });
+}
+
+if (notificationBell) {
+    notificationBell.addEventListener("click", function () {
+        window.location.href = "notifications.html";
     });
 }
+
+loadNotificationCount();
+setInterval(loadNotificationCount, 15000);

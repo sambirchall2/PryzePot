@@ -108,20 +108,22 @@ body {
     z-index:2;
 }
 
-.right-section {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 3;
+.right-section{
+    position:absolute;
+    right:12px;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    align-items:center;
+    gap:14px;
+    z-index:5;
+}
 
-    font-size: 11px;
-    font-weight: 900;
-    color: #b6ff00;
-    cursor: pointer;
-
-    width: 52px;
-    text-align: right;
+.logout-link{
+    color:#b6ff00;
+    font-size:11px;
+    font-weight:900;
+    cursor:pointer;
 }
 
 .brand-section{
@@ -377,4 +379,52 @@ body {
     background: #b6ff00;
     border-radius: 999px;
     transition: width .35s ease;
+}
+.notification-bell{
+    position:relative;
+    width:32px;
+    height:32px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    font-size:19px;
+    cursor:pointer;
+
+    border-radius:50%;
+    transition:.2s;
+}
+
+.notification-bell:hover{
+    background:rgba(182,255,0,.08);
+}
+
+.notification-count{
+    position:absolute;
+    top:2px;
+    right:1px;
+
+    min-width:17px;
+    height:17px;
+
+    padding:0 4px;
+
+    border-radius:999px;
+
+    background:#b6ff00;
+    color:#050505;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    font-size:10px;
+    font-weight:900;
+
+    box-shadow:0 0 12px rgba(182,255,0,.65);
+}
+
+.hidden{
+    display:none;
 }
