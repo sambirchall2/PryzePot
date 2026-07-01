@@ -19,8 +19,7 @@ const xpNext = document.getElementById("xpNext");
 const xpFill = document.getElementById("xpFill");
 
 const lifetimeWinnings = document.getElementById("lifetimeWinnings");
-const wins = document.getElementById("wins");
-const losses = document.getElementById("losses");
+const record = document.getElementById("record");
 const tournamentMatchWins = document.getElementById("tournamentMatchWins");
 const tournamentWins = document.getElementById("tournamentWins");
 
@@ -70,10 +69,14 @@ function loadProfile() {
             lifetimeWinnings.textContent =
                 formatMoney(stats.lifetime_winnings);
 
-            wins.textContent = stats.one_v_one_wins || 0;
-            losses.textContent = stats.one_v_one_losses || 0;
-            tournamentMatchWins.textContent = stats.tournament_match_wins || 0;
-            tournamentWins.textContent = stats.tournament_wins || 0;
+            record.textContent =
+                (stats.one_v_one_wins || 0) + " / " + (stats.one_v_one_losses || 0);
+
+            tournamentMatchWins.textContent =
+                stats.tournament_match_wins || 0;
+
+            tournamentWins.textContent =
+                stats.tournament_wins || 0;
 
             if (user.username === loggedInUsername) {
                 profileActionButton.textContent = "Edit Profile";
