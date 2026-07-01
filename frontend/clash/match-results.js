@@ -3,6 +3,9 @@ const API_BASE_URL = "https://api.pryzepot.com";
 const resultTitle = document.getElementById("resultTitle");
 const resultSubtitle = document.getElementById("resultSubtitle");
 
+const winnerCard = document.getElementById("winnerCard");
+const loserCard = document.getElementById("loserCard");
+
 const winnerName = document.getElementById("winnerName");
 const winnerLevel = document.getElementById("winnerLevel");
 const winnerAvatar = document.getElementById("winnerAvatar");
@@ -27,6 +30,13 @@ const backHomeButton = document.getElementById("backHomeButton");
 
 const savedMatch = localStorage.getItem("lastVerifiedMatch");
 const currentUsername = localStorage.getItem("username");
+
+function openProfile(username) {
+    if (!username) return;
+
+    window.location.href =
+        "../html/profile.html?user=" + encodeURIComponent(username);
+}
 
 function launchConfetti() {
     const canvas = document.getElementById("confettiCanvas");
@@ -185,6 +195,20 @@ if (!savedMatch) {
     loserBanner.src =
         "../assets/profile/" + getProfileImage(loserProfile, "banner") + ".png";
 
+    if (winnerCard) {
+        winnerCard.style.cursor = "pointer";
+        winnerCard.addEventListener("click", function () {
+            openProfile(match.winnerUsername);
+        });
+    }
+
+    if (loserCard) {
+        loserCard.style.cursor = "pointer";
+        loserCard.addEventListener("click", function () {
+            openProfile(match.loserUsername);
+        });
+    }
+
     if (
         currentUsername &&
         match.winnerUsername &&
@@ -192,14 +216,14 @@ if (!savedMatch) {
     ) {
         resultTitle.textContent = "🏆 Victory";
         resultSubtitle.textContent =
-            "You earned +30 XP. Battle verified through Clash Royale.";
+            "You earned +30 XP. Tap a player card to view their profile.";
 
         updateResultXpBar(30);
         launchConfetti();
     } else {
         resultTitle.textContent = "Defeat";
         resultSubtitle.textContent =
-            "You earned +10 XP. Every match builds your PryzePot level.";
+            "You earned +10 XP. Tap a player card to view their profile.";
 
         updateResultXpBar(10);
     }
