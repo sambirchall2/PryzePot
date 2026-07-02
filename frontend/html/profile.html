@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PryzePot Profile</title>
+
     <link rel="stylesheet" href="../css/profile.css">
     <link rel="stylesheet" href="../css/toast.css">
 </head>
@@ -73,6 +74,44 @@
     </button>
 
 </div>
+
+<div id="challengeModal" class="challenge-modal hidden">
+    <div class="challenge-box">
+
+        <button id="closeChallengeModal" class="challenge-close-btn">
+            ×
+        </button>
+
+        <p class="challenge-eyebrow">
+            FRIEND CHALLENGE
+        </p>
+
+        <h2 id="challengeTitle">
+            Challenge Player
+        </h2>
+
+        <p class="challenge-subtitle">
+            Choose an entry fee for this private Clash Royale match.
+        </p>
+
+        <div class="challenge-fees">
+
+            <button class="challenge-fee-btn" data-entry-fee="1">$1</button>
+            <button class="challenge-fee-btn" data-entry-fee="2">$2</button>
+            <button class="challenge-fee-btn" data-entry-fee="5">$5</button>
+            <button class="challenge-fee-btn" data-entry-fee="10">$10</button>
+            <button class="challenge-fee-btn" data-entry-fee="50">$50</button>
+            <button class="challenge-fee-btn" data-entry-fee="100">$100</button>
+
+        </div>
+
+        <button id="sendChallengeButton" class="send-challenge-button" disabled>
+            Select Entry Fee
+        </button>
+
+    </div>
+</div>
+
 <script src="../js/toast.js"></script>
 <script src="../js/profile.js"></script>
 

@@ -24,6 +24,11 @@ const tournamentWins = document.getElementById("tournamentWins");
 
 const profileActionButton = document.getElementById("profileActionButton");
 const removeFriendButton = document.getElementById("removeFriendButton");
+const challengeModal = document.getElementById("challengeModal");
+const challengeTitle = document.getElementById("challengeTitle");
+const sendChallengeButton = document.getElementById("sendChallengeButton");
+const closeChallengeModal = document.getElementById("closeChallengeModal");
+const challengeFeeButtons = document.querySelectorAll(".challenge-fee-btn");
 const backButton = document.getElementById("backButton");
 
 function formatMoney(value) {
@@ -33,6 +38,33 @@ function formatMoney(value) {
 function setButtonLoading(text) {
     profileActionButton.disabled = true;
     profileActionButton.textContent = text;
+}
+let selectedChallengeFee = null;
+
+function openChallengeModal() {
+
+    selectedChallengeFee = null;
+
+    challengeTitle.textContent =
+        "Challenge " + viewedUsername;
+
+    sendChallengeButton.disabled = true;
+    sendChallengeButton.textContent = "Select Entry Fee";
+
+    challengeFeeButtons.forEach(function(button){
+
+        button.classList.remove("selected");
+
+    });
+
+    challengeModal.classList.remove("hidden");
+
+}
+
+function closeChallenge() {
+
+    challengeModal.classList.add("hidden");
+
 }
 
 function hideRemoveFriendButton() {
@@ -93,8 +125,8 @@ function loadFriendStatus() {
                 profileActionButton.disabled = false;
 
                 profileActionButton.onclick = function () {
-                    alert("Friends Mode coming next.");
-                };
+    openChallengeModal();
+};
 
                 showRemoveFriendButton();
                 return;
@@ -293,5 +325,33 @@ if (backButton) {
         history.back();
     });
 }
+challengeFeeButtons.forEach(function(button){
 
+    button.addEventListener("click",function(){
+
+        challengeFeeButtons.forEach(function(b){
+
+            b.classList.remove("selected");
+
+        });
+
+        button.classList.add("selected");
+
+        selectedChallengeFee =
+            Number(button.dataset.entryFee);
+
+        sendChallengeButton.disabled = false;
+
+        sendChallengeButton.textContent =
+            "Send $" + selectedChallengeFee + " Challenge";
+
+    });
+
+});
+
+if(closeChallengeModal){
+
+    closeChallengeModal.addEventListener("click",closeChallenge);
+
+}
 loadProfile();

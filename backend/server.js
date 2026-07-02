@@ -2181,6 +2181,94 @@ app.post("/api/friends/remove", async function (req, res) {
         message: "Friend removed."
     });
 });
+app.post("/api/friends/challenge", async function (req, res) {
+
+    const challengerUsername = req.body.challengerUsername;
+    const receiverUsername = req.body.receiverUsername;
+    const entryFee = Number(req.body.entryFee);
+
+    if (!challengerUsername || !receiverUsername || !entryFee) {
+        res.json({
+            success: false,
+            message: "Missing challenge information."
+        });
+        return;
+    }
+
+    if (challengerUsername === receiverUsername) {
+        res.json({
+            success: false,
+            message: "You cannot challenge yourself."
+        });
+        return;
+    }
+
+    const friendship = normalizeFriendPair(
+        challengerUsername,
+        receiverUsername
+    );
+
+    const friendResult = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_one", friendship.userOne)
+        .eq("user_two", friendship.userTwo)
+        .maybeSingle();
+
+    if (!friendResult.data) {
+        res.json({
+            success: false,
+            message: "You can only challenge friends."
+        });
+        return;
+    }
+
+    const challenger = await supabase
+        .from("users")
+        .select("clash_tag, clash_friend_link")
+        .eq("username", challengerUsername)
+        .maybeSingle();
+
+    const receiver = await supabase
+        .from("users")
+        .select("clash_tag, clash_friend_link")
+        .eq("username", receiverUsername)
+        .maybeSingle();
+
+    const insertResult = await supabase
+        .from("friend_challenges")
+        .insert({
+            challenger_username: challengerUsername,
+            receiver_username: receiverUsername,
+            game: "Clash Royale",
+            entry_fee: entryFee,
+            status: "pending",
+            challenger_tag: challenger.data?.clash_tag,
+            challenger_friend_link: challenger.data?.clash_friend_link,
+            receiver_tag: receiver.data?.clash_tag,
+            receiver_friend_link: receiver.data?.clash_friend_link
+        })
+        .select()
+        .single();
+
+    if (insertResult.error) {
+        console.log(insertResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not send challenge."
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Challenge sent!",
+        challenge: insertResult.data
+    });
+
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {
