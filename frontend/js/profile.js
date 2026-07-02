@@ -153,19 +153,19 @@ function sendFriendRequest() {
             return response.json();
         })
         .then(function (data) {
-            alert(data.message);
+            showToast(data.message, "success");
             loadFriendStatus();
         })
         .catch(function (error) {
             console.log("SEND FRIEND REQUEST ERROR:", error);
-            alert("Could not send friend request.");
+            showToast("Could not send friend request.", "error");
             loadFriendStatus();
         });
 }
 
 function acceptFriendRequest(requestId) {
     if (!requestId) {
-        alert("Missing friend request.");
+        showToast("Missing friend request.", "error");
         return;
     }
 
@@ -184,12 +184,12 @@ function acceptFriendRequest(requestId) {
             return response.json();
         })
         .then(function (data) {
-            alert(data.message);
+            showToast(data.message, "success");
             loadFriendStatus();
         })
         .catch(function (error) {
             console.log("ACCEPT FRIEND ERROR:", error);
-            alert("Could not accept friend request.");
+            showToast("Could not accept friend request.", "error");
             loadFriendStatus();
         });
 }
@@ -216,7 +216,7 @@ function removeFriend() {
             return response.json();
         })
         .then(function (data) {
-            alert(data.message);
+            showToast(data.message, "success");
 
             removeFriendButton.disabled = false;
             removeFriendButton.textContent = "Remove Friend";
@@ -225,7 +225,7 @@ function removeFriend() {
         })
         .catch(function (error) {
             console.log("REMOVE FRIEND ERROR:", error);
-            alert("Could not remove friend.");
+            showToast("Could not remove friend.", "error");
 
             removeFriendButton.disabled = false;
             removeFriendButton.textContent = "Remove Friend";
@@ -241,7 +241,7 @@ function loadProfile() {
         })
         .then(function (data) {
             if (!data.success || !data.user) {
-                alert(data.message || "Profile not found.");
+                showToast(data.message || "Profile not found.", "error");
                 window.location.href = "home.html";
                 return;
             }
@@ -283,7 +283,7 @@ function loadProfile() {
         })
         .catch(function (error) {
             console.log("PROFILE LOAD ERROR:", error);
-            alert("Could not load profile.");
+            showToast("Could not load profile.", "error");
             window.location.href = "home.html";
         });
 }

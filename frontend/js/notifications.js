@@ -54,12 +54,12 @@ function acceptRequest(requestId) {
             return response.json();
         })
         .then(function (data) {
-            alert(data.message);
+            showToast(data.message, "success");
             loadFriendRequests();
         })
         .catch(function (error) {
             console.log("ACCEPT REQUEST ERROR:", error);
-            alert("Could not accept request.");
+            showToast("Could not accept request.", "error");
         });
 }
 
@@ -77,7 +77,7 @@ function declineRequest(requestId) {
             return response.json();
         })
         .then(function (data) {
-            alert(data.message);
+            showToast(data.message, "success");
             loadFriendRequests();
         })
         .catch(function (error) {

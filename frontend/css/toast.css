@@ -1,0 +1,43 @@
+.pryzepot-toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(120px);
+
+    width:calc(100% - 36px);
+    max-width:390px;
+
+    padding:15px 18px;
+
+    border-radius:16px;
+
+    background:#101010;
+    color:white;
+
+    border:1px solid rgba(182,255,0,.35);
+    box-shadow:0 0 24px rgba(182,255,0,.18);
+
+    font-size:14px;
+    font-weight:900;
+    text-align:center;
+
+    z-index:9999;
+
+    opacity:0;
+    pointer-events:none;
+
+    transition:.28s ease;
+}
+
+.pryzepot-toast.show{
+    transform:translateX(-50%) translateY(0);
+    opacity:1;
+}
+
+.pryzepot-toast.success{
+    color:#b6ff00;
+}
+
+.pryzepot-toast.error{
+    color:#ff5c5c;
+}
