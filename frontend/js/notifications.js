@@ -82,7 +82,7 @@ function declineRequest(requestId) {
         })
         .catch(function (error) {
             console.log("DECLINE REQUEST ERROR:", error);
-            alert("Could not decline request.");
+            showToast("Could not decline request.", "error");
         });
 }
 
