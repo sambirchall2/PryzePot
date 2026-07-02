@@ -1649,7 +1649,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     const result = await supabase
         .from("users")
         .select(
-            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at"
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen"
         )
         .eq("username", username)
         .maybeSingle();
@@ -1753,6 +1753,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
             xp: xp,
             level: level,
             created_at: user.created_at,
+last_seen: user.last_seen || 0,
 
             stats: {
                 lifetime_winnings: lifetimeWinnings,

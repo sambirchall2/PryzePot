@@ -210,3 +210,47 @@ body{
             0 30px 80px rgba(0,0,0,.6);
     }
 }
+
+.friend-card{
+    padding:12px;
+    min-height:82px;
+}
+
+.friend-level{
+    margin-top:3px;
+    color:#b6ff00;
+    font-size:12px;
+    font-weight:900;
+}
+
+.friend-status{
+    margin-top:5px;
+    font-size:12px;
+    font-weight:900;
+}
+
+.friend-status.online{
+    color:#b6ff00;
+}
+
+.friend-status.offline{
+    color:#888;
+}
+
+.offline-dot{
+    display:inline-block;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#444;
+    margin-right:6px;
+}
+
+.friend-group-title{
+    margin:10px 2px 2px;
+    color:#b6ff00;
+    font-size:13px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+}
