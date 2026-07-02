@@ -425,3 +425,6 @@ body{
 
     cursor:not-allowed;
 }
+.challenge-modal.hidden{
+    display:none;
+}
