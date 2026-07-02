@@ -354,4 +354,52 @@ if(closeChallengeModal){
     closeChallengeModal.addEventListener("click",closeChallenge);
 
 }
+if (sendChallengeButton) {
+    sendChallengeButton.addEventListener("click", function () {
+        if (!selectedChallengeFee) {
+            showToast("Select an entry fee first.", "error");
+            return;
+        }
+
+        sendChallengeButton.disabled = true;
+        sendChallengeButton.textContent = "Sending...";
+
+        fetch(API_BASE_URL + "/api/friends/challenge", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                challengerUsername: loggedInUsername,
+                receiverUsername: viewedUsername,
+                entryFee: selectedChallengeFee
+            })
+        })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (!data.success) {
+                    showToast(data.message || "Could not send challenge.", "error");
+
+                    sendChallengeButton.disabled = false;
+                    sendChallengeButton.textContent =
+                        "Send $" + selectedChallengeFee + " Challenge";
+
+                    return;
+                }
+
+                showToast(data.message || "Challenge sent!", "success");
+                closeChallenge();
+            })
+            .catch(function (error) {
+                console.log("SEND CHALLENGE ERROR:", error);
+                showToast("Could not send challenge.", "error");
+
+                sendChallengeButton.disabled = false;
+                sendChallengeButton.textContent =
+                    "Send $" + selectedChallengeFee + " Challenge";
+            });
+    });
+}
 loadProfile();
