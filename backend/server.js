@@ -2122,7 +2122,64 @@ app.get("/api/friends/status/:viewerUsername/:profileUsername", async function (
         status: "none"
     });
 });
+app.post("/api/users/heartbeat", async function (req, res) {
+    const username = req.body.username;
 
+    if (!username) {
+        res.json({
+            success: false,
+            message: "Missing username."
+        });
+        return;
+    }
+
+    await supabase
+        .from("users")
+        .update({
+            last_seen: Date.now()
+        })
+        .eq("username", username);
+
+    res.json({
+        success: true
+    });
+});
+
+app.post("/api/friends/remove", async function (req, res) {
+    const username = req.body.username;
+    const friendUsername = req.body.friendUsername;
+
+    if (!username || !friendUsername) {
+        res.json({
+            success: false,
+            message: "Missing friend information."
+        });
+        return;
+    }
+
+    const pair = normalizeFriendPair(username, friendUsername);
+
+    const result = await supabase
+        .from("friends")
+        .delete()
+        .eq("user_one", pair.userOne)
+        .eq("user_two", pair.userTwo);
+
+    if (result.error) {
+        console.log("REMOVE FRIEND ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not remove friend."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Friend removed."
+    });
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {

@@ -23,6 +23,7 @@ const record = document.getElementById("record");
 const tournamentWins = document.getElementById("tournamentWins");
 
 const profileActionButton = document.getElementById("profileActionButton");
+const removeFriendButton = document.getElementById("removeFriendButton");
 const backButton = document.getElementById("backButton");
 
 function formatMoney(value) {
@@ -34,11 +35,26 @@ function setButtonLoading(text) {
     profileActionButton.textContent = text;
 }
 
-function resetButton() {
-    profileActionButton.disabled = false;
+function hideRemoveFriendButton() {
+    if (!removeFriendButton) return;
+
+    removeFriendButton.classList.add("hidden");
+    removeFriendButton.onclick = null;
+}
+
+function showRemoveFriendButton() {
+    if (!removeFriendButton) return;
+
+    removeFriendButton.classList.remove("hidden");
+
+    removeFriendButton.onclick = function () {
+        removeFriend();
+    };
 }
 
 function loadFriendStatus() {
+    hideRemoveFriendButton();
+
     if (viewedUsername === loggedInUsername) {
         profileActionButton.textContent = "Edit Profile";
         profileActionButton.disabled = false;
@@ -64,12 +80,23 @@ function loadFriendStatus() {
             if (!data.success) {
                 profileActionButton.textContent = "Add Friend";
                 profileActionButton.disabled = false;
+
+                profileActionButton.onclick = function () {
+                    sendFriendRequest();
+                };
+
                 return;
             }
 
             if (data.status === "friends") {
-                profileActionButton.textContent = "Friends";
-                profileActionButton.disabled = true;
+                profileActionButton.textContent = "Challenge Friend";
+                profileActionButton.disabled = false;
+
+                profileActionButton.onclick = function () {
+                    alert("Friends Mode coming next.");
+                };
+
+                showRemoveFriendButton();
                 return;
             }
 
@@ -127,13 +154,11 @@ function sendFriendRequest() {
         })
         .then(function (data) {
             alert(data.message);
-
             loadFriendStatus();
         })
         .catch(function (error) {
             console.log("SEND FRIEND REQUEST ERROR:", error);
             alert("Could not send friend request.");
-            resetButton();
             loadFriendStatus();
         });
 }
@@ -160,13 +185,51 @@ function acceptFriendRequest(requestId) {
         })
         .then(function (data) {
             alert(data.message);
-
             loadFriendStatus();
         })
         .catch(function (error) {
             console.log("ACCEPT FRIEND ERROR:", error);
             alert("Could not accept friend request.");
-            resetButton();
+            loadFriendStatus();
+        });
+}
+
+function removeFriend() {
+    const confirmed = confirm("Remove " + viewedUsername + " as a friend?");
+
+    if (!confirmed) return;
+
+    removeFriendButton.disabled = true;
+    removeFriendButton.textContent = "Removing...";
+
+    fetch(API_BASE_URL + "/api/friends/remove", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: loggedInUsername,
+            friendUsername: viewedUsername
+        })
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            alert(data.message);
+
+            removeFriendButton.disabled = false;
+            removeFriendButton.textContent = "Remove Friend";
+
+            loadFriendStatus();
+        })
+        .catch(function (error) {
+            console.log("REMOVE FRIEND ERROR:", error);
+            alert("Could not remove friend.");
+
+            removeFriendButton.disabled = false;
+            removeFriendButton.textContent = "Remove Friend";
+
             loadFriendStatus();
         });
 }

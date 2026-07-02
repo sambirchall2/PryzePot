@@ -206,3 +206,24 @@ if (friendsBtn) {
         window.location.href = "friends.html";
     });
 }
+
+function sendHeartbeat() {
+    if (!username) return;
+
+    fetch("https://api.pryzepot.com/api/users/heartbeat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username
+        })
+    })
+    .catch(function (error) {
+        console.log("HEARTBEAT ERROR:", error);
+    });
+}
+
+sendHeartbeat();
+
+setInterval(sendHeartbeat, 30000);
