@@ -4,6 +4,7 @@ const username = localStorage.getItem("username");
 
 const backButton = document.getElementById("backButton");
 const friendRequestsContainer = document.getElementById("friendRequestsContainer");
+const friendChallengesContainer = document.getElementById("friendChallengesContainer");
 
 if (!username) {
     window.location.href = "index.html";
@@ -39,6 +40,8 @@ function loadUserProfile(usernameValue) {
             return getDefaultProfile(usernameValue);
         });
 }
+
+/* Friend Requests */
 
 function acceptRequest(requestId) {
     fetch(API_BASE_URL + "/api/friends/requests/" + requestId + "/accept", {
@@ -132,11 +135,11 @@ function createRequestCard(request, profile) {
     return card;
 }
 
-function renderEmptyState() {
+function renderEmptyRequests() {
     friendRequestsContainer.innerHTML = `
         <div class="empty-state">
-            <h2>No notifications</h2>
-            <p>Friend requests and invites will appear here.</p>
+            <h2>No friend requests</h2>
+            <p>New friend requests will appear here.</p>
         </div>
     `;
 }
@@ -154,14 +157,14 @@ function loadFriendRequests() {
         })
         .then(async function (data) {
             if (!data.success) {
-                renderEmptyState();
+                renderEmptyRequests();
                 return;
             }
 
             const requests = data.requests || [];
 
             if (requests.length === 0) {
-                renderEmptyState();
+                renderEmptyRequests();
                 return;
             }
 
@@ -176,8 +179,136 @@ function loadFriendRequests() {
         })
         .catch(function (error) {
             console.log("LOAD FRIEND REQUESTS ERROR:", error);
-            renderEmptyState();
+            renderEmptyRequests();
         });
 }
 
+/* Friend Challenges */
+
+function acceptChallenge(challengeId) {
+    fetch(API_BASE_URL + "/api/friends/challenges/" + challengeId + "/accept", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            showToast(data.message, "success");
+            loadFriendChallenges();
+        })
+        .catch(function (error) {
+            console.log("ACCEPT CHALLENGE ERROR:", error);
+            showToast("Could not accept challenge.", "error");
+        });
+}
+
+function declineChallenge(challengeId) {
+    fetch(API_BASE_URL + "/api/friends/challenges/" + challengeId + "/decline", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            showToast(data.message, "success");
+            loadFriendChallenges();
+        })
+        .catch(function (error) {
+            console.log("DECLINE CHALLENGE ERROR:", error);
+            showToast("Could not decline challenge.", "error");
+        });
+}
+
+function createChallengeCard(challenge) {
+    const card = document.createElement("div");
+    card.className = "challenge-card";
+
+    card.innerHTML = `
+        <div class="challenge-top">
+            Incoming Challenge
+        </div>
+
+        <div class="challenge-name">
+            ${challenge.challenger_username}
+        </div>
+
+        <div class="challenge-entry">
+            $${Number(challenge.entry_fee || 0).toLocaleString()} Match
+        </div>
+
+        <div class="challenge-buttons">
+            <button class="accept-btn">
+                Accept
+            </button>
+
+            <button class="decline-btn">
+                Decline
+            </button>
+        </div>
+    `;
+
+    card.querySelector(".accept-btn").addEventListener("click", function () {
+        acceptChallenge(challenge.id);
+    });
+
+    card.querySelector(".decline-btn").addEventListener("click", function () {
+        declineChallenge(challenge.id);
+    });
+
+    return card;
+}
+
+function renderEmptyChallenges() {
+    friendChallengesContainer.innerHTML = `
+        <div class="empty-state">
+            <h2>No challenges</h2>
+            <p>Friend challenges will appear here.</p>
+        </div>
+    `;
+}
+
+function loadFriendChallenges() {
+    friendChallengesContainer.innerHTML = `
+        <div class="loading-card">
+            Loading...
+        </div>
+    `;
+
+    fetch(API_BASE_URL + "/api/friends/challenges/" + encodeURIComponent(username))
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                renderEmptyChallenges();
+                return;
+            }
+
+            const challenges = data.challenges || [];
+
+            if (challenges.length === 0) {
+                renderEmptyChallenges();
+                return;
+            }
+
+            friendChallengesContainer.innerHTML = "";
+
+            challenges.forEach(function (challenge) {
+                const card = createChallengeCard(challenge);
+                friendChallengesContainer.appendChild(card);
+            });
+        })
+        .catch(function (error) {
+            console.log("LOAD FRIEND CHALLENGES ERROR:", error);
+            renderEmptyChallenges();
+        });
+}
+
+loadFriendChallenges();
 loadFriendRequests();

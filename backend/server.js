@@ -2269,6 +2269,111 @@ app.post("/api/friends/challenge", async function (req, res) {
     });
 
 });
+app.get("/api/friends/challenges/:username", async function (req, res) {
+
+    const username = req.params.username;
+
+    const result = await supabase
+        .from("friend_challenges")
+        .select("*")
+        .eq("receiver_username", username)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+    if (result.error) {
+        console.log(result.error);
+
+        res.json({
+            success: false,
+            challenges: []
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        challenges: result.data || []
+    });
+
+});
+app.post("/api/friends/challenges/:id/accept", async function (req, res) {
+
+    const challengeId = Number(req.params.id);
+
+    const challengeResult = await supabase
+        .from("friend_challenges")
+        .select("*")
+        .eq("id", challengeId)
+        .maybeSingle();
+
+    if (!challengeResult.data) {
+        res.json({
+            success: false,
+            message: "Challenge not found."
+        });
+        return;
+    }
+
+    const updateResult = await supabase
+        .from("friend_challenges")
+        .update({
+            status: "accepted",
+            updated_at: Date.now()
+        })
+        .eq("id", challengeId)
+        .select()
+        .single();
+
+    if (updateResult.error) {
+        console.log(updateResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not accept challenge."
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Challenge accepted!",
+        challenge: updateResult.data
+    });
+
+});
+app.post("/api/friends/challenges/:id/decline", async function (req, res) {
+
+    const challengeId = Number(req.params.id);
+
+    const updateResult = await supabase
+        .from("friend_challenges")
+        .update({
+            status: "declined",
+            updated_at: Date.now()
+        })
+        .eq("id", challengeId)
+        .select()
+        .single();
+
+    if (updateResult.error) {
+        console.log(updateResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not decline challenge."
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Challenge declined."
+    });
+
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {

@@ -207,3 +207,37 @@ body{
     }
 
 }
+.challenge-card{
+    background:#111;
+    border:1px solid rgba(182,255,0,.24);
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 0 18px rgba(182,255,0,.10);
+}
+
+.challenge-top{
+    color:#b6ff00;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+}
+
+.challenge-name{
+    font-size:20px;
+    font-weight:900;
+}
+
+.challenge-entry{
+    margin-top:6px;
+    color:white;
+    font-size:15px;
+    font-weight:900;
+}
+
+.challenge-buttons{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+}
