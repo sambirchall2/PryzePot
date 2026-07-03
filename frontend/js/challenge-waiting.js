@@ -8,7 +8,6 @@ const waitingText = document.getElementById("waitingText");
 const countdownText = document.getElementById("countdownText");
 const cancelWaitingBtn = document.getElementById("cancelWaitingBtn");
 
-const statusIcon = document.getElementById("statusIcon");
 const challengerName = document.getElementById("challengerName");
 const receiverName = document.getElementById("receiverName");
 const entryFeeText = document.getElementById("entryFeeText");
@@ -39,7 +38,6 @@ function updateCountdown() {
         waitingTitle.textContent = "Challenge expired";
         waitingText.textContent = "Your friend did not accept in time.";
         cancelWaitingBtn.textContent = "BACK HOME";
-        statusIcon.innerHTML = "⌛";
 
         clearInterval(pollInterval);
         clearInterval(countdownInterval);
@@ -55,7 +53,6 @@ function handleAccepted(challenge) {
     clearInterval(pollInterval);
     clearInterval(countdownInterval);
 
-    statusIcon.innerHTML = "✅";
 statusIcon.className = "status-logo-wrap accepted";
     waitingTitle.textContent = "Opponent accepted!";
     waitingText.textContent = "Preparing your match...";
@@ -75,7 +72,6 @@ function handleDeclined() {
     clearInterval(pollInterval);
     clearInterval(countdownInterval);
 
-    statusIcon.innerHTML = "❌";
 statusIcon.className = "status-logo-wrap declined";
     waitingTitle.textContent = "Challenge declined";
     waitingText.textContent = "Your friend declined the challenge.";
