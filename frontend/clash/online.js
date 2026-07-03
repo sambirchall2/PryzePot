@@ -1,6 +1,7 @@
 const backBtn = document.getElementById("backBtn");
 const createMatchBtn = document.getElementById("createMatchBtn");
-const joinMatchBtn = document.getElementById("joinMatchBtn");
+const friendsModeBtn = document.getElementById("friendsModeBtn");
+const tournamentModeBtn = document.getElementById("tournamentModeBtn");
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
@@ -14,17 +15,14 @@ if (createMatchBtn) {
     });
 }
 
-if (joinMatchBtn) {
-    joinMatchBtn.addEventListener("click", function () {
-        localStorage.setItem("afterConnectRedirect", "match-board.html");
+if (friendsModeBtn) {
+    friendsModeBtn.addEventListener("click", function () {
+        window.location.href = "friends-mode.html";
+    });
+}
 
-        const clashPlayerTag = localStorage.getItem("clashPlayerTag");
-        const clashFriendLink = localStorage.getItem("clashFriendLink");
-
-        if (!clashPlayerTag || !clashFriendLink) {
-            window.location.href = "connect-clash.html";
-        } else {
-            window.location.href = "match-board.html";
-        }
+if (tournamentModeBtn) {
+    tournamentModeBtn.addEventListener("click", function () {
+        window.location.href = "tournament.html";
     });
 }
