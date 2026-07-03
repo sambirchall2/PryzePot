@@ -7,7 +7,7 @@
 
 body{
     background:
-        radial-gradient(circle at top,rgba(182,255,0,.16),transparent 40%),
+        radial-gradient(circle at top,rgba(182,255,0,.18),transparent 42%),
         linear-gradient(180deg,#081108 0%,#050505 100%);
     color:white;
     min-height:100vh;
@@ -27,20 +27,26 @@ body{
 .waiting-card{
     width:100%;
     background:#101010;
-    border:1px solid rgba(182,255,0,.20);
-    border-radius:24px;
-    padding:34px 24px;
+    border:1px solid rgba(182,255,0,.22);
+    border-radius:26px;
+    padding:30px 22px;
     text-align:center;
-    box-shadow:0 0 35px rgba(182,255,0,.10);
+    box-shadow:0 0 38px rgba(182,255,0,.12);
 }
 
-.pulse-ring{
-    width:120px;
-    height:120px;
-    margin:0 auto 24px;
+.status-icon{
+    width:84px;
+    height:84px;
+    margin:0 auto 20px;
     border-radius:50%;
-    border:4px solid #b6ff00;
-    animation:pulse 1.6s infinite;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(182,255,0,.10);
+    border:2px solid rgba(182,255,0,.45);
+    color:#b6ff00;
+    font-size:38px;
+    box-shadow:0 0 24px rgba(182,255,0,.20);
 }
 
 .eyebrow{
@@ -48,29 +54,72 @@ body{
     font-size:12px;
     font-weight:900;
     letter-spacing:2px;
-    margin-bottom:12px;
+    margin-bottom:10px;
 }
 
 h1{
-    font-size:30px;
+    font-size:28px;
     font-weight:900;
-    margin-bottom:14px;
+    margin-bottom:20px;
+}
+
+.versus-card{
+    background:#070707;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    padding:16px;
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.player-name{
+    font-size:15px;
+    font-weight:900;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.player-label{
+    margin-top:5px;
+    color:#888;
+    font-size:10px;
+    font-weight:900;
+    text-transform:uppercase;
+}
+
+.vs-text{
+    color:#b6ff00;
+    font-size:16px;
+    font-weight:950;
+}
+
+.entry-fee{
+    display:inline-block;
+    padding:9px 16px;
+    border-radius:999px;
+    background:#b6ff00;
+    color:#050505;
+    font-size:15px;
+    font-weight:950;
+    margin-bottom:18px;
 }
 
 .subtitle{
     color:#bdbdbd;
-    line-height:1.6;
-    margin-bottom:32px;
+    line-height:1.5;
+    font-size:14px;
+    margin-bottom:16px;
 }
 
-.loader{
-    width:46px;
-    height:46px;
-    margin:0 auto 30px;
-    border-radius:50%;
-    border:4px solid rgba(255,255,255,.15);
-    border-top:4px solid #b6ff00;
-    animation:spin .8s linear infinite;
+.countdown{
+    color:#b6ff00;
+    font-size:18px;
+    font-weight:950;
+    margin-bottom:26px;
 }
 
 .secondary-btn{
@@ -87,35 +136,4 @@ h1{
 
 .secondary-btn:hover{
     background:#2a2a2a;
-}
-
-@keyframes spin{
-
-    from{
-        transform:rotate(0deg);
-    }
-
-    to{
-        transform:rotate(360deg);
-    }
-
-}
-
-@keyframes pulse{
-
-    0%{
-        transform:scale(.9);
-        opacity:.6;
-    }
-
-    50%{
-        transform:scale(1);
-        opacity:1;
-    }
-
-    100%{
-        transform:scale(.9);
-        opacity:.6;
-    }
-
 }

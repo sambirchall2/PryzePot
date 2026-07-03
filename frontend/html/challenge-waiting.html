@@ -14,20 +14,38 @@
 
     <div class="waiting-card">
 
-        <div class="pulse-ring"></div>
+        <div id="statusIcon" class="status-icon">⚔️</div>
 
-        <p class="eyebrow">FRIEND CHALLENGE SENT</p>
+        <p class="eyebrow">FRIEND CHALLENGE</p>
 
-        <h1>Waiting for opponent</h1>
+        <h1 id="waitingTitle">Waiting for opponent</h1>
+
+        <div class="versus-card">
+            <div>
+                <div id="challengerName" class="player-name">You</div>
+                <div class="player-label">Challenger</div>
+            </div>
+
+            <div class="vs-text">VS</div>
+
+            <div>
+                <div id="receiverName" class="player-name">Friend</div>
+                <div class="player-label">Opponent</div>
+            </div>
+        </div>
+
+        <div id="entryFeeText" class="entry-fee">$0 Match</div>
 
         <p id="waitingText" class="subtitle">
-            Your friend has been notified. We’ll move you into the match when they accept.
+            Waiting for your friend to accept...
         </p>
 
-        <div class="loader"></div>
+        <div id="countdownText" class="countdown">
+            5:00 remaining
+        </div>
 
         <button id="cancelWaitingBtn" class="secondary-btn">
-            BACK HOME
+            CANCEL CHALLENGE
         </button>
 
     </div>

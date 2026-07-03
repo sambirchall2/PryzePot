@@ -2298,7 +2298,6 @@ app.get("/api/friends/challenges/:username", async function (req, res) {
 
 });
 app.get("/api/friends/challenge/:id", async function (req, res) {
-
     const challengeId = Number(req.params.id);
 
     const result = await supabase
@@ -2309,16 +2308,110 @@ app.get("/api/friends/challenge/:id", async function (req, res) {
 
     if (result.error || !result.data) {
         res.json({
-            success: false
+            success: false,
+            message: "Challenge not found."
+        });
+        return;
+    }
+
+    const challenge = result.data;
+    const now = Date.now();
+    const challengeAge = now - Number(challenge.created_at || 0);
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (challenge.status === "pending" && challengeAge > fiveMinutes) {
+        const expiredResult = await supabase
+            .from("friend_challenges")
+            .update({
+                status: "expired",
+                updated_at: now
+            })
+            .eq("id", challengeId)
+            .select()
+            .single();
+
+        res.json({
+            success: true,
+            challenge: expiredResult.data
+        });
+
+        return;
+    }
+
+    res.json({
+        success: true,
+        challenge: challenge
+    });
+});
+app.post("/api/friends/challenge/:id/cancel", async function (req, res) {
+    const challengeId = Number(req.params.id);
+    const username = req.body.username;
+
+    if (!username) {
+        res.json({
+            success: false,
+            message: "Missing username."
+        });
+        return;
+    }
+
+    const challengeResult = await supabase
+        .from("friend_challenges")
+        .select("*")
+        .eq("id", challengeId)
+        .maybeSingle();
+
+    if (!challengeResult.data) {
+        res.json({
+            success: false,
+            message: "Challenge not found."
+        });
+        return;
+    }
+
+    const challenge = challengeResult.data;
+
+    if (challenge.challenger_username !== username) {
+        res.json({
+            success: false,
+            message: "You cannot cancel this challenge."
+        });
+        return;
+    }
+
+    if (challenge.status !== "pending") {
+        res.json({
+            success: false,
+            message: "This challenge is no longer pending."
+        });
+        return;
+    }
+
+    const updateResult = await supabase
+        .from("friend_challenges")
+        .update({
+            status: "cancelled",
+            updated_at: Date.now()
+        })
+        .eq("id", challengeId)
+        .select()
+        .single();
+
+    if (updateResult.error) {
+        console.log("CANCEL CHALLENGE ERROR:", updateResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not cancel challenge."
         });
         return;
     }
 
     res.json({
         success: true,
-        challenge: result.data
+        message: "Challenge cancelled.",
+        challenge: updateResult.data
     });
-
 });
 app.post("/api/friends/challenges/:id/accept", async function (req, res) {
     const challengeId = Number(req.params.id);
