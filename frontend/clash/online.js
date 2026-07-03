@@ -4,7 +4,7 @@ const joinMatchBtn = document.getElementById("joinMatchBtn");
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
-        window.location.href = "clash.html";
+        window.location.href = "../html/home.html";
     });
 }
 
