@@ -187,11 +187,14 @@ function loadFriendRequests() {
 
 function acceptChallenge(challengeId) {
     fetch(API_BASE_URL + "/api/friends/challenges/" + challengeId + "/accept", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        }
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        username: username
     })
+})
         .then(function (response) {
             return response.json();
         })
