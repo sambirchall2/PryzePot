@@ -138,14 +138,22 @@ const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
 
             statusText.classList.add("connected");
 
-            const afterConnectRedirect =
-                localStorage.getItem("afterConnectRedirect") || "entry.html";
+            const urlParams = new URLSearchParams(window.location.search);
+const isFriendChallenge = urlParams.get("friendChallenge") === "1";
+const challengeMatchId = urlParams.get("matchId");
 
-            localStorage.removeItem("afterConnectRedirect");
+if (isFriendChallenge && challengeMatchId) {
+    localStorage.setItem("currentMatchId", challengeMatchId);
+    window.location.href = "match-room.html";
+    return;
+}
 
-            window.location.href = afterConnectRedirect;
-        });
-    })
+const afterConnectRedirect =
+    localStorage.getItem("afterConnectRedirect") || "entry.html";
+
+localStorage.removeItem("afterConnectRedirect");
+
+window.location.href = afterConnectRedirect;
     .catch(function (error) {
         console.log("ERROR:", error);
 
