@@ -5,7 +5,6 @@ const verifyBtn = document.getElementById("verifyBtn");
 const statusText = document.getElementById("statusText");
 
 const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 if (backBtn) {
@@ -26,26 +25,43 @@ if (savedTag) {
     }
 
     if (savedName) {
-        statusText.textContent =
-            "Connected: " + savedName + " (" + savedTag + ")";
+        statusText.textContent = "Connected: " + savedName + " (" + savedTag + ")";
     } else {
-        statusText.textContent =
-            "Connected: " + savedTag;
+        statusText.textContent = "Connected: " + savedTag;
     }
 
     statusText.classList.add("connected");
     verifyBtn.textContent = "CONTINUE";
 }
 
+function finishConnectRedirect() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFriendChallenge = urlParams.get("friendChallenge") === "1";
+    const challengeMatchId = urlParams.get("matchId");
+
+    if (isFriendChallenge && challengeMatchId) {
+        localStorage.setItem("currentMatchId", challengeMatchId);
+        window.location.href = "match-room.html";
+        return;
+    }
+
+    const afterConnectRedirect =
+        localStorage.getItem("afterConnectRedirect") || "entry.html";
+
+    localStorage.removeItem("afterConnectRedirect");
+
+    window.location.href = afterConnectRedirect;
+}
+
 verifyBtn.addEventListener("click", function () {
     const playerTag = playerTagInput.value.trim().toUpperCase();
     const rawFriendLink = friendLinkInput.value.trim();
 
-const linkMatch = rawFriendLink.match(
-    /https:\/\/link\.clashroyale\.com\/invite\/friend\/[^\s]+/
-);
+    const linkMatch = rawFriendLink.match(
+        /https:\/\/link\.clashroyale\.com\/invite\/friend\/[^\s]+/
+    );
 
-const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
+    const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
 
     if (!username) {
         alert("Please log in first.");
@@ -85,81 +101,64 @@ const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
             playerTag: playerTag
         })
     })
-    .then(function (response) {
-        return response.json();
-    })
-    .then(function (data) {
-        if (data.success !== true) {
-            alert(data.message);
-
-            verifyBtn.textContent = "VERIFY ACCOUNT";
-            verifyBtn.disabled = false;
-            return;
-        }
-
-        localStorage.setItem("clashPlayerTag", data.player.tag);
-        localStorage.setItem("clashPlayerName", data.player.name);
-        localStorage.setItem("clashTrophies", data.player.trophies);
-        localStorage.setItem("clashExpLevel", data.player.expLevel);
-        localStorage.setItem("clashFriendLink", friendLink);
-
-        return fetch(API_BASE_URL + "/api/users/save-clash", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                username: username,
-                clashTag: data.player.tag,
-                clashName: data.player.name,
-                clashFriendLink: friendLink,
-                clashTrophies: data.player.trophies,
-                clashExpLevel: data.player.expLevel
-            })
+        .then(function (response) {
+            return response.json();
         })
-        .then(function (saveResponse) {
-            return saveResponse.json();
-        })
-        .then(function (saveData) {
-            if (saveData.success !== true) {
-                alert(saveData.message || "Clash verified, but could not save to account.");
+        .then(function (data) {
+            if (data.success !== true) {
+                alert(data.message);
 
                 verifyBtn.textContent = "VERIFY ACCOUNT";
                 verifyBtn.disabled = false;
                 return;
             }
 
-            statusText.textContent =
-                "Connected: " +
-                data.player.name +
-                " (" +
-                data.player.tag +
-                ")";
+            localStorage.setItem("clashPlayerTag", data.player.tag);
+            localStorage.setItem("clashPlayerName", data.player.name);
+            localStorage.setItem("clashTrophies", data.player.trophies);
+            localStorage.setItem("clashExpLevel", data.player.expLevel);
+            localStorage.setItem("clashFriendLink", friendLink);
 
-            statusText.classList.add("connected");
+            return fetch(API_BASE_URL + "/api/users/save-clash", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    clashTag: data.player.tag,
+                    clashName: data.player.name,
+                    clashFriendLink: friendLink,
+                    clashTrophies: data.player.trophies,
+                    clashExpLevel: data.player.expLevel
+                })
+            })
+                .then(function (saveResponse) {
+                    return saveResponse.json();
+                })
+                .then(function (saveData) {
+                    if (saveData.success !== true) {
+                        alert(saveData.message || "Clash verified, but could not save to account.");
 
-            const urlParams = new URLSearchParams(window.location.search);
-const isFriendChallenge = urlParams.get("friendChallenge") === "1";
-const challengeMatchId = urlParams.get("matchId");
+                        verifyBtn.textContent = "VERIFY ACCOUNT";
+                        verifyBtn.disabled = false;
+                        return;
+                    }
 
-if (isFriendChallenge && challengeMatchId) {
-    localStorage.setItem("currentMatchId", challengeMatchId);
-    window.location.href = "match-room.html";
-    return;
-}
+                    statusText.textContent =
+                        "Connected: " + data.player.name + " (" + data.player.tag + ")";
 
-const afterConnectRedirect =
-    localStorage.getItem("afterConnectRedirect") || "entry.html";
+                    statusText.classList.add("connected");
 
-localStorage.removeItem("afterConnectRedirect");
+                    finishConnectRedirect();
+                });
+        })
+        .catch(function (error) {
+            console.log("ERROR:", error);
 
-window.location.href = afterConnectRedirect;
-    .catch(function (error) {
-        console.log("ERROR:", error);
+            alert("Could not verify Clash account. Make sure your backend is running.");
 
-        alert("Could not verify Clash account. Make sure your backend is running.");
-
-        verifyBtn.textContent = "VERIFY ACCOUNT";
-        verifyBtn.disabled = false;
-    });
+            verifyBtn.textContent = "VERIFY ACCOUNT";
+            verifyBtn.disabled = false;
+        });
 });
