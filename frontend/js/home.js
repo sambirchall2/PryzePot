@@ -172,17 +172,35 @@ if (menuLogoutBtn) menuLogoutBtn.addEventListener("click", logout);
 function loadNotificationCount() {
     if (!username || !notificationCount) return;
 
-    fetch("https://api.pryzepot.com/api/friends/requests/" + encodeURIComponent(username))
-        .then(function (response) {
-            return response.json();
-        })
-        .then(function (data) {
-            if (!data.success) return;
+    Promise.all([
+        fetch("https://api.pryzepot.com/api/friends/requests/" + encodeURIComponent(username))
+            .then(function (response) {
+                return response.json();
+            }),
 
-            const count = data.requests ? data.requests.length : 0;
+        fetch("https://api.pryzepot.com/api/friends/challenges/" + encodeURIComponent(username))
+            .then(function (response) {
+                return response.json();
+            })
+    ])
+        .then(function (results) {
+            const requestData = results[0];
+            const challengeData = results[1];
 
-            if (count > 0) {
-                notificationCount.textContent = count;
+            const requestCount =
+                requestData.success && requestData.requests
+                    ? requestData.requests.length
+                    : 0;
+
+            const challengeCount =
+                challengeData.success && challengeData.challenges
+                    ? challengeData.challenges.length
+                    : 0;
+
+            const totalCount = requestCount + challengeCount;
+
+            if (totalCount > 0) {
+                notificationCount.textContent = totalCount;
                 notificationCount.classList.remove("hidden");
             } else {
                 notificationCount.classList.add("hidden");
