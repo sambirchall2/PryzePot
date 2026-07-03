@@ -2298,8 +2298,8 @@ app.get("/api/friends/challenges/:username", async function (req, res) {
 
 });
 app.post("/api/friends/challenges/:id/accept", async function (req, res) {
-
     const challengeId = Number(req.params.id);
+    const username = req.body.username;
 
     const challengeResult = await supabase
         .from("friend_challenges")
@@ -2308,9 +2308,60 @@ app.post("/api/friends/challenges/:id/accept", async function (req, res) {
         .maybeSingle();
 
     if (!challengeResult.data) {
+        res.json({ success: false, message: "Challenge not found." });
+        return;
+    }
+
+    const challenge = challengeResult.data;
+
+    if (challenge.receiver_username !== username) {
+        res.json({ success: false, message: "You cannot accept this challenge." });
+        return;
+    }
+
+    if (challenge.status !== "pending") {
+        res.json({ success: false, message: "This challenge is no longer pending." });
+        return;
+    }
+
+    const now = Date.now();
+
+    const matchResult = await supabase
+        .from("matches")
+        .insert({
+            game: "Clash Royale",
+            mode: "Friend Challenge",
+            entry_fee: challenge.entry_fee,
+
+            creator_username: challenge.challenger_username,
+            creator_tag: challenge.challenger_tag,
+            creator_friend_link: challenge.challenger_friend_link,
+
+            opponent_username: challenge.receiver_username,
+            opponent_tag: challenge.receiver_tag,
+            opponent_friend_link: challenge.receiver_friend_link,
+
+            status: "Match ready",
+
+            created_at: now,
+            expires_at: null,
+            verify_expires_at: now + VERIFY_MATCH_EXPIRATION_MINUTES * 60 * 1000,
+
+            winner_username: null,
+            winner_tag: null,
+            loser_username: null,
+            loser_tag: null,
+            verified_at: null
+        })
+        .select()
+        .single();
+
+    if (matchResult.error) {
+        console.log("CREATE FRIEND MATCH ERROR:", matchResult.error);
+
         res.json({
             success: false,
-            message: "Challenge not found."
+            message: "Could not create friend match."
         });
         return;
     }
@@ -2319,29 +2370,19 @@ app.post("/api/friends/challenges/:id/accept", async function (req, res) {
         .from("friend_challenges")
         .update({
             status: "accepted",
+            match_id: matchResult.data.id,
             updated_at: Date.now()
         })
         .eq("id", challengeId)
         .select()
         .single();
 
-    if (updateResult.error) {
-        console.log(updateResult.error);
-
-        res.json({
-            success: false,
-            message: "Could not accept challenge."
-        });
-
-        return;
-    }
-
     res.json({
         success: true,
         message: "Challenge accepted!",
-        challenge: updateResult.data
+        challenge: updateResult.data,
+        match: dbMatchToFrontend(matchResult.data)
     });
-
 });
 app.post("/api/friends/challenges/:id/decline", async function (req, res) {
 

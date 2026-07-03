@@ -196,9 +196,27 @@ function acceptChallenge(challengeId) {
             return response.json();
         })
         .then(function (data) {
-            showToast(data.message, "success");
-            loadFriendChallenges();
-        })
+
+    if (!data.success) {
+        showToast(data.message || "Could not accept challenge.", "error");
+        return;
+    }
+
+    showToast(data.message, "success");
+
+    if (data.match && data.match.id) {
+
+        localStorage.setItem("currentMatchId", data.match.id);
+
+        window.location.href =
+            "../clash/connect-clash.html?friendChallenge=1&matchId=" + data.match.id;
+
+        return;
+    }
+
+    loadFriendChallenges();
+
+})
         .catch(function (error) {
             console.log("ACCEPT CHALLENGE ERROR:", error);
             showToast("Could not accept challenge.", "error");
