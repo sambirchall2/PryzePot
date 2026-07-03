@@ -2297,6 +2297,29 @@ app.get("/api/friends/challenges/:username", async function (req, res) {
     });
 
 });
+app.get("/api/friends/challenge/:id", async function (req, res) {
+
+    const challengeId = Number(req.params.id);
+
+    const result = await supabase
+        .from("friend_challenges")
+        .select("*")
+        .eq("id", challengeId)
+        .maybeSingle();
+
+    if (result.error || !result.data) {
+        res.json({
+            success: false
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        challenge: result.data
+    });
+
+});
 app.post("/api/friends/challenges/:id/accept", async function (req, res) {
     const challengeId = Number(req.params.id);
     const username = req.body.username;

@@ -379,19 +379,29 @@ if (sendChallengeButton) {
                 return response.json();
             })
             .then(function (data) {
-                if (!data.success) {
-                    showToast(data.message || "Could not send challenge.", "error");
 
-                    sendChallengeButton.disabled = false;
-                    sendChallengeButton.textContent =
-                        "Send $" + selectedChallengeFee + " Challenge";
+    if (!data.success) {
 
-                    return;
-                }
+        showToast(data.message || "Could not send challenge.", "error");
 
-                showToast(data.message || "Challenge sent!", "success");
-                closeChallenge();
-            })
+        sendChallengeButton.disabled = false;
+
+        sendChallengeButton.textContent =
+            "Send $" + selectedChallengeFee + " Challenge";
+
+        return;
+
+    }
+
+    localStorage.setItem(
+        "pendingChallengeId",
+        data.challenge.id
+    );
+
+    window.location.href =
+        "../html/challenge-waiting.html";
+
+})
             .catch(function (error) {
                 console.log("SEND CHALLENGE ERROR:", error);
                 showToast("Could not send challenge.", "error");
