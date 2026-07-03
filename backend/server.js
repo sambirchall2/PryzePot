@@ -2345,7 +2345,7 @@ app.post("/api/friends/challenges/:id/accept", async function (req, res) {
 
             created_at: now,
             expires_at: null,
-            verify_expires_at: now + VERIFY_MATCH_EXPIRATION_MINUTES * 60 * 1000,
+            verify_expires_at: now + 30 * 60 * 1000,
 
             winner_username: null,
             winner_tag: null,
