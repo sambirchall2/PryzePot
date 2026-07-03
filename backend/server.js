@@ -2531,6 +2531,129 @@ app.post("/api/friends/challenges/:id/decline", async function (req, res) {
     });
 
 });
+app.post("/api/friends/messages/send", async function (req, res) {
+    const senderUsername = req.body.senderUsername;
+    const receiverUsername = req.body.receiverUsername;
+    const message = (req.body.message || "").trim();
+
+    if (!senderUsername || !receiverUsername || !message) {
+        res.json({
+            success: false,
+            message: "Missing message information."
+        });
+        return;
+    }
+
+    if (message.length > 500) {
+        res.json({
+            success: false,
+            message: "Message is too long."
+        });
+        return;
+    }
+
+    const pair = normalizeFriendPair(senderUsername, receiverUsername);
+
+    const friendResult = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_one", pair.userOne)
+        .eq("user_two", pair.userTwo)
+        .maybeSingle();
+
+    if (!friendResult.data) {
+        res.json({
+            success: false,
+            message: "You can only message friends."
+        });
+        return;
+    }
+
+    const insertResult = await supabase
+        .from("friend_messages")
+        .insert({
+            sender_username: senderUsername,
+            receiver_username: receiverUsername,
+            message: message,
+            is_read: false,
+            created_at: Date.now()
+        })
+        .select()
+        .single();
+
+    if (insertResult.error) {
+        console.log("SEND MESSAGE ERROR:", insertResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not send message."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Message sent.",
+        chatMessage: insertResult.data
+    });
+});
+
+app.get("/api/friends/messages/:username/:friendUsername", async function (req, res) {
+    const username = req.params.username;
+    const friendUsername = req.params.friendUsername;
+
+    const pair = normalizeFriendPair(username, friendUsername);
+
+    const friendResult = await supabase
+        .from("friends")
+        .select("*")
+        .eq("user_one", pair.userOne)
+        .eq("user_two", pair.userTwo)
+        .maybeSingle();
+
+    if (!friendResult.data) {
+        res.json({
+            success: false,
+            message: "You can only view chats with friends.",
+            messages: []
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("friend_messages")
+        .select("*")
+        .or(
+            "and(sender_username.eq." + username + ",receiver_username.eq." + friendUsername + ")," +
+            "and(sender_username.eq." + friendUsername + ",receiver_username.eq." + username + ")"
+        )
+        .order("created_at", { ascending: true })
+        .limit(100);
+
+    if (result.error) {
+        console.log("LOAD MESSAGES ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not load messages.",
+            messages: []
+        });
+        return;
+    }
+
+    await supabase
+        .from("friend_messages")
+        .update({
+            is_read: true
+        })
+        .eq("receiver_username", username)
+        .eq("sender_username", friendUsername);
+
+    res.json({
+        success: true,
+        messages: result.data || []
+    });
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {

@@ -254,3 +254,30 @@ body{
     text-transform:uppercase;
     letter-spacing:.5px;
 }
+.friend-card-actions{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.chat-btn{
+    height:34px;
+    min-width:72px;
+
+    border:none;
+    border-radius:10px;
+
+    background:#b6ff00;
+    color:#050505;
+
+    font-size:12px;
+    font-weight:900;
+
+    cursor:pointer;
+
+    transition:.15s;
+}
+
+.chat-btn:hover{
+    opacity:.9;
+}

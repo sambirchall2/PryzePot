@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Chat | PryzePot</title>
+
+    <link rel="stylesheet" href="../css/friend-chat.css">
+    <link rel="stylesheet" href="../css/toast.css">
+</head>
+
+<body>
+
+<div class="chat-page">
+
+    <div class="chat-header">
+        <button id="backButton" class="back-button">←</button>
+
+        <img id="friendAvatar" class="friend-avatar" src="../assets/profile/avatar1.png" alt="Friend">
+
+        <div class="friend-header-info">
+            <div id="friendUsername" class="friend-username">Loading...</div>
+            <div id="friendStatus" class="friend-status">Checking status...</div>
+        </div>
+
+        <button id="challengeButton" class="challenge-button">
+            Challenge
+        </button>
+    </div>
+
+    <div id="messagesContainer" class="messages-container">
+        <div class="loading-message">Loading chat...</div>
+    </div>
+
+    <div class="message-composer">
+        <input
+            id="messageInput"
+            class="message-input"
+            type="text"
+            maxlength="500"
+            placeholder="Type a message..."
+        >
+
+        <button id="sendButton" class="send-button">
+            Send
+        </button>
+    </div>
+
+</div>
+
+<div id="challengeModal" class="challenge-modal hidden">
+    <div class="challenge-box">
+
+        <button id="closeChallengeModal" class="challenge-close-btn">×</button>
+
+        <p class="challenge-eyebrow">FRIEND CHALLENGE</p>
+
+        <h2 id="challengeTitle">Challenge Player</h2>
+
+        <p class="challenge-subtitle">
+            Choose an entry fee for this private Clash Royale match.
+        </p>
+
+        <div class="challenge-fees">
+            <button class="challenge-fee-btn" data-entry-fee="1">$1</button>
+            <button class="challenge-fee-btn" data-entry-fee="2">$2</button>
+            <button class="challenge-fee-btn" data-entry-fee="5">$5</button>
+            <button class="challenge-fee-btn" data-entry-fee="10">$10</button>
+            <button class="challenge-fee-btn" data-entry-fee="50">$50</button>
+            <button class="challenge-fee-btn" data-entry-fee="100">$100</button>
+        </div>
+
+        <button id="sendChallengeButton" class="send-challenge-button" disabled>
+            Select Entry Fee
+        </button>
+
+    </div>
+</div>
+
+<script src="../js/toast.js"></script>
+<script src="../js/friend-chat.js"></script>
+
+</body>
+</html>

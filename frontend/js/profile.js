@@ -23,6 +23,7 @@ const record = document.getElementById("record");
 const tournamentWins = document.getElementById("tournamentWins");
 
 const profileActionButton = document.getElementById("profileActionButton");
+const chatFriendButton = document.getElementById("chatFriendButton");
 const removeFriendButton = document.getElementById("removeFriendButton");
 const challengeModal = document.getElementById("challengeModal");
 const challengeTitle = document.getElementById("challengeTitle");
@@ -73,6 +74,23 @@ function hideRemoveFriendButton() {
     removeFriendButton.classList.add("hidden");
     removeFriendButton.onclick = null;
 }
+function hideChatButton() {
+    if (!chatFriendButton) return;
+
+    chatFriendButton.classList.add("hidden");
+    chatFriendButton.onclick = null;
+}
+
+function showChatButton() {
+    if (!chatFriendButton) return;
+
+    chatFriendButton.classList.remove("hidden");
+
+    chatFriendButton.onclick = function () {
+        window.location.href =
+            "friend-chat.html?user=" + encodeURIComponent(viewedUsername);
+    };
+}
 
 function showRemoveFriendButton() {
     if (!removeFriendButton) return;
@@ -86,6 +104,7 @@ function showRemoveFriendButton() {
 
 function loadFriendStatus() {
     hideRemoveFriendButton();
+    hideChatButton();
 
     if (viewedUsername === loggedInUsername) {
         profileActionButton.textContent = "Edit Profile";
@@ -128,8 +147,10 @@ function loadFriendStatus() {
     openChallengeModal();
 };
 
-                showRemoveFriendButton();
-                return;
+showChatButton();
+showRemoveFriendButton();
+
+return;
             }
 
             if (data.status === "request_sent") {

@@ -428,3 +428,20 @@ body{
 .challenge-modal.hidden{
     display:none;
 }
+.chat-friend-button{
+    width:calc(100% - 36px);
+    margin:22px 18px 0;
+    padding:16px;
+    border:none;
+    border-radius:16px;
+    background:#b6ff00;
+    color:#05070b;
+    font-size:16px;
+    font-weight:950;
+    cursor:pointer;
+    box-shadow:0 0 18px rgba(182,255,0,.35);
+}
+
+.chat-friend-button:active{
+    transform:scale(.98);
+}

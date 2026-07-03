@@ -21,7 +21,10 @@ function openProfile(playerUsername) {
     window.location.href =
         "profile.html?user=" + encodeURIComponent(playerUsername);
 }
-
+function openChat(playerUsername) {
+    window.location.href =
+        "friend-chat.html?user=" + encodeURIComponent(playerUsername);
+}
 function isOnline(lastSeen) {
     if (!lastSeen) return false;
 
@@ -77,14 +80,25 @@ function createFriendCard(user) {
             </div>
         </div>
 
-        <button class="view-profile-btn">
-            View
-        </button>
+        <div class="friend-card-actions">
+
+    <button class="chat-btn">
+        Chat
+    </button>
+
+    <button class="view-profile-btn">
+        View
+    </button>
+
+</div>
     `;
 
     card.querySelector(".view-profile-btn").addEventListener("click", function () {
         openProfile(user.username);
     });
+    card.querySelector(".chat-btn").addEventListener("click", function () {
+    openChat(user.username);
+});
 
     return {
         card: card,
