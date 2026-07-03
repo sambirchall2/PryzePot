@@ -1,10 +1,11 @@
 const backBtn = document.getElementById("backBtn");
 const onlineMode = document.getElementById("onlineMode");
+const friendsMode = document.getElementById("friendsMode");
 const tournamentMode = document.getElementById("tournamentMode");
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
-        window.location.href = "../html/home.html";
+        window.location.href = "online.html";
     });
 }
 
@@ -15,6 +16,12 @@ if (onlineMode) {
 
         localStorage.setItem("afterConnectRedirect", "entry.html");
         window.location.href = "connect-clash.html";
+    });
+}
+
+if (friendsMode) {
+    friendsMode.addEventListener("click", function () {
+        window.location.href = "friends-mode.html";
     });
 }
 
