@@ -10,7 +10,7 @@ const backButton = document.getElementById("backButton");
 const searchInput = document.getElementById("searchInput");
 const searchResults = document.getElementById("searchResults");
 const friendsList = document.getElementById("friendsList");
-
+let unreadMessagesByUser = {};
 if (backButton) {
     backButton.addEventListener("click", function () {
         window.location.href = "home.html";
@@ -83,8 +83,11 @@ function createFriendCard(user) {
         <div class="friend-card-actions">
 
     <button class="chat-btn">
-        Chat
-    </button>
+    Chat
+    <span class="unread-badge hidden">
+        0
+    </span>
+</button>
 
     <button class="view-profile-btn">
         View
@@ -96,6 +99,18 @@ function createFriendCard(user) {
     card.querySelector(".view-profile-btn").addEventListener("click", function () {
         openProfile(user.username);
     });
+    const unreadBadge = card.querySelector(".unread-badge");
+
+const unreadCount = unreadMessagesByUser[user.username] || 0;
+
+if (unreadCount > 0) {
+    unreadBadge.textContent = unreadCount;
+    unreadBadge.classList.remove("hidden");
+}
+
+card.querySelector(".chat-btn").addEventListener("click", function () {
+    openChat(user.username);
+});
     card.querySelector(".chat-btn").addEventListener("click", function () {
     openChat(user.username);
 });
@@ -177,8 +192,22 @@ function loadFriends() {
         </div>
     `;
 
-    fetch(API_BASE_URL + "/api/friends/" + encodeURIComponent(username))
-        .then(function (response) {
+    fetch(API_BASE_URL + "/api/friends/unread/" + encodeURIComponent(username))
+    .then(function (response) {
+        return response.json();
+    })
+    .then(function (unreadData) {
+
+        unreadMessagesByUser = unreadData.unread || {};
+
+        return fetch(
+            API_BASE_URL +
+            "/api/friends/" +
+            encodeURIComponent(username)
+        );
+
+    })
+    .then(function (response) {
             return response.json();
         })
         .then(async function (data) {

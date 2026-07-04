@@ -281,3 +281,31 @@ body{
 .chat-btn:hover{
     opacity:.9;
 }
+.chat-btn{
+    position:relative;
+}
+
+.unread-badge{
+    position:absolute;
+    top:-8px;
+    right:-8px;
+
+    min-width:20px;
+    height:20px;
+
+    padding:0 6px;
+
+    border-radius:999px;
+
+    background:#ff2b2b;
+    color:white;
+
+    font-size:11px;
+    font-weight:900;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:2px solid #111;
+}

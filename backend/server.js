@@ -2654,6 +2654,43 @@ app.get("/api/friends/messages/:username/:friendUsername", async function (req, 
         messages: result.data || []
     });
 });
+app.get("/api/friends/unread/:username", async function (req, res) {
+
+    const username = req.params.username;
+
+    const result = await supabase
+        .from("friend_messages")
+        .select("sender_username")
+        .eq("receiver_username", username)
+        .eq("is_read", false);
+
+    if (result.error) {
+
+        console.log("UNREAD MESSAGE ERROR:", result.error);
+
+        res.json({
+            success: false,
+            unread: {}
+        });
+
+        return;
+    }
+
+    const unread = {};
+
+    for (const message of result.data || []) {
+
+        unread[message.sender_username] =
+            (unread[message.sender_username] || 0) + 1;
+
+    }
+
+    res.json({
+        success: true,
+        unread: unread
+    });
+
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {
