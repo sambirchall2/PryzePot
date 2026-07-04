@@ -1608,6 +1608,155 @@ app.post("/api/users/save-profile", async function (req, res) {
         user: result.data
     });
 });
+app.get("/api/leaderboard", async function (req, res) {
+    const game = req.query.game || "all";
+    const time = req.query.time || "all";
+
+    if (game !== "all" && game !== "clash") {
+        res.json({
+            success: true,
+            players: []
+        });
+        return;
+    }
+
+    const usersResult = await supabase
+        .from("users")
+        .select("username, profile_picture, profile_banner, xp, level");
+
+    if (usersResult.error) {
+        console.log("LEADERBOARD USERS ERROR:", usersResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not load leaderboard users."
+        });
+        return;
+    }
+
+    const completedMatches = await supabase
+        .from("matches")
+        .select("entry_fee, winner_username, loser_username, status, verified_at")
+        .eq("status", "Completed");
+
+    const completedTournaments = await supabase
+        .from("tournaments")
+        .select("entry_fee, winner_username, status")
+        .eq("status", "Completed");
+
+    const tournamentMatchWins = await supabase
+        .from("tournament_matches")
+        .select("winner_username, loser_username, status")
+        .eq("status", "Completed");
+
+    if (completedMatches.error || completedTournaments.error || tournamentMatchWins.error) {
+        console.log("LEADERBOARD STATS ERROR:", {
+            matches: completedMatches.error,
+            tournaments: completedTournaments.error,
+            tournamentMatches: tournamentMatchWins.error
+        });
+
+        res.json({
+            success: false,
+            message: "Could not load leaderboard stats."
+        });
+        return;
+    }
+
+    const statsByUser = {};
+
+    function ensureUser(username) {
+        if (!username) return null;
+
+        if (!statsByUser[username]) {
+            statsByUser[username] = {
+                username: username,
+                lifetime_winnings: 0,
+                one_v_one_wins: 0,
+                one_v_one_losses: 0,
+                tournament_wins: 0,
+                tournament_match_wins: 0,
+                tournament_match_losses: 0
+            };
+        }
+
+        return statsByUser[username];
+    }
+
+    (completedMatches.data || []).forEach(function (match) {
+        const winner = ensureUser(match.winner_username);
+        const loser = ensureUser(match.loser_username);
+
+        if (winner) {
+            winner.one_v_one_wins += 1;
+            winner.lifetime_winnings += Number(match.entry_fee || 0) * 2;
+        }
+
+        if (loser) {
+            loser.one_v_one_losses += 1;
+        }
+    });
+
+    (completedTournaments.data || []).forEach(function (tournament) {
+        const winner = ensureUser(tournament.winner_username);
+
+        if (winner) {
+            winner.tournament_wins += 1;
+            winner.lifetime_winnings +=
+                Number(tournament.entry_fee || 0) *
+                2;
+        }
+    });
+
+    (tournamentMatchWins.data || []).forEach(function (match) {
+        const winner = ensureUser(match.winner_username);
+        const loser = ensureUser(match.loser_username);
+
+        if (winner) {
+            winner.tournament_match_wins += 1;
+        }
+
+        if (loser) {
+            loser.tournament_match_losses += 1;
+        }
+    });
+
+    const players = (usersResult.data || []).map(function (user) {
+        const stats = ensureUser(user.username);
+
+        return {
+            username: user.username,
+            profile_picture: user.profile_picture || "avatar1",
+            profile_banner: user.profile_banner || "banner1",
+            xp: Number(user.xp) || 0,
+            level: calculateLevelFromXp(user.xp || 0),
+            lifetime_winnings: stats ? stats.lifetime_winnings : 0,
+            one_v_one_wins: stats ? stats.one_v_one_wins : 0,
+            one_v_one_losses: stats ? stats.one_v_one_losses : 0,
+            tournament_wins: stats ? stats.tournament_wins : 0,
+            tournament_match_wins: stats ? stats.tournament_match_wins : 0,
+            tournament_match_losses: stats ? stats.tournament_match_losses : 0
+        };
+    });
+
+    players.sort(function (a, b) {
+        return Number(b.lifetime_winnings) - Number(a.lifetime_winnings);
+    });
+
+    const rankedPlayers = players.map(function (player, index) {
+        return {
+            rank: index + 1,
+            ...player
+        };
+    });
+
+    res.json({
+        success: true,
+        game: game,
+        time: time,
+        players: rankedPlayers
+    });
+});
 app.get("/api/users/search/:query", async function (req, res) {
 
     const query = req.params.query.trim();
