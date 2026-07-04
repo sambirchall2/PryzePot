@@ -675,3 +675,30 @@ body{
         0 0 24px rgba(182,255,0,.22),
         0 18px 36px rgba(0,0,0,.55);
 }
+/* Fix leaderboard rows back to clean gray */
+.row-banner-bg,
+.row-banner-overlay{
+    display:none;
+}
+
+.leaderboard-row{
+    position:relative;
+    overflow:hidden;
+    background:#171717;
+}
+
+.leaderboard-row:hover{
+    background:#202020;
+}
+
+.leaderboard-row .rank-number,
+.leaderboard-row .player-cell,
+.leaderboard-row .money-cell{
+    position:relative;
+    z-index:2;
+}
+
+.current-user-row{
+    border-left:4px solid #b6ff00;
+    background:rgba(182,255,0,.08);
+}
