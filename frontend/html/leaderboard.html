@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PryzePot Leaderboard</title>
-
     <link rel="stylesheet" href="../css/leaderboard.css">
 </head>
 
@@ -14,25 +12,53 @@
 <div class="leaderboard-page">
 
     <div class="top-bar">
-
-        <button id="backButton" class="back-button">
-            ←
-        </button>
+        <button id="backButton" class="back-button">←</button>
 
         <h1 class="leaderboard-title">
             LEADERBOARD
         </h1>
-
     </div>
 
-    <div id="leaderboardContent">
+    <div class="time-filter-row">
+        <span class="filter-label">STATS OF THE</span>
 
+        <button class="time-pill active" data-time="week">WEEK</button>
+        <button class="time-pill" data-time="day">DAY</button>
+        <button class="time-pill" data-time="month">MONTH</button>
+        <button class="time-pill" data-time="all">ALL</button>
     </div>
+
+    <div class="game-filter-row">
+        <button class="game-pill active" data-game="all">ALL</button>
+        <button class="game-pill" data-game="clash">CLASH</button>
+        <button class="game-pill locked" data-game="sf6">SF6</button>
+        <button class="game-pill locked" data-game="rocketleague">RL</button>
+        <button class="game-pill locked" data-game="valorant">VAL</button>
+    </div>
+
+    <section class="top-section">
+        <div class="section-label">TOP PLAYERS</div>
+
+        <div id="podium" class="podium"></div>
+    </section>
+
+    <section class="ranking-section">
+        <div class="ranking-header">
+            <span>RANK</span>
+            <span>PLAYER</span>
+            <span>WINNINGS</span>
+        </div>
+
+        <div id="leaderboardList" class="leaderboard-list"></div>
+    </section>
+
+    <section id="yourRankCard" class="your-rank-card"></section>
 
 </div>
+
+<div id="toast" class="toast">Coming Soon</div>
 
 <script src="../js/leaderboard.js"></script>
 
 </body>
-
 </html>
