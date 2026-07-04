@@ -8,9 +8,8 @@ body{
     font-family:Arial,sans-serif;
     color:white;
     background:
-        radial-gradient(circle at top center,rgba(182,255,0,.28),transparent 45%),
-        radial-gradient(circle at center,rgba(182,255,0,.08),transparent 60%),
-        linear-gradient(180deg,#08120a 0%,#050505 100%);
+        radial-gradient(circle at top center,rgba(182,255,0,.22),transparent 42%),
+        linear-gradient(180deg,#101010 0%,#050505 100%);
 }
 
 .leaderboard-page{
@@ -20,8 +19,27 @@ body{
     margin:0 auto;
     padding:0 14px 34px;
     background:
-        radial-gradient(circle at top center,rgba(182,255,0,.16),transparent 38%),
-        linear-gradient(180deg,#071006 0%,#050505 48%,#020202 100%);
+        radial-gradient(circle at top center,rgba(182,255,0,.15),transparent 36%),
+        linear-gradient(180deg,#121512 0%,#080808 42%,#030303 100%);
+}
+
+.page-animate{
+    opacity:0;
+    transform:translateY(10px);
+    animation:pageIn .42s ease forwards;
+}
+
+.delay-1{animation-delay:.05s;}
+.delay-2{animation-delay:.10s;}
+.delay-3{animation-delay:.15s;}
+.delay-4{animation-delay:.20s;}
+.delay-5{animation-delay:.25s;}
+
+@keyframes pageIn{
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
 }
 
 .top-bar{
@@ -39,12 +57,23 @@ body{
     height:40px;
     border:none;
     border-radius:13px;
-    background:rgba(255,255,255,.08);
+    background:#202020;
     color:white;
     font-size:22px;
     font-weight:900;
     cursor:pointer;
-    border:1px solid rgba(182,255,0,.18);
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 8px 20px rgba(0,0,0,.35);
+    transition:.18s;
+}
+
+.back-button:active,
+.time-pill:active,
+.game-pill:active,
+.podium-card:active,
+.leaderboard-row:active,
+.your-rank-card:active{
+    transform:scale(.98);
 }
 
 .leaderboard-title{
@@ -59,7 +88,7 @@ body{
     font-weight:900;
     font-style:italic;
     letter-spacing:1px;
-    text-shadow:0 0 24px rgba(182,255,0,.40);
+    text-shadow:0 0 24px rgba(182,255,0,.38);
 }
 
 .time-filter-row{
@@ -69,32 +98,32 @@ body{
     margin-top:6px;
     padding:8px;
     border-radius:18px;
-    background:rgba(0,0,0,.45);
-    border:1px solid rgba(182,255,0,.16);
+    background:#1a1a1a;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 12px 26px rgba(0,0,0,.30);
 }
 
 .filter-label{
     font-size:11px;
     font-weight:900;
-    color:rgba(255,255,255,.72);
+    color:rgba(255,255,255,.70);
     margin-right:auto;
     white-space:nowrap;
 }
 
-.time-pill,
-.game-pill{
+.time-pill{
     border:none;
     border-radius:999px;
-    background:rgba(255,255,255,.09);
+    background:#2a2a2a;
     color:white;
     font-size:10px;
     font-weight:900;
     padding:8px 10px;
     cursor:pointer;
+    transition:.18s;
 }
 
-.time-pill.active,
-.game-pill.active{
+.time-pill.active{
     background:#b6ff00;
     color:#050505;
     box-shadow:0 0 18px rgba(182,255,0,.35);
@@ -103,7 +132,7 @@ body{
 .game-filter-row{
     margin-top:12px;
     display:flex;
-    gap:7px;
+    gap:8px;
     overflow-x:auto;
     padding-bottom:2px;
 }
@@ -113,8 +142,57 @@ body{
 }
 
 .game-pill{
-    min-width:58px;
-    border:1px solid rgba(182,255,0,.14);
+    min-width:68px;
+    height:72px;
+    border:none;
+    border-radius:18px;
+    background:#1a1a1a;
+    color:white;
+    font-size:9px;
+    font-weight:900;
+    cursor:pointer;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 12px 26px rgba(0,0,0,.28);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+    transition:.18s;
+    flex-shrink:0;
+}
+
+.game-pill img{
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    object-fit:cover;
+}
+
+.game-icon{
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#2b2b2b;
+    color:#b6ff00;
+    font-size:11px;
+    font-weight:900;
+    border:1px solid rgba(182,255,0,.22);
+}
+
+.all-icon{
+    background:#b6ff00;
+    color:#050505;
+}
+
+.game-pill.active{
+    border-color:rgba(182,255,0,.65);
+    box-shadow:
+        0 0 22px rgba(182,255,0,.20),
+        0 14px 28px rgba(0,0,0,.35);
 }
 
 .game-pill.locked{
@@ -135,7 +213,7 @@ body{
 
 .podium{
     display:grid;
-    grid-template-columns:1fr 1.12fr 1fr;
+    grid-template-columns:1fr 1.14fr 1fr;
     gap:8px;
     align-items:end;
 }
@@ -143,20 +221,30 @@ body{
 .podium-card{
     position:relative;
     min-height:158px;
-    border-radius:18px;
+    border-radius:20px;
     overflow:hidden;
-    background:#101010;
-    border:1px solid rgba(182,255,0,.22);
-    box-shadow:0 12px 28px rgba(0,0,0,.40);
+    background:#1a1a1a;
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 14px 30px rgba(0,0,0,.42);
+    cursor:pointer;
+    transition:.18s;
+}
+
+.podium-card:hover{
+    border-color:rgba(182,255,0,.35);
 }
 
 .podium-card.rank-1{
-    min-height:184px;
-    border-color:rgba(182,255,0,.65);
+    min-height:188px;
+    border-color:rgba(182,255,0,.62);
     box-shadow:
-        0 0 26px rgba(182,255,0,.25),
-        0 16px 34px rgba(0,0,0,.50);
-    transform:translateY(-8px);
+        0 0 28px rgba(182,255,0,.22),
+        0 18px 36px rgba(0,0,0,.55);
+    transform:translateY(-10px);
+}
+
+.podium-card.rank-1:active{
+    transform:translateY(-10px) scale(.98);
 }
 
 .podium-banner{
@@ -173,7 +261,7 @@ body{
     inset:0;
     background:
         linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.88)),
-        linear-gradient(90deg,rgba(0,0,0,.60),rgba(0,0,0,.12));
+        linear-gradient(90deg,rgba(0,0,0,.64),rgba(0,0,0,.14));
 }
 
 .rank-badge{
@@ -181,13 +269,13 @@ body{
     top:8px;
     left:8px;
     z-index:2;
-    padding:5px 8px;
+    padding:5px 9px;
     border-radius:999px;
-    background:rgba(0,0,0,.76);
+    background:rgba(0,0,0,.78);
     color:#b6ff00;
     font-size:11px;
     font-weight:900;
-    border:1px solid rgba(182,255,0,.25);
+    border:1px solid rgba(182,255,0,.28);
 }
 
 .podium-content{
@@ -207,12 +295,12 @@ body{
     object-fit:cover;
     border:3px solid #b6ff00;
     background:#050505;
-    box-shadow:0 0 18px rgba(182,255,0,.45);
+    box-shadow:0 0 18px rgba(182,255,0,.42);
 }
 
 .rank-1 .podium-avatar{
-    width:62px;
-    height:62px;
+    width:64px;
+    height:64px;
 }
 
 .podium-name{
@@ -227,42 +315,50 @@ body{
 .podium-money{
     margin-top:3px;
     color:#b6ff00;
-    font-size:12px;
+    font-size:13px;
     font-weight:900;
 }
 
 .podium-record{
     margin-top:3px;
-    color:rgba(255,255,255,.75);
+    color:rgba(255,255,255,.76);
     font-size:10px;
     font-weight:900;
 }
 
 .ranking-section{
     margin-top:12px;
-    border-radius:18px;
+    border-radius:20px;
     overflow:hidden;
-    background:rgba(0,0,0,.42);
-    border:1px solid rgba(182,255,0,.14);
+    background:#171717;
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 14px 30px rgba(0,0,0,.35);
 }
 
 .ranking-header{
     display:grid;
-    grid-template-columns:50px 1fr 88px;
-    padding:12px 12px;
+    grid-template-columns:50px 1fr 92px;
+    padding:12px;
     color:#b6ff00;
     font-size:10px;
     font-weight:900;
     letter-spacing:.7px;
-    border-bottom:1px solid rgba(182,255,0,.12);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    background:#202020;
 }
 
 .leaderboard-row{
     display:grid;
-    grid-template-columns:50px 1fr 88px;
+    grid-template-columns:50px 1fr 92px;
     align-items:center;
-    padding:11px 12px;
+    padding:12px;
     border-bottom:1px solid rgba(255,255,255,.06);
+    cursor:pointer;
+    transition:.18s;
+}
+
+.leaderboard-row:hover{
+    background:#202020;
 }
 
 .leaderboard-row:last-child{
@@ -270,7 +366,7 @@ body{
 }
 
 .rank-number{
-    color:rgba(255,255,255,.76);
+    color:rgba(255,255,255,.74);
     font-size:13px;
     font-weight:900;
 }
@@ -288,6 +384,7 @@ body{
     border-radius:50%;
     object-fit:cover;
     border:2px solid rgba(182,255,0,.55);
+    background:#050505;
 }
 
 .player-meta{
@@ -312,19 +409,21 @@ body{
 .money-cell{
     text-align:right;
     color:#b6ff00;
-    font-size:13px;
+    font-size:14px;
     font-weight:900;
+    text-shadow:0 0 12px rgba(182,255,0,.14);
 }
 
 .your-rank-card{
     margin-top:14px;
-    border-radius:18px;
+    border-radius:20px;
     padding:13px;
     background:
-        linear-gradient(135deg,rgba(182,255,0,.22),rgba(0,0,0,.60)),
-        #101010;
+        linear-gradient(135deg,rgba(182,255,0,.22),rgba(32,32,32,.92)),
+        #171717;
     border:1px solid rgba(182,255,0,.42);
-    box-shadow:0 0 26px rgba(182,255,0,.16);
+    box-shadow:0 0 26px rgba(182,255,0,.14);
+    cursor:pointer;
 }
 
 .your-label{
@@ -340,6 +439,23 @@ body{
     grid-template-columns:52px 1fr 92px;
     align-items:center;
     gap:8px;
+}
+
+.empty-state,
+.empty-list-row{
+    color:rgba(255,255,255,.70);
+    font-size:12px;
+    font-weight:900;
+    text-align:center;
+    padding:22px 12px;
+    background:#171717;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+}
+
+.empty-list-row{
+    border-radius:0;
+    background:transparent;
 }
 
 .toast{
@@ -365,6 +481,11 @@ body{
 }
 
 @media (max-width:380px){
+    .leaderboard-page{
+        padding-left:12px;
+        padding-right:12px;
+    }
+
     .leaderboard-title{
         font-size:30px;
         padding-left:48px;
@@ -373,6 +494,11 @@ body{
     .time-pill{
         padding:7px 8px;
         font-size:9px;
+    }
+
+    .game-pill{
+        min-width:64px;
+        height:68px;
     }
 
     .podium{
@@ -384,7 +510,7 @@ body{
     }
 
     .podium-card.rank-1{
-        min-height:174px;
+        min-height:178px;
     }
 }
 

@@ -11,7 +11,7 @@
 
 <div class="leaderboard-page">
 
-    <div class="top-bar">
+    <div class="top-bar page-animate">
         <button id="backButton" class="back-button">←</button>
 
         <h1 class="leaderboard-title">
@@ -19,7 +19,7 @@
         </h1>
     </div>
 
-    <div class="time-filter-row">
+    <div class="time-filter-row page-animate delay-1">
         <span class="filter-label">STATS OF THE</span>
 
         <button class="time-pill active" data-time="week">WEEK</button>
@@ -28,21 +28,40 @@
         <button class="time-pill" data-time="all">ALL</button>
     </div>
 
-    <div class="game-filter-row">
-        <button class="game-pill active" data-game="all">ALL</button>
-        <button class="game-pill" data-game="clash">CLASH</button>
-        <button class="game-pill locked" data-game="sf6">SF6</button>
-        <button class="game-pill locked" data-game="rocketleague">RL</button>
-        <button class="game-pill locked" data-game="valorant">VAL</button>
+    <div class="game-filter-row page-animate delay-2">
+        <button class="game-pill active" data-game="all">
+            <span class="game-icon all-icon">PP</span>
+            <span>ALL</span>
+        </button>
+
+        <button class="game-pill" data-game="clash">
+            <img src="../assets/clashroyale.jpg" alt="Clash Royale">
+            <span>CLASH</span>
+        </button>
+
+        <button class="game-pill locked" data-game="sf6">
+            <span class="game-icon">SF6</span>
+            <span>SOON</span>
+        </button>
+
+        <button class="game-pill locked" data-game="rocketleague">
+            <span class="game-icon">RL</span>
+            <span>SOON</span>
+        </button>
+
+        <button class="game-pill locked" data-game="valorant">
+            <span class="game-icon">VAL</span>
+            <span>SOON</span>
+        </button>
     </div>
 
-    <section class="top-section">
+    <section class="top-section page-animate delay-3">
         <div class="section-label">TOP PLAYERS</div>
 
         <div id="podium" class="podium"></div>
     </section>
 
-    <section class="ranking-section">
+    <section class="ranking-section page-animate delay-4">
         <div class="ranking-header">
             <span>RANK</span>
             <span>PLAYER</span>
@@ -52,7 +71,7 @@
         <div id="leaderboardList" class="leaderboard-list"></div>
     </section>
 
-    <section id="yourRankCard" class="your-rank-card"></section>
+    <section id="yourRankCard" class="your-rank-card page-animate delay-5"></section>
 
 </div>
 
