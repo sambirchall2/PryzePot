@@ -1,0 +1,439 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top, rgba(190, 255, 0, 0.18), transparent 34%),
+        linear-gradient(180deg, #061000 0%, #020402 45%, #000 100%);
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.vault-page {
+    width: min(100%, 430px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 14px 12px 34px;
+}
+
+.vault-hero {
+    position: relative;
+    min-height: 560px;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid rgba(200, 255, 0, 0.22);
+    background: #050805;
+    box-shadow: 0 0 38px rgba(200, 255, 0, 0.12);
+}
+
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,.58) 48%, #050805 92%),
+        url("../assets/vault/vaults/vault-door.png") center 34px / 130% auto no-repeat;
+    opacity: .98;
+}
+
+.vault-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 72% 35%, rgba(200,255,0,.2), transparent 28%),
+        linear-gradient(90deg, rgba(0,0,0,.92), transparent 54%);
+    pointer-events: none;
+}
+
+.back-button,
+.level-badge,
+.hero-content {
+    position: relative;
+    z-index: 3;
+}
+
+.back-button {
+    margin: 14px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 12px;
+    padding: 10px 13px;
+    background: rgba(0,0,0,.62);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.level-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    padding: 9px 11px;
+    border-radius: 13px;
+    border: 1px solid rgba(200,255,0,.42);
+    background: rgba(0,0,0,.62);
+    text-align: right;
+}
+
+.level-badge span,
+.xp-card span {
+    display: block;
+    color: #bdbdbd;
+    font-size: 9px;
+    font-weight: 1000;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+
+.level-badge strong {
+    display: block;
+    color: #c8ff00;
+    font-size: 15px;
+    font-weight: 1000;
+}
+
+.hero-content {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+}
+
+.eyebrow {
+    margin: 0 0 7px;
+    color: #c8ff00;
+    font-size: 11px;
+    font-weight: 1000;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.hero-content h1 {
+    margin: 0;
+    font-size: 48px;
+    line-height: .86;
+    font-weight: 1000;
+    letter-spacing: -2px;
+    text-transform: uppercase;
+}
+
+.hero-content h1 span {
+    display: block;
+    color: #c8ff00;
+    text-shadow: 0 0 22px rgba(200,255,0,.55);
+}
+
+.hero-subtitle {
+    max-width: 260px;
+    margin: 12px 0 16px;
+    color: #dedede;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.xp-card {
+    display: grid;
+    grid-template-columns: .75fr 1.25fr 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 13px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.13);
+    background: rgba(0,0,0,.72);
+    backdrop-filter: blur(8px);
+}
+
+.xp-card strong {
+    display: block;
+    margin-top: 4px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 1000;
+}
+
+.xp-card > div:last-child strong {
+    color: #c8ff00;
+    font-size: 13px;
+    line-height: 1.1;
+}
+
+.xp-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 7px;
+}
+
+.xp-row span {
+    color: #fff;
+    font-size: 10px;
+}
+
+.xp-bar {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.xp-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #88ff00, #c8ff00);
+    box-shadow: 0 0 18px rgba(200,255,0,.55);
+}
+
+.section-heading {
+    margin: 18px 4px 10px;
+}
+
+.section-heading h2 {
+    margin: 0 0 5px;
+    color: #c8ff00;
+    font-size: 22px;
+    text-transform: uppercase;
+}
+
+.section-heading p {
+    margin: 0;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.vault-track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 2px 16px;
+    scroll-snap-type: x mandatory;
+}
+
+.vault-track::-webkit-scrollbar {
+    display: none;
+}
+
+.vault-pack-card {
+    flex: 0 0 142px;
+    min-height: 220px;
+    scroll-snap-align: start;
+    position: relative;
+    padding: 13px 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.11);
+    background:
+        radial-gradient(circle at center 42%, rgba(200,255,0,.18), transparent 34%),
+        linear-gradient(180deg, #171717, #050505);
+    text-align: center;
+    cursor: pointer;
+}
+
+.vault-pack-card.active {
+    border-color: rgba(200,255,0,.95);
+    box-shadow: 0 0 24px rgba(200,255,0,.28);
+}
+
+.pack-level {
+    color: #c8ff00;
+    font-size: 10px;
+    font-weight: 1000;
+    text-transform: uppercase;
+}
+
+.pack-number {
+    margin-top: 2px;
+    font-size: 34px;
+    font-weight: 1000;
+}
+
+.pack-art {
+    height: 112px;
+    margin: 6px 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pack-art img {
+    width: 120px;
+    max-height: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 18px rgba(200,255,0,.28));
+    transition: transform .22s ease, filter .22s ease;
+}
+
+.vault-pack-card.active .pack-art img {
+    transform: translateY(-3px) scale(1.08);
+    filter: drop-shadow(0 0 24px rgba(200,255,0,.46));
+}
+
+.vault-pack-card h3 {
+    margin: 0;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.vault-pack-card p {
+    margin: 5px 0 10px;
+    color: #aaa;
+    font-size: 11px;
+}
+
+.pack-status {
+    width: 100%;
+    border: 0;
+    border-radius: 11px;
+    padding: 9px;
+    background: rgba(255,255,255,.09);
+    color: #d7d7d7;
+    font-size: 10px;
+    font-weight: 1000;
+}
+
+.preview-panel {
+    margin-top: 4px;
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(200,255,0,.22);
+    background:
+        radial-gradient(circle at 92% 0%, rgba(200,255,0,.12), transparent 28%),
+        rgba(8,8,8,.96);
+}
+
+.preview-panel h3 {
+    margin: 0 0 5px;
+    color: #c8ff00;
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+.preview-panel p {
+    margin: 0 0 12px;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.preview-items {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+}
+
+.preview-item {
+    min-height: 76px;
+    padding: 9px 6px;
+    border-radius: 13px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.045);
+    text-align: center;
+}
+
+.preview-icon {
+    font-size: 23px;
+    margin-bottom: 6px;
+}
+
+.preview-name {
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.preview-type {
+    margin-top: 3px;
+    color: #c8ff00;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+@media (min-width: 900px) {
+    .vault-page {
+        width: min(100%, 1040px);
+    }
+
+    .vault-hero {
+        min-height: 520px;
+    }
+
+    .hero-bg {
+        background-size: 62% auto;
+        background-position: right center;
+    }
+
+    .hero-content {
+        max-width: 520px;
+        bottom: 34px;
+        left: 38px;
+    }
+
+    .hero-content h1 {
+        font-size: 78px;
+    }
+
+    .vault-track {
+        overflow: visible;
+    }
+
+    .vault-pack-card {
+        flex: 1;
+    }
+}
+.vault-info-panel {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(200,255,0,.2);
+    background:
+        radial-gradient(circle at 90% 10%, rgba(200,255,0,.12), transparent 28%),
+        rgba(8,8,8,.96);
+}
+
+.vault-info-panel h2 {
+    margin: 0 0 14px;
+    color: #c8ff00;
+    font-size: 18px;
+    font-weight: 1000;
+    text-transform: uppercase;
+}
+
+.info-step {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.info-step:last-child {
+    margin-bottom: 0;
+}
+
+.info-icon {
+    height: 46px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #c8ff00;
+    font-size: 11px;
+    font-weight: 1000;
+    border: 1px solid rgba(200,255,0,.35);
+    background: rgba(200,255,0,.08);
+    box-shadow: 0 0 18px rgba(200,255,0,.08);
+}
+
+.info-step strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 13px;
+    font-weight: 1000;
+    text-transform: uppercase;
+}
+
+.info-step p {
+    margin: 0;
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.35;
+}

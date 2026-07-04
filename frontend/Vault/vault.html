@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pryze Vault | PryzePot</title>
+    <link rel="stylesheet" href="vault.css">
+</head>
+<body>
+
+<main class="vault-page">
+
+    <section class="vault-hero">
+        <button id="backButton" class="back-button">‹ Back</button>
+
+        <div class="level-badge">
+            <span>Your Level</span>
+            <strong id="currentLevel">Level 1</strong>
+        </div>
+
+        <div class="hero-bg"></div>
+
+        <div class="hero-content">
+            <p class="eyebrow">Your legacy. Earned.</p>
+            <h1>PRYZE <span>VAULT</span></h1>
+            <p class="hero-subtitle">Every level brings you closer to exclusive rewards.</p>
+
+            <div class="xp-card">
+                <div>
+                    <span>XP</span>
+                    <strong id="xpAmount">0</strong>
+                </div>
+
+                <div class="xp-info">
+                    <div class="xp-row">
+                        <span id="xpText">0 / 100 XP</span>
+                    </div>
+                    <div class="xp-bar">
+                        <div id="xpFill" class="xp-fill"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <span>Next Vault</span>
+                    <strong id="nextReward">Recruit · Lvl 5</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="vault-section">
+        <div class="section-heading">
+            <h2>Level Rewards</h2>
+            <p>Tap a vault to preview what’s inside.</p>
+        </div>
+
+        <div id="vaultTrack" class="vault-track"></div>
+    </section>
+
+    <section id="previewPanel" class="preview-panel"></section>
+    <section class="vault-info-panel">
+    <h2>How The Vault Works</h2>
+
+    <div class="info-step">
+        <div class="info-icon">XP</div>
+        <div>
+            <strong>Earn XP</strong>
+            <p>Play matches, win tournaments, and level up your PryzePot account.</p>
+        </div>
+    </div>
+
+    <div class="info-step">
+        <div class="info-icon">LVL</div>
+        <div>
+            <strong>Unlock Vaults</strong>
+            <p>Reach milestone levels to unlock exclusive Vault Packs.</p>
+        </div>
+    </div>
+
+    <div class="info-step">
+        <div class="info-icon">EQP</div>
+        <div>
+            <strong>Equip Rewards</strong>
+            <p>Use unlocked avatars, banners, frames, badges, and titles on your profile.</p>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<script src="vault.js"></script>
+</body>
+</html>
