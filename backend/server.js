@@ -1620,6 +1620,21 @@ app.get("/api/leaderboard", async function (req, res) {
         return;
     }
 
+    let startTime = 0;
+    const now = Date.now();
+
+    if (time === "day") {
+        startTime = now - 24 * 60 * 60 * 1000;
+    }
+
+    if (time === "week") {
+        startTime = now - 7 * 24 * 60 * 60 * 1000;
+    }
+
+    if (time === "month") {
+        startTime = now - 30 * 24 * 60 * 60 * 1000;
+    }
+
     const usersResult = await supabase
         .from("users")
         .select("username, profile_picture, profile_banner, xp, level");
@@ -1634,20 +1649,29 @@ app.get("/api/leaderboard", async function (req, res) {
         return;
     }
 
-    const completedMatches = await supabase
+    let completedMatchesQuery = supabase
         .from("matches")
         .select("entry_fee, winner_username, loser_username, status, verified_at")
         .eq("status", "Completed");
 
-    const completedTournaments = await supabase
+    let completedTournamentsQuery = supabase
         .from("tournaments")
         .select("entry_fee, winner_username, status")
         .eq("status", "Completed");
 
-    const tournamentMatchWins = await supabase
+    let tournamentMatchWinsQuery = supabase
         .from("tournament_matches")
-        .select("winner_username, loser_username, status")
+        .select("winner_username, loser_username, status, verified_at")
         .eq("status", "Completed");
+
+    if (startTime > 0) {
+        completedMatchesQuery = completedMatchesQuery.gte("verified_at", startTime);
+        tournamentMatchWinsQuery = tournamentMatchWinsQuery.gte("verified_at", startTime);
+    }
+
+    const completedMatches = await completedMatchesQuery;
+    const completedTournaments = await completedTournamentsQuery;
+    const tournamentMatchWins = await tournamentMatchWinsQuery;
 
     if (completedMatches.error || completedTournaments.error || tournamentMatchWins.error) {
         console.log("LEADERBOARD STATS ERROR:", {
@@ -1702,9 +1726,7 @@ app.get("/api/leaderboard", async function (req, res) {
 
         if (winner) {
             winner.tournament_wins += 1;
-            winner.lifetime_winnings +=
-                Number(tournament.entry_fee || 0) *
-                2;
+            winner.lifetime_winnings += Number(tournament.entry_fee || 0) * 2;
         }
     });
 
@@ -1740,7 +1762,11 @@ app.get("/api/leaderboard", async function (req, res) {
     });
 
     players.sort(function (a, b) {
-        return Number(b.lifetime_winnings) - Number(a.lifetime_winnings);
+        if (Number(b.lifetime_winnings) !== Number(a.lifetime_winnings)) {
+            return Number(b.lifetime_winnings) - Number(a.lifetime_winnings);
+        }
+
+        return Number(b.xp) - Number(a.xp);
     });
 
     const rankedPlayers = players.map(function (player, index) {
