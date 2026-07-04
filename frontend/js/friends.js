@@ -111,9 +111,6 @@ if (unreadCount > 0) {
 card.querySelector(".chat-btn").addEventListener("click", function () {
     openChat(user.username);
 });
-    card.querySelector(".chat-btn").addEventListener("click", function () {
-    openChat(user.username);
-});
 
     return {
         card: card,
