@@ -47,11 +47,19 @@ body {
 
 .clash-logo {
     display: block;
-    width: 145px;
-    height: 76px;
-    object-fit: cover;
-    margin: 0 auto 26px;
-    border-radius: 12px;
+
+    width: 240px;
+    max-width: 82%;
+
+    height: auto;
+
+    margin: 0 auto 30px;
+
+    object-fit: contain;
+
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .mode-card {
