@@ -154,10 +154,12 @@ body{
     margin-top:18px;
     display:flex;
     align-items:center;
-    gap:24px;
+    gap:26px;
     overflow-x:auto;
-    padding:10px 4px 14px;
-    border-bottom:1px solid rgba(255,255,255,.08);
+    overflow-y:hidden;
+    padding:10px 4px 16px;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
 }
 
 .game-filter-row::-webkit-scrollbar{
@@ -182,6 +184,7 @@ body{
     flex-shrink:0;
     opacity:.72;
     transition:.18s;
+    scroll-snap-align:center;
 }
 
 .game-pill img{
