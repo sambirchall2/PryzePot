@@ -256,9 +256,9 @@ body {
     width: 100%;
     height: 125px;
     object-fit: cover;
-    object-position: center top;
     display: block;
 }
+
 .game-card button {
     width: calc(100% - 12px);
     margin: 6px;
@@ -427,106 +427,4 @@ body {
 
 .hidden{
     display:none;
-}
-/* Home layout emergency fix */
-
-.games-container,
-.quick-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.games-container {
-    gap: 8px;
-    padding: 0 16px;
-}
-
-.game-card {
-    width: 100%;
-    min-width: 0;
-}
-
-.game-card img {
-    width: 100%;
-    height: 125px;
-    object-fit: cover;
-    object-position: center top;
-    display: block;
-}
-
-.quick-actions {
-    gap: 8px;
-    padding: 14px 16px;
-}
-
-.action-card {
-    width: 100%;
-    min-width: 0;
-}
-
-.tournament-card {
-    width: auto;
-    margin: 0 16px 28px;
-}
-
-.tournament-card img {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-}
-/* HARD FIX: Home featured cards layout */
-
-.app-shell .games-container {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-    padding: 0 16px !important;
-}
-
-.app-shell .game-card {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 145px !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
-}
-
-.app-shell .game-card img {
-    width: 100% !important;
-    height: 105px !important;
-    object-fit: cover !important;
-    object-position: center top !important;
-    display: block !important;
-}
-
-.app-shell .game-card button {
-    height: 30px !important;
-    width: calc(100% - 12px) !important;
-    margin: 5px 6px !important;
-}
-
-.app-shell .quick-actions {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-    padding: 14px 16px !important;
-}
-
-.app-shell .action-card {
-    width: 100% !important;
-    min-width: 0 !important;
-}
-
-.app-shell .tournament-card {
-    width: auto !important;
-    margin: 0 16px 28px !important;
-}
-
-.app-shell .tournament-card img {
-    width: 100% !important;
-    height: auto !important;
-    display: block !important;
 }
