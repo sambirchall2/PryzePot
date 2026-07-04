@@ -1,3 +1,5 @@
+const API_BASE_URL = "https://api.pryzepot.com";
+
 const username = localStorage.getItem("username");
 
 if (!username) {
@@ -10,82 +12,19 @@ const leaderboardList = document.getElementById("leaderboardList");
 const yourRankCard = document.getElementById("yourRankCard");
 const toast = document.getElementById("toast");
 
-const leaderboardPlayers = [
-    {
-        username: "birdogwar",
-        level: 7,
-        winnings: 2450,
-        wins: 31,
-        losses: 8,
-        avatar: "avatar1",
-        banner: "banner6"
-    },
-    {
-        username: "ClashKing",
-        level: 6,
-        winnings: 1880,
-        wins: 26,
-        losses: 11,
-        avatar: "avatar2",
-        banner: "banner3"
-    },
-    {
-        username: "NeonKnight",
-        level: 5,
-        winnings: 1540,
-        wins: 21,
-        losses: 10,
-        avatar: "avatar3",
-        banner: "banner5"
-    },
-    {
-        username: "RoyalPush",
-        level: 4,
-        winnings: 980,
-        wins: 14,
-        losses: 7,
-        avatar: "avatar4",
-        banner: "banner2"
-    },
-    {
-        username: "PotHunter",
-        level: 4,
-        winnings: 820,
-        wins: 12,
-        losses: 6,
-        avatar: "avatar5",
-        banner: "banner4"
-    },
-    {
-        username: "charissa",
-        level: 3,
-        winnings: 740,
-        wins: 10,
-        losses: 5,
-        avatar: "avatar6",
-        banner: "banner1"
-    },
-    {
-        username: username,
-        level: Number(localStorage.getItem("level")) || 1,
-        winnings: Number(localStorage.getItem("balance")) || 0,
-        wins: 0,
-        losses: 0,
-        avatar: localStorage.getItem("profilePicture") || "avatar1",
-        banner: localStorage.getItem("profileBanner") || "banner1"
-    }
-];
+let selectedTime = "week";
+let selectedGame = "all";
 
 function formatMoney(amount) {
     return "$" + Number(amount || 0).toLocaleString();
 }
 
 function getAvatarPath(avatar) {
-    return "../assets/profile/" + avatar + ".png";
+    return "../assets/profile/" + (avatar || "avatar1") + ".png";
 }
 
 function getBannerPath(banner) {
-    return "../assets/profile/" + banner + ".png";
+    return "../assets/profile/" + (banner || "banner1") + ".png";
 }
 
 function showToast(message) {
@@ -99,37 +38,79 @@ function showToast(message) {
     }, 1800);
 }
 
+function openProfile(playerUsername) {
+    window.location.href =
+        "profile.html?user=" + encodeURIComponent(playerUsername);
+}
+
+function getTotalWins(player) {
+    return (
+        Number(player.one_v_one_wins || 0) +
+        Number(player.tournament_match_wins || 0)
+    );
+}
+
+function getTotalLosses(player) {
+    return (
+        Number(player.one_v_one_losses || 0) +
+        Number(player.tournament_match_losses || 0)
+    );
+}
+
 function renderPodium(players) {
     const topThree = players.slice(0, 3);
 
-    if (topThree.length < 3 || !podium) return;
+    if (!podium) return;
 
-    const podiumOrder = [
-        { player: topThree[1], rank: 2 },
-        { player: topThree[0], rank: 1 },
-        { player: topThree[2], rank: 3 }
-    ];
+    if (topThree.length === 0) {
+        podium.innerHTML = `
+            <div class="empty-state">
+                No ranked players yet.
+            </div>
+        `;
+        return;
+    }
+
+    const podiumOrder = [];
+
+    if (topThree[1]) {
+        podiumOrder.push({ player: topThree[1], rank: 2 });
+    }
+
+    if (topThree[0]) {
+        podiumOrder.push({ player: topThree[0], rank: 1 });
+    }
+
+    if (topThree[2]) {
+        podiumOrder.push({ player: topThree[2], rank: 3 });
+    }
 
     podium.innerHTML = podiumOrder.map(function (item) {
         const player = item.player;
         const rank = item.rank;
 
         return `
-            <div class="podium-card rank-${rank}">
-                <img class="podium-banner" src="${getBannerPath(player.banner)}" alt="">
+            <div class="podium-card rank-${rank}" data-username="${player.username}">
+                <img class="podium-banner" src="${getBannerPath(player.profile_banner)}" alt="">
                 <div class="podium-overlay"></div>
 
                 <div class="rank-badge">#${rank}</div>
 
                 <div class="podium-content">
-                    <img class="podium-avatar" src="${getAvatarPath(player.avatar)}" alt="">
+                    <img class="podium-avatar" src="${getAvatarPath(player.profile_picture)}" alt="">
                     <div class="podium-name">${player.username}</div>
-                    <div class="podium-money">${formatMoney(player.winnings)}</div>
-                    <div class="podium-record">${player.wins}W - ${player.losses}L</div>
+                    <div class="podium-money">${formatMoney(player.lifetime_winnings)}</div>
+                    <div class="podium-record">${getTotalWins(player)}W - ${getTotalLosses(player)}L</div>
                 </div>
             </div>
         `;
     }).join("");
+
+    document.querySelectorAll(".podium-card").forEach(function (card) {
+        card.addEventListener("click", function () {
+            openProfile(card.dataset.username);
+        });
+    });
 }
 
 function renderLeaderboard(players) {
@@ -137,66 +118,133 @@ function renderLeaderboard(players) {
 
     const remainingPlayers = players.slice(3);
 
-    leaderboardList.innerHTML = remainingPlayers.map(function (player, index) {
-        const rank = index + 4;
+    if (remainingPlayers.length === 0) {
+        leaderboardList.innerHTML = `
+            <div class="empty-list-row">
+                More players will appear here after matches are completed.
+            </div>
+        `;
+        return;
+    }
 
+    leaderboardList.innerHTML = remainingPlayers.map(function (player) {
         return `
-            <div class="leaderboard-row">
-                <div class="rank-number">#${rank}</div>
+            <div class="leaderboard-row" data-username="${player.username}">
+                <div class="rank-number">#${player.rank}</div>
 
                 <div class="player-cell">
-                    <img class="row-avatar" src="${getAvatarPath(player.avatar)}" alt="">
+                    <img class="row-avatar" src="${getAvatarPath(player.profile_picture)}" alt="">
 
                     <div class="player-meta">
                         <div class="player-name">${player.username}</div>
-                        <div class="player-sub">Lvl ${player.level} • ${player.wins}W - ${player.losses}L</div>
+                        <div class="player-sub">Level ${player.level} • ${player.tournament_wins || 0} Tournament Wins</div>
                     </div>
                 </div>
 
-                <div class="money-cell">${formatMoney(player.winnings)}</div>
+                <div class="money-cell">${formatMoney(player.lifetime_winnings)}</div>
             </div>
         `;
     }).join("");
+
+    document.querySelectorAll(".leaderboard-row").forEach(function (row) {
+        row.addEventListener("click", function () {
+            openProfile(row.dataset.username);
+        });
+    });
 }
 
 function renderYourRank(players) {
     if (!yourRankCard) return;
 
-    const userIndex = players.findIndex(function (player) {
+    const userPlayer = players.find(function (player) {
         return player.username === username;
     });
 
-    const userPlayer = userIndex >= 0 ? players[userIndex] : players[players.length - 1];
-    const rank = userIndex >= 0 ? userIndex + 1 : players.length;
+    if (!userPlayer) {
+        yourRankCard.innerHTML = `
+            <div class="your-label">YOUR RANK</div>
+            <div class="empty-list-row">
+                Play your first verified match to appear on the leaderboard.
+            </div>
+        `;
+        return;
+    }
 
     yourRankCard.innerHTML = `
         <div class="your-label">YOUR RANK</div>
 
-        <div class="your-row">
-            <div class="rank-number">#${rank}</div>
+        <div class="your-row" data-username="${userPlayer.username}">
+            <div class="rank-number">#${userPlayer.rank}</div>
 
             <div class="player-cell">
-                <img class="row-avatar" src="${getAvatarPath(userPlayer.avatar)}" alt="">
+                <img class="row-avatar" src="${getAvatarPath(userPlayer.profile_picture)}" alt="">
 
                 <div class="player-meta">
                     <div class="player-name">${userPlayer.username}</div>
-                    <div class="player-sub">Lvl ${userPlayer.level} • ${userPlayer.wins}W - ${userPlayer.losses}L</div>
+                    <div class="player-sub">Level ${userPlayer.level} • ${userPlayer.tournament_wins || 0} Tournament Wins</div>
                 </div>
             </div>
 
-            <div class="money-cell">${formatMoney(userPlayer.winnings)}</div>
+            <div class="money-cell">${formatMoney(userPlayer.lifetime_winnings)}</div>
         </div>
     `;
+
+    const yourRow = yourRankCard.querySelector(".your-row");
+
+    if (yourRow) {
+        yourRow.addEventListener("click", function () {
+            openProfile(userPlayer.username);
+        });
+    }
 }
 
-function renderLeaderboardPage() {
-    const sortedPlayers = leaderboardPlayers.sort(function (a, b) {
-        return Number(b.winnings) - Number(a.winnings);
-    });
+function renderLoadingState() {
+    if (podium) {
+        podium.innerHTML = `
+            <div class="empty-state">
+                Loading leaderboard...
+            </div>
+        `;
+    }
 
-    renderPodium(sortedPlayers);
-    renderLeaderboard(sortedPlayers);
-    renderYourRank(sortedPlayers);
+    if (leaderboardList) {
+        leaderboardList.innerHTML = "";
+    }
+
+    if (yourRankCard) {
+        yourRankCard.innerHTML = "";
+    }
+}
+
+function loadLeaderboard() {
+    renderLoadingState();
+
+    fetch(
+        API_BASE_URL +
+        "/api/leaderboard?game=" +
+        encodeURIComponent(selectedGame) +
+        "&time=" +
+        encodeURIComponent(selectedTime)
+    )
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                showToast(data.message || "Could not load leaderboard");
+                return;
+            }
+
+            const players = data.players || [];
+
+            renderPodium(players);
+            renderLeaderboard(players);
+            renderYourRank(players);
+        })
+        .catch(function (error) {
+            console.log("LEADERBOARD LOAD ERROR:", error);
+            showToast("Could not load leaderboard");
+        });
 }
 
 if (backButton) {
@@ -212,6 +260,8 @@ document.querySelectorAll(".time-pill").forEach(function (button) {
         });
 
         button.classList.add("active");
+        selectedTime = button.dataset.time || "week";
+        loadLeaderboard();
     });
 });
 
@@ -227,7 +277,9 @@ document.querySelectorAll(".game-pill").forEach(function (button) {
         });
 
         button.classList.add("active");
+        selectedGame = button.dataset.game || "all";
+        loadLeaderboard();
     });
 });
 
-renderLeaderboardPage();
+loadLeaderboard();
