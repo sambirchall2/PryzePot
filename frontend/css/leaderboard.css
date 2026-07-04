@@ -168,7 +168,7 @@ body{
 
 .game-pill{
     min-width:auto;
-    height:64px;
+    height:68px;
     padding:0;
     border:none;
     border-radius:0;
@@ -578,4 +578,100 @@ body{
             0 0 40px rgba(182,255,0,.12),
             0 30px 90px rgba(0,0,0,.65);
     }
+}
+/* ===========================
+   Leaderboard Final Polish
+=========================== */
+
+.leaderboard-row{
+    position:relative;
+    overflow:hidden;
+}
+
+.row-banner-bg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    opacity:.14;
+    pointer-events:none;
+}
+
+.row-banner-overlay{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(
+        90deg,
+        rgba(23,23,23,.96),
+        rgba(23,23,23,.72),
+        rgba(23,23,23,.96)
+    );
+    pointer-events:none;
+}
+
+.leaderboard-row > *{
+    position:relative;
+    z-index:2;
+}
+
+.current-user-row{
+    border-left:4px solid #b6ff00;
+    background:rgba(182,255,0,.06);
+}
+
+.you-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-left:8px;
+    padding:2px 7px;
+    border-radius:999px;
+    background:#b6ff00;
+    color:#050505;
+    font-size:9px;
+    font-weight:900;
+    letter-spacing:.5px;
+}
+
+.your-rank-card{
+    position:relative;
+    overflow:hidden;
+}
+
+.your-banner-bg{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    opacity:.25;
+}
+
+.your-banner-overlay{
+    position:absolute;
+    inset:0;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(8,8,8,.95),
+            rgba(8,8,8,.60),
+            rgba(8,8,8,.95)
+        ),
+        linear-gradient(
+            180deg,
+            rgba(182,255,0,.10),
+            transparent
+        );
+}
+
+.your-content{
+    position:relative;
+    z-index:2;
+}
+
+.current-user-card{
+    box-shadow:
+        0 0 24px rgba(182,255,0,.22),
+        0 18px 36px rgba(0,0,0,.55);
 }

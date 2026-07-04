@@ -57,6 +57,10 @@ function getTotalLosses(player) {
     );
 }
 
+function isCurrentUser(player) {
+    return player.username === username;
+}
+
 function renderPodium(players) {
     const topThree = players.slice(0, 3);
 
@@ -89,8 +93,10 @@ function renderPodium(players) {
         const player = item.player;
         const rank = item.rank;
 
+        const userClass = isCurrentUser(player) ? " current-user-card" : "";
+
         return `
-            <div class="podium-card rank-${rank}" data-username="${player.username}">
+            <div class="podium-card rank-${rank}${userClass}" data-username="${player.username}">
                 <img class="podium-banner" src="${getBannerPath(player.profile_banner)}" alt="">
                 <div class="podium-overlay"></div>
 
@@ -128,15 +134,23 @@ function renderLeaderboard(players) {
     }
 
     leaderboardList.innerHTML = remainingPlayers.map(function (player) {
+        const userClass = isCurrentUser(player) ? " current-user-row" : "";
+
         return `
-            <div class="leaderboard-row" data-username="${player.username}">
+            <div class="leaderboard-row${userClass}" data-username="${player.username}">
+                <img class="row-banner-bg" src="${getBannerPath(player.profile_banner)}" alt="">
+                <div class="row-banner-overlay"></div>
+
                 <div class="rank-number">#${player.rank}</div>
 
                 <div class="player-cell">
                     <img class="row-avatar" src="${getAvatarPath(player.profile_picture)}" alt="">
 
                     <div class="player-meta">
-                        <div class="player-name">${player.username}</div>
+                        <div class="player-name">
+                            ${player.username}
+                            ${isCurrentUser(player) ? '<span class="you-badge">YOU</span>' : ''}
+                        </div>
                         <div class="player-sub">Level ${player.level}</div>
                     </div>
                 </div>
@@ -171,21 +185,29 @@ function renderYourRank(players) {
     }
 
     yourRankCard.innerHTML = `
-        <div class="your-label">YOUR RANK</div>
+        <img class="your-banner-bg" src="${getBannerPath(userPlayer.profile_banner)}" alt="">
+        <div class="your-banner-overlay"></div>
 
-        <div class="your-row" data-username="${userPlayer.username}">
-            <div class="rank-number">#${userPlayer.rank}</div>
+        <div class="your-content">
+            <div class="your-label">YOUR RANK</div>
 
-            <div class="player-cell">
-                <img class="row-avatar" src="${getAvatarPath(userPlayer.profile_picture)}" alt="">
+            <div class="your-row" data-username="${userPlayer.username}">
+                <div class="rank-number">#${userPlayer.rank}</div>
 
-                <div class="player-meta">
-                    <div class="player-name">${userPlayer.username}</div>
-                    <div class="player-sub">Level ${player.level}</div>
+                <div class="player-cell">
+                    <img class="row-avatar" src="${getAvatarPath(userPlayer.profile_picture)}" alt="">
+
+                    <div class="player-meta">
+                        <div class="player-name">
+                            ${userPlayer.username}
+                            <span class="you-badge">YOU</span>
+                        </div>
+                        <div class="player-sub">Level ${userPlayer.level}</div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="money-cell">${formatMoney(userPlayer.lifetime_winnings)}</div>
+                <div class="money-cell">${formatMoney(userPlayer.lifetime_winnings)}</div>
+            </div>
         </div>
     `;
 
