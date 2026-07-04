@@ -137,7 +137,7 @@ function renderLeaderboard(players) {
 
                     <div class="player-meta">
                         <div class="player-name">${player.username}</div>
-                        <div class="player-sub">Level ${player.level} • ${player.tournament_wins || 0} Tournament Wins</div>
+                        <div class="player-sub">Level ${player.level}</div>
                     </div>
                 </div>
 
@@ -181,7 +181,7 @@ function renderYourRank(players) {
 
                 <div class="player-meta">
                     <div class="player-name">${userPlayer.username}</div>
-                    <div class="player-sub">Level ${userPlayer.level} • ${userPlayer.tournament_wins || 0} Tournament Wins</div>
+                    <div class="player-sub">Level ${player.level}</div>
                 </div>
             </div>
 
