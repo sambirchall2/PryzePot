@@ -245,3 +245,10 @@ function sendHeartbeat() {
 sendHeartbeat();
 
 setInterval(sendHeartbeat, 30000);
+const leaderboardCard = document.getElementById("leaderboardCard");
+
+if (leaderboardCard) {
+    leaderboardCard.addEventListener("click", function () {
+        window.location.href = "leaderboard.html";
+    });
+}
