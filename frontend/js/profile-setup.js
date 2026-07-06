@@ -30,27 +30,27 @@ if (usernameDisplay) {
     usernameDisplay.textContent = username;
 }
 
-function normalizeImagePath(path) {
+function normalizeImagePath(path, type) {
     if (!path) return "";
 
-    if (path.startsWith("../")) {
-        return path;
-    }
+    if (path.startsWith("../")) return path;
+    if (path.startsWith("assets/")) return "../" + path;
 
-    if (path.startsWith("assets/")) {
-        return "../" + path;
-    }
+    if (type === "Avatar") return "../assets/vault/avatars/" + path + ".png";
+    if (type === "Banner") return "../assets/vault/banners/" + path + ".png";
+    if (type === "Frame") return "../assets/vault/frames/" + path + ".png";
+    if (type === "Badge") return "../assets/vault/badges/" + path + ".png";
 
     return "../assets/profile/" + path + ".png";
 }
 
 function updateProfilePreview() {
     if (selectedAvatar && avatarPreview) {
-        avatarPreview.src = normalizeImagePath(selectedAvatar.cosmetic_image || selectedAvatar.cosmetic_id);
+        avatarPreview.src = normalizeImagePath(selectedAvatar.cosmetic_image || selectedAvatar.cosmetic_id, selectedAvatar.cosmetic_type);
     }
 
     if (selectedBanner && bannerPreview) {
-        bannerPreview.src = normalizeImagePath(selectedBanner.cosmetic_image || selectedBanner.cosmetic_id);
+        bannerPreview.src = normalizeImagePath(selectedBanner.cosmetic_image || selectedBanner.cosmetic_id, selectedBanner.cosmetic_type);
     }
 
     if (selectedTitle && titlePreview) {
@@ -93,7 +93,7 @@ function createCosmeticButton(cosmetic) {
         `;
     } else {
         button.innerHTML = `
-            <img src="${normalizeImagePath(cosmetic.cosmetic_image)}" alt="${cosmetic.cosmetic_name}">
+            <img src="${normalizeImagePath(cosmetic.cosmetic_image || cosmetic.cosmetic_id, cosmetic.cosmetic_type)}" alt="${cosmetic.cosmetic_name}">
         `;
     }
 
@@ -116,6 +116,58 @@ function renderCosmetics() {
     frameOptions.innerHTML = "";
     badgeOptions.innerHTML = "";
     titleOptions.innerHTML = "";
+    // ---------- Starter Avatars ----------
+for (let i = 1; i <= 6; i++) {
+
+    const button = document.createElement("button");
+    button.className = "avatar-option cosmetic-option";
+    button.dataset.cosmeticId = "avatar" + i;
+
+    button.innerHTML =
+        '<img src="../assets/profile/avatar' + i + '.png">';
+
+    button.addEventListener("click", function () {
+
+        selectedAvatar = {
+            cosmetic_id: "avatar" + i,
+            cosmetic_type: "Avatar",
+            cosmetic_image: "avatar" + i
+        };
+
+        updateProfilePreview();
+
+    });
+
+    avatarOptions.appendChild(button);
+
+}
+
+
+// ---------- Starter Banners ----------
+for (let i = 1; i <= 6; i++) {
+
+    const button = document.createElement("button");
+    button.className = "banner-option cosmetic-option";
+    button.dataset.cosmeticId = "banner" + i;
+
+    button.innerHTML =
+        '<img src="../assets/profile/banner' + i + '.png">';
+
+    button.addEventListener("click", function () {
+
+        selectedBanner = {
+            cosmetic_id: "banner" + i,
+            cosmetic_type: "Banner",
+            cosmetic_image: "banner" + i
+        };
+
+        updateProfilePreview();
+
+    });
+
+    bannerOptions.appendChild(button);
+
+}
 
     unlockedCosmetics.forEach(function (cosmetic) {
         const button = createCosmeticButton(cosmetic);
