@@ -17,6 +17,8 @@ const titleOptions = document.getElementById("titleOptions");
 
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 const skipProfileBtn = document.getElementById("skipProfileBtn");
+const framePreview = document.getElementById("framePreview");
+const badgePreview = document.getElementById("badgePreview");
 
 let unlockedCosmetics = [];
 
@@ -52,7 +54,31 @@ function updateProfilePreview() {
     if (selectedBanner && bannerPreview) {
         bannerPreview.src = normalizeImagePath(selectedBanner.cosmetic_image || selectedBanner.cosmetic_id, selectedBanner.cosmetic_type);
     }
+if (selectedFrame && framePreview) {
+    framePreview.src = normalizeImagePath(
+        selectedFrame.cosmetic_image || selectedFrame.cosmetic_id,
+        selectedFrame.cosmetic_type
+    );
+    framePreview.classList.remove("hidden");
+} else if (framePreview) {
+    framePreview.classList.add("hidden");
+}
 
+if (selectedBadge && badgePreview) {
+    badgePreview.src = normalizeImagePath(
+        selectedBadge.cosmetic_image || selectedBadge.cosmetic_id,
+        selectedBadge.cosmetic_type
+    );
+    badgePreview.classList.remove("hidden");
+} else if (badgePreview) {
+    badgePreview.classList.add("hidden");
+}
+
+if (selectedTitle && titlePreview) {
+    titlePreview.textContent = selectedTitle.cosmetic_name;
+} else if (titlePreview) {
+    titlePreview.textContent = "Level " + (localStorage.getItem("level") || "1");
+}
     if (selectedTitle && titlePreview) {
         titlePreview.textContent = selectedTitle.cosmetic_name;
     }
@@ -179,17 +205,41 @@ for (let i = 1; i <= 6; i++) {
         if (cosmetic.cosmetic_type === "Title") titleOptions.appendChild(button);
     });
 
-    selectedAvatar = unlockedCosmetics.find(c => c.cosmetic_type === "Avatar") || null;
-    selectedBanner = unlockedCosmetics.find(c => c.cosmetic_type === "Banner") || null;
-    selectedFrame = unlockedCosmetics.find(c => c.cosmetic_type === "Frame") || null;
-    selectedBadge = unlockedCosmetics.find(c => c.cosmetic_type === "Badge") || null;
-    selectedTitle = unlockedCosmetics.find(c => c.cosmetic_type === "Title") || null;
+    selectedAvatar = {
+    cosmetic_id: localStorage.getItem("profilePicture") || "avatar1",
+    cosmetic_type: "Avatar",
+    cosmetic_image: localStorage.getItem("profilePicture") || "avatar1"
+};
+
+selectedBanner = {
+    cosmetic_id: localStorage.getItem("profileBanner") || "banner1",
+    cosmetic_type: "Banner",
+    cosmetic_image: localStorage.getItem("profileBanner") || "banner1"
+};
+
+selectedFrame = null;
+selectedBadge = null;
+selectedTitle = null;
 
     updateProfilePreview();
 }
 
 function equipCosmetic(cosmetic) {
     if (!cosmetic) return Promise.resolve();
+
+    const isStarterAvatar =
+        cosmetic.cosmetic_type === "Avatar" &&
+        cosmetic.cosmetic_id.startsWith("avatar");
+
+    const isStarterBanner =
+        cosmetic.cosmetic_type === "Banner" &&
+        cosmetic.cosmetic_id.startsWith("banner");
+
+    if (isStarterAvatar || isStarterBanner) {
+        return Promise.resolve({
+            success: true
+        });
+    }
 
     return fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
         method: "POST",
