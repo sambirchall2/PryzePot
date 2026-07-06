@@ -252,3 +252,10 @@ if (leaderboardCard) {
         window.location.href = "leaderboard.html";
     });
 }
+const vaultHomeBanner = document.getElementById("vaultHomeBanner");
+
+if (vaultHomeBanner) {
+    vaultHomeBanner.addEventListener("click", function () {
+        window.location.href = "../Vault/vault.html";
+    });
+}

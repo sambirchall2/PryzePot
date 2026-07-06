@@ -439,3 +439,21 @@ body {
 .hidden{
     display:none;
 }
+.vault-home-section {
+    margin: 22px 0 24px;
+}
+
+.vault-home-banner {
+    width: 100%;
+    display: block;
+    border-radius: 16px;
+    cursor: pointer;
+    border: 1px solid rgba(200, 255, 0, 0.45);
+    box-shadow: 0 0 24px rgba(200, 255, 0, 0.14);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vault-home-banner:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 34px rgba(200, 255, 0, 0.24);
+}
