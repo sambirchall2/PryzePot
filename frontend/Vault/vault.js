@@ -42,7 +42,7 @@ const vaultPacks = [
             { type: "Frame", name: "Silver Edge", image: "../assets/vault/frames/Silver-edge-frame.png" },
             { type: "Title", name: "King Slayer", rarity: "rare" },
             { type: "Badge", name: "Veteran", image: "../assets/vault/badges/Veteran-badge.png" },
-            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/shield-mark-badge.png" }
+            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/Shield-mark-badge.png" }
         ]
     },
     {
