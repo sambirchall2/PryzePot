@@ -25,7 +25,7 @@ const vaultPacks = [
             { type: "Banner", name: "Dark Matter", image: "../assets/vault/banners/dark-matter.png" },
             { type: "Frame", name: "Bronze Edge", image: "../assets/vault/frames/bronze-edge-frame.png" },
             { type: "Title", name: "The Grinder", rarity: "common" },
-            { type: "Badge", name: "Rising Player", image: "../assets/vault/badges/rising-player-badge.png" },
+            { type: "Badge", name: "Rising Player", image: "../assets/vault/badges/rising-player-badge.png" }
         ]
     },
     {
@@ -42,7 +42,7 @@ const vaultPacks = [
             { type: "Frame", name: "Silver Edge", image: "../assets/vault/frames/silver-edge-frame.png" },
             { type: "Title", name: "King Slayer", rarity: "rare" },
             { type: "Badge", name: "Veteran", image: "../assets/vault/badges/veteran-badge.png" },
-            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/shield-mark-badge.png" },
+            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/shield-mark-badge.png" }
         ]
     },
     {
@@ -58,7 +58,7 @@ const vaultPacks = [
             { type: "Banner", name: "Crystal Core", image: "../assets/vault/banners/crystal-core.png" },
             { type: "Frame", name: "Gold Edge", image: "../assets/vault/frames/gold-edge-frame.png" },
             { type: "Title", name: "Elite Competitor", rarity: "epic" },
-            { type: "Badge", name: "Winner", image: "../assets/vault/badges/winner-badge.png" },
+            { type: "Badge", name: "Winner", image: "../assets/vault/badges/winner-badge.png" }
         ]
     },
     {
@@ -74,7 +74,7 @@ const vaultPacks = [
             { type: "Banner", name: "Toxic Neon", image: "../assets/vault/banners/toxic-neon.png" },
             { type: "Frame", name: "Diamond Edge", image: "../assets/vault/frames/diamond-edge-frame.png" },
             { type: "Title", name: "Champion", rarity: "legendary" },
-            { type: "Badge", name: "Champion Badge", image: "../assets/vault/badges/champion-badge.png" },
+            { type: "Badge", name: "Champion Badge", image: "../assets/vault/badges/champion-badge.png" }
         ]
     },
     {
@@ -90,7 +90,7 @@ const vaultPacks = [
             { type: "Banner", name: "Overcharge", image: "../assets/vault/banners/overcharge.png" },
             { type: "Frame", name: "Master Frame", image: "../assets/vault/frames/master-frame.png" },
             { type: "Title", name: "Master", rarity: "master" },
-            { type: "Badge", name: "Master Badge", image: "../assets/vault/badges/master-badge.png" },
+            { type: "Badge", name: "Master Badge", image: "../assets/vault/badges/master-badge.png" }
         ]
     },
     {
@@ -106,31 +106,51 @@ const vaultPacks = [
             { type: "Banner", name: "God Spark", image: "../assets/vault/banners/god-spark.png" },
             { type: "Frame", name: "Legend Frame", image: "../assets/vault/frames/legend-frame.png" },
             { type: "Title", name: "Pryze Legend", rarity: "legend" },
-            { type: "Badge", name: "Legend Badge", image: "../assets/vault/badges/legend-badge.png" },
+            { type: "Badge", name: "Legend Badge", image: "../assets/vault/badges/legend-badge.png" }
         ]
     }
 ];
 
+function normalizeVaultImagePath(image) {
+    if (!image) return "";
+
+    if (image.startsWith("../")) {
+        return image;
+    }
+
+    if (image.startsWith("assets/")) {
+        return "../" + image;
+    }
+
+    return image;
+}
+
 if (backButton) {
-    backButton.addEventListener("click", () => {
+    backButton.addEventListener("click", function () {
         window.location.href = "../html/home.html";
     });
 }
 
-currentLevelText.textContent = `Level ${currentLevel}`;
+currentLevelText.textContent = "Level " + currentLevel;
 xpAmount.textContent = currentXP.toLocaleString();
-xpText.textContent = `${currentXP} / ${xpNeededForNextLevel} XP`;
-xpFill.style.width = `${Math.min((currentXP / xpNeededForNextLevel) * 100, 100)}%`;
+xpText.textContent = currentXP + " / " + xpNeededForNextLevel + " XP";
+xpFill.style.width = Math.min((currentXP / xpNeededForNextLevel) * 100, 100) + "%";
 
-const nextVault = vaultPacks.find(pack => pack.level > currentLevel);
+const nextVault = vaultPacks.find(function (pack) {
+    return pack.level > currentLevel;
+});
+
 nextRewardText.textContent = nextVault
-    ? `${nextVault.name.replace(" Vault", "")} · Lvl ${nextVault.level}`
+    ? nextVault.name.replace(" Vault", "") + " · Lvl " + nextVault.level
     : "Complete";
 
 function renderVaultPacks() {
-    const targetVault = vaultPacks.find(pack => pack.level > currentLevel) || vaultPacks[vaultPacks.length - 1];
+    const targetVault =
+        vaultPacks.find(function (pack) {
+            return pack.level > currentLevel;
+        }) || vaultPacks[vaultPacks.length - 1];
 
-    vaultTrack.innerHTML = vaultPacks.map(pack => {
+    vaultTrack.innerHTML = vaultPacks.map(function (pack) {
         const unlocked = currentLevel >= pack.level;
         const active = pack.level === targetVault.level;
 
@@ -138,12 +158,17 @@ function renderVaultPacks() {
             <article class="vault-pack-card ${active ? "active" : ""}" data-level="${pack.level}">
                 <div class="pack-level">Level</div>
                 <div class="pack-number">${pack.level}</div>
+
                 <div class="pack-art">
-    <img src="${pack.image}" alt="${pack.name}">
-</div>
+                    <img src="${normalizeVaultImagePath(pack.image)}" alt="${pack.name}">
+                </div>
+
                 <h3>${pack.name}</h3>
                 <p>${pack.items.length} items</p>
-                <button class="pack-status">${unlocked ? "View Rewards" : "Locked"}</button>
+
+                <button class="pack-status">
+                    ${unlocked ? "View Rewards" : "Locked"}
+                </button>
             </article>
         `;
     }).join("");
@@ -157,27 +182,34 @@ function renderPreview(pack) {
 
     previewPanel.innerHTML = `
         <h3>${pack.name}</h3>
-        <p>${levelsRemaining === 0
-            ? "Unlocked. Preview the rewards inside this Vault."
-            : `Reach Level ${pack.level} to unlock. ${levelsRemaining} level${levelsRemaining === 1 ? "" : "s"} remaining.`
-        }</p>
+
+        <p>
+            ${levelsRemaining === 0
+                ? "Unlocked. Preview the rewards inside this Vault."
+                : "Reach Level " + pack.level + " to unlock. " + levelsRemaining + " level" + (levelsRemaining === 1 ? "" : "s") + " remaining."
+            }
+        </p>
 
         <div class="preview-items">
-            ${pack.items.map(item => {
-    const type = item.type || item[0];
-    const name = item.name || item[1];
-    const image = item.image;
+            ${pack.items.map(function (item) {
+                const type = item.type || item[0];
+                const name = item.name || item[1];
+                const image = item.image;
 
-    return `
-        <div class="preview-item">
-            <div class="preview-icon">
-                ${image ? `<img src="${image}" alt="${name}">` : renderTitlePreview(item, type, name)}
-            </div>
-            <div class="preview-name">${name}</div>
-            <div class="preview-type">${type}</div>
-        </div>
-    `;
-}).join("")}
+                return `
+                    <div class="preview-item">
+                        <div class="preview-icon">
+                            ${image
+                                ? `<img src="${normalizeVaultImagePath(image)}" alt="${name}">`
+                                : renderTitlePreview(item, type, name)
+                            }
+                        </div>
+
+                        <div class="preview-name">${name}</div>
+                        <div class="preview-type">${type}</div>
+                    </div>
+                `;
+            }).join("")}
         </div>
     `;
 }
@@ -188,8 +220,10 @@ function getItemIcon(type) {
     if (type === "Frame") return "◇";
     if (type === "Badge") return "⬟";
     if (type === "Title") return "T";
+
     return "◆";
 }
+
 function renderTitlePreview(item, type, name) {
     if (type === "Title") {
         return `<span class="title-preview ${item.rarity || "common"}">${name}</span>`;
@@ -199,12 +233,17 @@ function renderTitlePreview(item, type, name) {
 }
 
 function addVaultCardClicks() {
-    document.querySelectorAll(".vault-pack-card").forEach(card => {
-        card.addEventListener("click", () => {
+    document.querySelectorAll(".vault-pack-card").forEach(function (card) {
+        card.addEventListener("click", function () {
             const selectedLevel = Number(card.dataset.level);
-            const selectedPack = vaultPacks.find(pack => pack.level === selectedLevel);
+            const selectedPack = vaultPacks.find(function (pack) {
+                return pack.level === selectedLevel;
+            });
 
-            document.querySelectorAll(".vault-pack-card").forEach(c => c.classList.remove("active"));
+            document.querySelectorAll(".vault-pack-card").forEach(function (c) {
+                c.classList.remove("active");
+            });
+
             card.classList.add("active");
 
             renderPreview(selectedPack);
