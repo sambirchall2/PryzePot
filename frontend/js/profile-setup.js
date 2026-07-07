@@ -38,6 +38,14 @@ function normalizeImagePath(path, type) {
     if (path.startsWith("../")) return path;
     if (path.startsWith("assets/")) return "../" + path;
 
+    if (type === "Avatar" && path.startsWith("avatar")) {
+        return "../assets/profile/" + path + ".png";
+    }
+
+    if (type === "Banner" && path.startsWith("banner")) {
+        return "../assets/profile/" + path + ".png";
+    }
+
     if (type === "Avatar") return "../assets/vault/avatars/" + path + ".png";
     if (type === "Banner") return "../assets/vault/banners/" + path + ".png";
     if (type === "Frame") return "../assets/vault/frames/" + path + ".png";

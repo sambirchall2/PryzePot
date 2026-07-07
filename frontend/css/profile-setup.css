@@ -336,3 +336,32 @@ body {
 .hidden {
     display: none !important;
 }
+.profile-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.avatar-preview {
+    position: relative;
+    z-index: 3;
+}
+
+.avatar-frame-preview {
+    position: absolute;
+    top: 31px;
+    left: 50%;
+    width: 116px;
+    height: 116px;
+    transform: translateX(-50%);
+    object-fit: contain;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.badge-preview {
+    width: 34px;
+    height: 34px;
+    margin: 6px auto 0;
+    object-fit: contain;
+}
