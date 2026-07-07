@@ -73,26 +73,71 @@ body{
     padding:0 18px;
 }
 
+.avatar-wrapper{
+    position:relative;
+    width:126px;
+    height:126px;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
 .profile-avatar{
-    width:112px;
-    height:112px;
+    width:92px;
+    height:92px;
+    margin:0;
     border-radius:50%;
-    border:4px solid #c8ff00;
-    background:#080b10;
     object-fit:cover;
+    background:#080b10;
+    border:3px solid #c8ff00;
     box-shadow:
         0 0 18px rgba(200,255,0,.55),
         0 0 40px rgba(200,255,0,.18);
+    position:relative;
+    z-index:2;
+}
+
+.profile-frame{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:102px;
+    height:102px;
+    transform:translate(-50%,-50%);
+    object-fit:contain;
+    pointer-events:none;
+    z-index:3;
 }
 
 #profileUsername{
-    margin-top:12px;
+    margin-top:10px;
     font-size:28px;
     line-height:1;
     font-weight:900;
     text-align:center;
     letter-spacing:-.5px;
     text-shadow:0 2px 12px rgba(0,0,0,.85);
+}
+
+.profile-badge{
+    width:38px;
+    height:38px;
+    margin-top:10px;
+    object-fit:contain;
+}
+
+.profile-title-pill{
+    margin-top:10px;
+    padding:6px 14px;
+    border-radius:999px;
+    background:rgba(200,255,0,.08);
+    border:1px solid rgba(200,255,0,.25);
+    color:#c8ff00;
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.5px;
 }
 
 .profile-level-pill{
@@ -199,7 +244,8 @@ body{
     letter-spacing:.3px;
 }
 
-.profile-action-button{
+.profile-action-button,
+.chat-friend-button{
     width:calc(100% - 36px);
     margin:22px 18px 0;
     padding:16px;
@@ -213,43 +259,9 @@ body{
     box-shadow:0 0 18px rgba(200,255,0,.35);
 }
 
-.profile-action-button:active{
+.profile-action-button:active,
+.chat-friend-button:active{
     transform:scale(.98);
-}
-
-@media (max-width:380px){
-    .profile-banner{
-        height:148px;
-    }
-
-    .profile-avatar{
-        width:102px;
-        height:102px;
-    }
-
-    #profileUsername{
-        font-size:25px;
-    }
-
-    .xp-card{
-        margin-top:19px;
-    }
-
-    .lifetime-card{
-        min-height:96px;
-    }
-
-    .small-stat-card{
-        min-height:96px;
-    }
-
-    .stat-value{
-        font-size:25px;
-    }
-
-    .big-value{
-        font-size:34px;
-    }
 }
 
 .remove-friend-button{
@@ -269,9 +281,6 @@ body{
     transform:scale(.98);
 }
 
-.hidden{
-    display:none;
-}
 /* ---------- Challenge Modal ---------- */
 
 .challenge-modal{
@@ -289,18 +298,12 @@ body{
     width:100%;
     max-width:380px;
     background:
-        radial-gradient(circle at top,
-        rgba(200,255,0,.10),
-        transparent 40%),
+        radial-gradient(circle at top, rgba(200,255,0,.10), transparent 40%),
         #0b1018;
-
     border:1px solid rgba(200,255,0,.22);
     border-radius:24px;
-
     padding:26px 22px 22px;
-
     position:relative;
-
     box-shadow:
         0 0 35px rgba(200,255,0,.12),
         0 20px 50px rgba(0,0,0,.55);
@@ -310,20 +313,14 @@ body{
     position:absolute;
     top:12px;
     right:12px;
-
     width:38px;
     height:38px;
-
     border:none;
     border-radius:12px;
-
     background:#181d24;
-
     color:white;
-
     font-size:22px;
     font-weight:900;
-
     cursor:pointer;
 }
 
@@ -352,96 +349,82 @@ body{
 
 .challenge-fees{
     margin-top:26px;
-
     display:grid;
     grid-template-columns:repeat(3,1fr);
-
     gap:12px;
 }
 
 .challenge-fee-btn{
-
     height:54px;
-
     border:none;
-
     border-radius:14px;
-
     background:#171d27;
-
     color:white;
-
     font-size:18px;
-
     font-weight:900;
-
     cursor:pointer;
-
     transition:.18s;
 }
 
 .challenge-fee-btn:hover{
-
     transform:translateY(-2px);
-
 }
 
 .challenge-fee-btn.selected{
-
     background:#c8ff00;
-
     color:#05070b;
-
     box-shadow:0 0 18px rgba(200,255,0,.40);
-
 }
 
 .send-challenge-button{
-
     margin-top:22px;
-
     width:100%;
-
     height:58px;
-
     border:none;
-
     border-radius:16px;
-
     background:#c8ff00;
-
     color:#05070b;
-
     font-size:17px;
-
     font-weight:950;
-
     cursor:pointer;
 }
 
 .send-challenge-button:disabled{
-
     opacity:.45;
-
     cursor:not-allowed;
 }
+
+.hidden,
 .challenge-modal.hidden{
-    display:none;
-}
-.chat-friend-button{
-    width:calc(100% - 36px);
-    margin:22px 18px 0;
-    padding:16px;
-    border:none;
-    border-radius:16px;
-    background:#b6ff00;
-    color:#05070b;
-    font-size:16px;
-    font-weight:950;
-    cursor:pointer;
-    box-shadow:0 0 18px rgba(182,255,0,.35);
+    display:none !important;
 }
 
-.chat-friend-button:active{
-    transform:scale(.98);
+@media (max-width:380px){
+    .profile-banner{
+        height:148px;
+    }
+
+    #profileUsername{
+        font-size:25px;
+    }
+
+    .xp-card{
+        margin-top:19px;
+    }
+
+    .lifetime-card{
+        min-height:96px;
+    }
+
+    .small-stat-card{
+        min-height:96px;
+    }
+
+    .stat-value{
+        font-size:25px;
+    }
+
+    .big-value{
+        font-size:34px;
+    }
 }

@@ -11,6 +11,9 @@ const viewedUsername = params.get("user") || loggedInUsername;
 
 const profileBanner = document.getElementById("profileBanner");
 const profileAvatar = document.getElementById("profileAvatar");
+const profileFrame = document.getElementById("profileFrame");
+const profileBadge = document.getElementById("profileBadge");
+const profileTitle = document.getElementById("profileTitle");
 const profileUsername = document.getElementById("profileUsername");
 const profileLevel = document.getElementById("profileLevel");
 

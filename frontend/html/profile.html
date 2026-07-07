@@ -6,8 +6,8 @@
     <title>PryzePot Profile</title>
 
     <link rel="stylesheet" href="../css/profile.css">
-<link rel="stylesheet" href="../css/cosmetic-card.css">
-<link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/cosmetic-card.css">
+    <link rel="stylesheet" href="../css/toast.css">
 </head>
 
 <body>
@@ -15,7 +15,10 @@
 <div class="profile-page">
 
     <div class="profile-banner">
-        <img id="profileBanner" class="banner-image" src="../assets/profile/banner1.png" alt="Banner">
+        <img id="profileBanner"
+             class="banner-image"
+             src="../assets/profile/banner1.png"
+             alt="Banner">
 
         <button id="backButton" class="back-button">
             ← Back
@@ -23,16 +26,46 @@
     </div>
 
     <div class="profile-header">
-        <img id="profileAvatar" class="profile-avatar" src="../assets/profile/avatar1.png" alt="Avatar">
+
+        <div class="avatar-wrapper">
+
+            <img
+                id="profileAvatar"
+                class="profile-avatar"
+                src="../assets/profile/avatar1.png"
+                alt="Avatar">
+
+            <img
+                id="profileFrame"
+                class="profile-frame hidden"
+                src=""
+                alt="Frame">
+
+        </div>
 
         <h1 id="profileUsername">Loading...</h1>
 
-        <div id="profileLevel" class="profile-level-pill">
+        <img
+            id="profileBadge"
+            class="profile-badge hidden"
+            src=""
+            alt="Badge">
+
+        <div
+            id="profileTitle"
+            class="profile-title-pill hidden">
+        </div>
+
+        <div
+            id="profileLevel"
+            class="profile-level-pill">
             Level 1
         </div>
+
     </div>
 
     <div class="xp-card">
+
         <div class="xp-top">
             <span id="xpCurrent">0 XP</span>
             <span id="xpNext">Lvl 2</span>
@@ -41,49 +74,86 @@
         <div class="xp-bar">
             <div id="xpFill" class="xp-fill"></div>
         </div>
+
     </div>
 
     <div class="stats-section">
 
         <div class="stat-card lifetime-card">
-            <div id="lifetimeWinnings" class="stat-value big-value">$0</div>
-            <div class="stat-title">Lifetime Winnings</div>
+
+            <div
+                id="lifetimeWinnings"
+                class="stat-value big-value">
+                $0
+            </div>
+
+            <div class="stat-title">
+                Lifetime Winnings
+            </div>
+
         </div>
 
         <div class="small-stats-row">
 
             <div class="stat-card small-stat-card">
-                <div id="record" class="stat-value">0 / 0</div>
-                <div class="stat-title">1v1 Record</div>
+
+                <div
+                    id="record"
+                    class="stat-value">
+                    0 / 0
+                </div>
+
+                <div class="stat-title">
+                    1v1 Record
+                </div>
+
             </div>
 
             <div class="stat-card small-stat-card">
-                <div id="tournamentWins" class="stat-value">0</div>
-                <div class="stat-title">Tournament Wins</div>
+
+                <div
+                    id="tournamentWins"
+                    class="stat-value">
+                    0
+                </div>
+
+                <div class="stat-title">
+                    Tournament Wins
+                </div>
+
             </div>
 
         </div>
 
     </div>
 
-    <button id="chatFriendButton" class="chat-friend-button hidden">
-    Chat
-</button>
+    <button
+        id="chatFriendButton"
+        class="chat-friend-button hidden">
+        Chat
+    </button>
 
-<button id="profileActionButton" class="profile-action-button">
-    Edit Profile
-</button>
+    <button
+        id="profileActionButton"
+        class="profile-action-button">
+        Edit Profile
+    </button>
 
-<button id="removeFriendButton" class="remove-friend-button hidden">
-    Remove Friend
-</button>
+    <button
+        id="removeFriendButton"
+        class="remove-friend-button hidden">
+        Remove Friend
+    </button>
 
 </div>
 
 <div id="challengeModal" class="challenge-modal hidden">
+
     <div class="challenge-box">
 
-        <button id="closeChallengeModal" class="challenge-close-btn">
+        <button
+            id="closeChallengeModal"
+            class="challenge-close-btn">
             ×
         </button>
 
@@ -110,11 +180,15 @@
 
         </div>
 
-        <button id="sendChallengeButton" class="send-challenge-button" disabled>
+        <button
+            id="sendChallengeButton"
+            class="send-challenge-button"
+            disabled>
             Select Entry Fee
         </button>
 
     </div>
+
 </div>
 
 <script src="../js/toast.js"></script>
