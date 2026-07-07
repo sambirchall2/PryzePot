@@ -2187,35 +2187,45 @@ app.get("/api/users/:username/profile", async function (req, res) {
     res.json({
         success: true,
         user: {
-            username: user.username,
-            balance: user.balance || 0,
-            profile_picture: user.profile_picture || "avatar1",
-            profile_banner: user.profile_banner || "banner1",
-            profile_completed: user.profile_completed || false,
-            xp: xp,
-            level: level,
-            created_at: user.created_at,
-last_seen: user.last_seen || 0,
+    username: user.username,
+    balance: user.balance || 0,
 
-            stats: {
-                lifetime_winnings: lifetimeWinnings,
-                one_v_one_wins: normalWins.data ? normalWins.data.length : 0,
-                one_v_one_losses: normalLosses.data ? normalLosses.data.length : 0,
-                tournament_match_wins: tournamentMatchWins.data ? tournamentMatchWins.data.length : 0,
-                tournament_wins: tournamentWins.data ? tournamentWins.data.length : 0
-            },
+    profile_picture: user.profile_picture || "avatar1",
+    profile_banner: user.profile_banner || "banner1",
 
-            xp_progress: {
-                current_xp: xp,
-                current_level: level,
-                current_level_xp: currentLevelXp,
-                next_level: nextLevel,
-                next_level_xp: nextLevelXp,
-                progress_xp: progressXp,
-                needed_xp: neededXp,
-                progress_percent: progressPercent
-            }
-        }
+    equipped_avatar: user.equipped_avatar || null,
+    equipped_banner: user.equipped_banner || null,
+    equipped_frame: user.equipped_frame || null,
+    equipped_badge: user.equipped_badge || null,
+    equipped_title: user.equipped_title || null,
+
+    profile_completed: user.profile_completed || false,
+
+    xp: xp,
+    level: level,
+
+    created_at: user.created_at,
+    last_seen: user.last_seen || 0,
+
+    stats: {
+        lifetime_winnings: lifetimeWinnings,
+        one_v_one_wins: normalWins.data ? normalWins.data.length : 0,
+        one_v_one_losses: normalLosses.data ? normalLosses.data.length : 0,
+        tournament_match_wins: tournamentMatchWins.data ? tournamentMatchWins.data.length : 0,
+        tournament_wins: tournamentWins.data ? tournamentWins.data.length : 0
+    },
+
+    xp_progress: {
+        current_xp: xp,
+        current_level: level,
+        current_level_xp: currentLevelXp,
+        next_level: nextLevel,
+        next_level_xp: nextLevelXp,
+        progress_xp: progressXp,
+        needed_xp: neededXp,
+        progress_percent: progressPercent
+    }
+}
     });
 });
 function normalizeFriendPair(usernameOne, usernameTwo) {
