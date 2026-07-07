@@ -90,8 +90,8 @@ body {
 
 .avatar-preview-wrap {
     position: relative;
-    width: 126px;
-    height: 126px;
+    width: 108px;
+    height: 108px;
     margin: 28px auto 14px;
     display: flex;
     align-items: center;
@@ -296,12 +296,14 @@ body {
 
 .avatar-frame-preview {
     position: absolute;
-    inset: 0;
-    width: 126px;
-    height: 126px;
+    width: 108px;
+    height: 108px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     object-fit: contain;
-    z-index: 4;
     pointer-events: none;
+    z-index: 4;
 }
 
 .badge-preview {
