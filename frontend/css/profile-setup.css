@@ -88,21 +88,14 @@ body {
     z-index: 2;
 }
 
-.avatar-preview {
-    width: 92px;
-    height: 92px;
-    margin: 0 auto 12px;
-
-    border-radius: 50%;
-
-    object-fit: cover;
-
-    background: #050505;
-    border: 3px solid #b6ff00;
-
-    box-shadow:
-        0 0 18px rgba(182,255,0,.45),
-        inset 0 0 18px rgba(182,255,0,.12);
+.avatar-preview-wrap {
+    position: relative;
+    width: 126px;
+    height: 126px;
+    margin: 28px auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .profile-preview h2 {
@@ -303,11 +296,9 @@ body {
 
 .avatar-frame-preview {
     position: absolute;
-    top: 68px;
-    left: 50%;
+    inset: 0;
     width: 126px;
     height: 126px;
-    transform: translateX(-50%);
     object-fit: contain;
     z-index: 4;
     pointer-events: none;
@@ -342,11 +333,6 @@ body {
 }
 
 .avatar-preview {
-    position: relative;
-    z-index: 3;
-}
-
-.avatar-preview {
     width: 92px;
     height: 92px;
     margin: 28px auto 14px;
@@ -369,10 +355,4 @@ body {
     height: 34px;
     margin: 6px auto 0;
     object-fit: contain;
-}
-.avatar-preview {
-    width: 92px;
-    height: 92px;
-    margin: 28px auto 14px;
-    ...
 }
