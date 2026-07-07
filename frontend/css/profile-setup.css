@@ -303,10 +303,10 @@ body {
 
 .avatar-frame-preview {
     position: absolute;
-    top: 27px;
+    top: 42px;
     left: 50%;
-    width: 116px;
-    height: 116px;
+    width: 106px;
+    height: 106px;
     transform: translateX(-50%);
     object-fit: contain;
     z-index: 4;
@@ -347,16 +347,19 @@ body {
     z-index: 3;
 }
 
-.avatar-frame-preview {
-    position: absolute;
-    top: 31px;
-    left: 50%;
-    width: 116px;
-    height: 116px;
-    transform: translateX(-50%);
-    object-fit: contain;
-    z-index: 4;
-    pointer-events: none;
+.avatar-preview {
+    width: 92px;
+    height: 92px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #050505;
+    border: 3px solid #b6ff00;
+    box-shadow:
+        0 0 18px rgba(182,255,0,.45),
+        inset 0 0 18px rgba(182,255,0,.12);
+    position: relative;
+    z-index: 3;
 }
 
 .badge-preview {
