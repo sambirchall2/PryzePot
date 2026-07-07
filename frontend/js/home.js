@@ -3,6 +3,7 @@ const balance = localStorage.getItem("balance");
 const level = localStorage.getItem("level") || "1";
 const profilePicture = localStorage.getItem("profilePicture") || "avatar1";
 const profileBanner = localStorage.getItem("profileBanner") || "banner1";
+
 const notificationBell = document.getElementById("notificationBell");
 const notificationCount = document.getElementById("notificationCount");
 
@@ -20,25 +21,21 @@ const xpFill = document.getElementById("xpFill");
 
 const homeAvatarImage = document.getElementById("homeAvatarImage");
 const homeBannerImage = document.getElementById("homeBannerImage");
+const homeFrameImage = document.getElementById("homeFrameImage");
+const homeBadgeImage = document.getElementById("homeBadgeImage");
+const homeTitleText = document.getElementById("homeTitleText");
 
 if (usernameDisplay) usernameDisplay.textContent = username;
 if (balanceDisplay) balanceDisplay.textContent = balance || "0";
 if (levelDisplay) levelDisplay.textContent = "Level " + level;
 
-if (homeAvatarImage) {
-    homeAvatarImage.src = "../assets/profile/" + profilePicture + ".png";
-}
-
-if (homeBannerImage) {
-    homeBannerImage.src = "../assets/profile/" + profileBanner + ".png";
-}
+setImageIfExists(homeAvatarImage, profilePicture, "Avatar", "avatar1");
+setImageIfExists(homeBannerImage, profileBanner, "Banner", "banner1");
 
 function updateXpBar(user) {
     const xpProgress = user.xp_progress;
 
-    if (!xpProgress) {
-        return;
-    }
+    if (!xpProgress) return;
 
     if (xpFill) {
         xpFill.style.width = xpProgress.progress_percent + "%";
@@ -50,12 +47,11 @@ function updateXpBar(user) {
     }
 
     if (nextLevelDisplay) {
-        nextLevelDisplay.textContent =
-            "Lvl " + xpProgress.next_level;
+        nextLevelDisplay.textContent = "Lvl " + xpProgress.next_level;
     }
 }
 
-fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
+fetch("https://api.pryzepot.com/api/users/" + encodeURIComponent(username) + "/profile")
     .then(function (response) {
         return response.json();
     })
@@ -64,8 +60,8 @@ fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
 
         const user = data.user;
 
-        const savedAvatar = user.profile_picture || "avatar1";
-        const savedBanner = user.profile_banner || "banner1";
+        const savedAvatar = user.equipped_avatar || user.profile_picture || "avatar1";
+        const savedBanner = user.equipped_banner || user.profile_banner || "banner1";
         const savedLevel = user.level || 1;
         const savedXp = user.xp || 0;
 
@@ -75,12 +71,18 @@ fetch("https://api.pryzepot.com/api/users/" + username + "/profile")
         localStorage.setItem("level", savedLevel);
         localStorage.setItem("xp", savedXp);
 
-        if (homeAvatarImage) {
-            homeAvatarImage.src = "../assets/profile/" + savedAvatar + ".png";
-        }
+        setImageIfExists(homeAvatarImage, savedAvatar, "Avatar", "avatar1");
+        setImageIfExists(homeBannerImage, savedBanner, "Banner", "banner1");
+        setImageIfExists(homeFrameImage, user.equipped_frame, "Frame", null);
+        setImageIfExists(homeBadgeImage, user.equipped_badge, "Badge", null);
 
-        if (homeBannerImage) {
-            homeBannerImage.src = "../assets/profile/" + savedBanner + ".png";
+        if (homeTitleText) {
+            if (user.equipped_title) {
+                homeTitleText.textContent = user.equipped_title;
+                homeTitleText.classList.remove("hidden");
+            } else {
+                homeTitleText.classList.add("hidden");
+            }
         }
 
         if (levelDisplay) {
@@ -113,6 +115,7 @@ const menuToggle = document.getElementById("menuToggle");
 const sideMenu = document.getElementById("sideMenu");
 const menuOverlay = document.getElementById("menuOverlay");
 const profileBtn = document.getElementById("profileBtn");
+const friendsBtn = document.getElementById("friendsBtn");
 
 function openMenu() {
     sideMenu.classList.add("open");
@@ -136,6 +139,12 @@ if (profileBtn) {
     profileBtn.addEventListener("click", function () {
         window.location.href =
             "profile.html?user=" + encodeURIComponent(username);
+    });
+}
+
+if (friendsBtn) {
+    friendsBtn.addEventListener("click", function () {
+        window.location.href = "friends.html";
     });
 }
 
@@ -219,11 +228,6 @@ if (notificationBell) {
 
 loadNotificationCount();
 setInterval(loadNotificationCount, 15000);
-if (friendsBtn) {
-    friendsBtn.addEventListener("click", function () {
-        window.location.href = "friends.html";
-    });
-}
 
 function sendHeartbeat() {
     if (!username) return;
@@ -243,8 +247,8 @@ function sendHeartbeat() {
 }
 
 sendHeartbeat();
-
 setInterval(sendHeartbeat, 30000);
+
 const leaderboardCard = document.getElementById("leaderboardCard");
 
 if (leaderboardCard) {
@@ -252,6 +256,7 @@ if (leaderboardCard) {
         window.location.href = "leaderboard.html";
     });
 }
+
 const vaultHomeBanner = document.getElementById("vaultHomeBanner");
 
 if (vaultHomeBanner) {

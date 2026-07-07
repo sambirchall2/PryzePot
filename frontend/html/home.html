@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PryzePot Home</title>
     <link rel="stylesheet" href="../css/home.css">
+    <link rel="stylesheet" href="../css/cosmetic-card.css">
 </head>
 
 <body>
@@ -77,10 +78,34 @@
 
         <div class="home-profile-content">
 
-            <img id="homeAvatarImage" class="home-avatar-image" src="../assets/profile/avatar1.png" alt="Profile Picture">
+    <div class="avatar-wrapper">
 
-            <div class="home-profile-info">
+        <img
+            id="homeAvatarImage"
+            class="home-avatar-image"
+            src="../assets/profile/avatar1.png"
+            alt="Profile Picture">
+
+        <img
+            id="homeFrameImage"
+            class="profile-frame hidden"
+            src=""
+            alt="Frame">
+
+    </div>
+
+    <div class="home-profile-info">
                 <h2 id="usernameDisplay">Loading...</h2>
+                <img
+    id="homeBadgeImage"
+    class="profile-badge hidden"
+    src=""
+    alt="Badge">
+
+<div
+    id="homeTitleText"
+    class="profile-title-pill hidden">
+</div>
 
                 <div class="user-stats">
 
@@ -173,7 +198,7 @@
     </div>
 
 </div>
-
+<script src="../js/cosmetic-card.js"></script>
 <script src="../js/home.js"></script>
 
 </body>
