@@ -23,9 +23,9 @@ const vaultPacks = [
             { type: "Banner", name: "Inferno", image: "../assets/vault/banners/inferno.png" },
             { type: "Banner", name: "Ice Wall", image: "../assets/vault/banners/ice-wall.png" },
             { type: "Banner", name: "Dark Matter", image: "../assets/vault/banners/dark-matter.png" },
-            { type: "Frame", name: "Bronze Edge", image: "../assets/vault/frames/Bronze-edge-frame.png" },
+            { type: "Frame", name: "Bronze Edge", image: "../assets/vault/frames/bronze-edge-frame.png" },
             { type: "Title", name: "The Grinder", rarity: "common" },
-            { type: "Badge", name: "Rising Player", image: "../assets/vault/badges/Rising-player-badge.png" }
+            { type: "Badge", name: "Rising Player", image: "../assets/vault/badges/rising-player-badge.png" }
         ]
     },
     {
@@ -39,10 +39,10 @@ const vaultPacks = [
             { type: "Banner", name: "Lightning Run", image: "../assets/vault/banners/lightning-run.png" },
             { type: "Banner", name: "Neon Galaxy", image: "../assets/vault/banners/neon-galaxy.png" },
             { type: "Banner", name: "Lime Smoke", image: "../assets/vault/banners/lime-smoke.png" },
-            { type: "Frame", name: "Silver Edge", image: "../assets/vault/frames/Silver-edge-frame.png" },
+            { type: "Frame", name: "Silver Edge", image: "../assets/vault/frames/silver-edge-frame.png" },
             { type: "Title", name: "King Slayer", rarity: "rare" },
-            { type: "Badge", name: "Veteran", image: "../assets/vault/badges/Veteran-badge.png" },
-            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/Shield-mark-badge.png" }
+            { type: "Badge", name: "Veteran", image: "../assets/vault/badges/veteran-badge.png" },
+            { type: "Badge", name: "Shield Mark", image: "../assets/vault/badges/shield-mark-badge.png" }
         ]
     },
     {
@@ -56,9 +56,9 @@ const vaultPacks = [
             { type: "Banner", name: "Green Fire", image: "../assets/vault/banners/green-fire.png" },
             { type: "Banner", name: "Battlefield", image: "../assets/vault/banners/battlefield.png" },
             { type: "Banner", name: "Crystal Core", image: "../assets/vault/banners/crystal-core.png" },
-            { type: "Frame", name: "Gold Edge", image: "../assets/vault/frames/Gold-edge-frame.png" },
+            { type: "Frame", name: "Gold Edge", image: "../assets/vault/frames/gold-edge-frame.png" },
             { type: "Title", name: "Elite Competitor", rarity: "epic" },
-            { type: "Badge", name: "Winner", image: "../assets/vault/badges/Winner-badge.png" }
+            { type: "Badge", name: "Winner", image: "../assets/vault/badges/winner-badge.png" }
         ]
     },
     {
@@ -72,9 +72,9 @@ const vaultPacks = [
             { type: "Banner", name: "Inferno Banner", image: "../assets/vault/banners/inferno-banner.png" },
             { type: "Banner", name: "Thunder Vault", image: "../assets/vault/banners/thunder-vault.png" },
             { type: "Banner", name: "Toxic Neon", image: "../assets/vault/banners/toxic-neon.png" },
-            { type: "Frame", name: "Diamond Edge", image: "../assets/vault/frames/Diamond-edge-frame.png" },
+            { type: "Frame", name: "Diamond Edge", image: "../assets/vault/frames/diamond-edge-frame.png" },
             { type: "Title", name: "Champion", rarity: "legendary" },
-            { type: "Badge", name: "Champion Badge", image: "../assets/vault/badges/Champion-badge.png" }
+            { type: "Badge", name: "Champion Badge", image: "../assets/vault/badges/champion-badge.png" }
         ]
     },
     {
@@ -88,9 +88,9 @@ const vaultPacks = [
             { type: "Banner", name: "Master Galaxy", image: "../assets/vault/banners/master-galaxy.png" },
             { type: "Banner", name: "Crown Flame", image: "../assets/vault/banners/crown-flame.png" },
             { type: "Banner", name: "Overcharge", image: "../assets/vault/banners/overcharge.png" },
-            { type: "Frame", name: "Master Frame", image: "../assets/vault/frames/Master-frame.png" },
+            { type: "Frame", name: "Master Frame", image: "../assets/vault/frames/master-frame.png" },
             { type: "Title", name: "Master", rarity: "master" },
-            { type: "Badge", name: "Master Badge", image: "../assets/vault/badges/Master-badge.png" }
+            { type: "Badge", name: "Master Badge", image: "../assets/vault/badges/master-badge.png" }
         ]
     },
     {
@@ -104,9 +104,9 @@ const vaultPacks = [
             { type: "Banner", name: "Hall of Legends", image: "../assets/vault/banners/hall-of-legends.png" },
             { type: "Banner", name: "Eternal Flame", image: "../assets/vault/banners/eternal-flame.png" },
             { type: "Banner", name: "God Spark", image: "../assets/vault/banners/god-spark.png" },
-            { type: "Frame", name: "Legend Frame", image: "../assets/vault/frames/Legend-frame.png" },
+            { type: "Frame", name: "Legend Frame", image: "../assets/vault/frames/legend-frame.png" },
             { type: "Title", name: "Pryze Legend", rarity: "legend" },
-            { type: "Badge", name: "Legend Badge", image: "../assets/vault/badges/Legend-badge.png" }
+            { type: "Badge", name: "Legend Badge", image: "../assets/vault/badges/legend-badge.png" }
         ]
     }
 ];
@@ -114,13 +114,11 @@ const vaultPacks = [
 function normalizeVaultImagePath(image) {
     if (!image) return "";
 
-    if (image.startsWith("../")) {
-        return image;
-    }
+    if (image.startsWith("../")) return image;
 
-    if (image.startsWith("assets/")) {
-        return "../" + image;
-    }
+    if (image.startsWith("assets/")) return "../" + image;
+
+    if (image.includes("/")) return "../" + image;
 
     return image;
 }
