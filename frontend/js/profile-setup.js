@@ -134,9 +134,26 @@ function createCosmeticButton(cosmetic) {
     button.addEventListener("click", function () {
         if (cosmetic.cosmetic_type === "Avatar") selectedAvatar = cosmetic;
         if (cosmetic.cosmetic_type === "Banner") selectedBanner = cosmetic;
-        if (cosmetic.cosmetic_type === "Frame") selectedFrame = cosmetic;
-        if (cosmetic.cosmetic_type === "Badge") selectedBadge = cosmetic;
-        if (cosmetic.cosmetic_type === "Title") selectedTitle = cosmetic;
+        if (cosmetic.cosmetic_type === "Frame") {
+    selectedFrame =
+        selectedFrame && selectedFrame.cosmetic_id === cosmetic.cosmetic_id
+            ? null
+            : cosmetic;
+}
+
+if (cosmetic.cosmetic_type === "Badge") {
+    selectedBadge =
+        selectedBadge && selectedBadge.cosmetic_id === cosmetic.cosmetic_id
+            ? null
+            : cosmetic;
+}
+
+if (cosmetic.cosmetic_type === "Title") {
+    selectedTitle =
+        selectedTitle && selectedTitle.cosmetic_id === cosmetic.cosmetic_id
+            ? null
+            : cosmetic;
+}
 
         updateProfilePreview();
     });
