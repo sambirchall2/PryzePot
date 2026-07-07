@@ -482,16 +482,21 @@ body {
 }
 
 .home-profile-content .profile-badge{
-    width:22px;
-    height:22px;
+    width:28px;
+    height:28px;
     margin-top:3px;
 }
 
 .home-profile-content .profile-title-pill{
-    width:fit-content;
-    margin:3px 0 5px;
-    padding:3px 8px;
-    font-size:8px;
+  padding:6px 14px;
+    border-radius:999px;
+    background:rgba(200,255,0,.08);
+    border:1px solid rgba(200,255,0,.25);
+    color:#c8ff00;
+    font-size:11px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.6px;
 }
 /* ---------- Home Profile Refinement ---------- */
 
@@ -505,17 +510,16 @@ body {
     display:grid;
     grid-template-columns:1fr auto;
     grid-template-areas:
-        "name stats"
-        "title stats"
+        "name right"
         "xp xp";
     align-items:center;
-    column-gap:10px;
+    column-gap:16px;
 }
-
 .home-profile-info h2{
     grid-area:name;
-    margin-top:8px;
+    margin:0;
     font-size:20px;
+    font-weight:900;
     line-height:1;
 }
 
@@ -542,10 +546,10 @@ body {
 }
 
 .user-stats{
-    grid-area:stats;
+    display:flex;
     justify-content:flex-end;
-    margin:0;
-    gap:7px;
+    gap:10px;
+    margin-top:6px;
 }
 
 .user-stats span,
@@ -575,6 +579,20 @@ body {
 }
 
 .home-profile-content .profile-frame{
-    width:84px;
-    height:84px;
+   width:86px;
+    height:86px;
+    transform:translate(-50%,-50%) scale(1.02);
+}
+.home-right{
+    grid-area:right;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+}
+
+.title-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
 }
