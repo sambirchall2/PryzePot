@@ -2091,7 +2091,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     const result = await supabase
         .from("users")
         .select(
-            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen"
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title"
         )
         .eq("username", username)
         .maybeSingle();

@@ -11,6 +11,7 @@ const viewedUsername = params.get("user") || loggedInUsername;
 
 const profileBanner = document.getElementById("profileBanner");
 const profileAvatar = document.getElementById("profileAvatar");
+const profileBanner = document.getElementById("profileBanner");
 const profileUsername = document.getElementById("profileUsername");
 const profileLevel = document.getElementById("profileLevel");
 
@@ -303,11 +304,42 @@ function loadProfile() {
             const stats = user.stats || {};
             const xpProgress = user.xp_progress || {};
 
-            profileBanner.src =
-                "../assets/profile/" + (user.profile_banner || "banner1") + ".png";
+            setImageIfExists(
+    profileBanner,
+    user.equipped_banner || user.profile_banner,
+    "Banner",
+    "banner1"
+);
 
-            profileAvatar.src =
-                "../assets/profile/" + (user.profile_picture || "avatar1") + ".png";
+setImageIfExists(
+    profileAvatar,
+    user.equipped_avatar || user.profile_picture,
+    "Avatar",
+    "avatar1"
+);
+
+setImageIfExists(
+    profileFrame,
+    user.equipped_frame,
+    "Frame",
+    null
+);
+
+setImageIfExists(
+    profileBadge,
+    user.equipped_badge,
+    "Badge",
+    null
+);
+
+if (profileTitle) {
+    if (user.equipped_title) {
+        profileTitle.textContent = user.equipped_title;
+        profileTitle.classList.remove("hidden");
+    } else {
+        profileTitle.classList.add("hidden");
+    }
+}
 
             profileUsername.textContent = user.username;
             profileLevel.textContent = "Level " + (user.level || 1);
