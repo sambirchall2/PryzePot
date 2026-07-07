@@ -493,3 +493,88 @@ body {
     padding:3px 8px;
     font-size:8px;
 }
+/* ---------- Home Profile Refinement ---------- */
+
+.home-profile-content{
+    align-items:center;
+    gap:14px;
+}
+
+.home-profile-info{
+    flex:1;
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-areas:
+        "name stats"
+        "title stats"
+        "xp xp";
+    align-items:center;
+    column-gap:10px;
+}
+
+.home-profile-info h2{
+    grid-area:name;
+    margin-top:8px;
+    font-size:20px;
+    line-height:1;
+}
+
+.home-profile-info .profile-badge{
+    width:28px;
+    height:28px;
+    margin:0 0 0 4px;
+}
+
+.home-profile-info .profile-title-pill{
+    grid-area:title;
+    width:fit-content;
+    margin:3px 0 6px;
+    padding:5px 12px;
+    font-size:9px;
+    letter-spacing:.7px;
+    color:#c8ff00;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.75), rgba(80,20,120,.45), rgba(0,0,0,.75));
+    border:1px solid rgba(200,255,0,.45);
+    box-shadow:
+        0 0 10px rgba(200,255,0,.18),
+        inset 0 0 12px rgba(200,255,0,.10);
+}
+
+.user-stats{
+    grid-area:stats;
+    justify-content:flex-end;
+    margin:0;
+    gap:7px;
+}
+
+.user-stats span,
+.coin-balance{
+    min-width:48px;
+    justify-content:center;
+}
+
+.xp-section{
+    grid-area:xp;
+    margin-top:-2px;
+}
+
+.xp-label{
+    margin-bottom:3px;
+}
+
+.home-profile-content .avatar-wrapper{
+    width:78px;
+    height:78px;
+    flex:0 0 78px;
+}
+
+.home-profile-content .home-avatar-image{
+    width:68px;
+    height:68px;
+}
+
+.home-profile-content .profile-frame{
+    width:84px;
+    height:84px;
+}
