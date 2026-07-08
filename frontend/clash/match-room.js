@@ -8,17 +8,8 @@ const prizeDisplay = document.getElementById("prizeDisplay");
 const timerLabel = document.getElementById("timerLabel");
 const timerDisplay = document.getElementById("timerDisplay");
 
-const playerOneBanner = document.getElementById("playerOneBanner");
-const playerOneAvatar = document.getElementById("playerOneAvatar");
-const playerOneName = document.getElementById("playerOneName");
-const playerOneLevel = document.getElementById("playerOneLevel");
-
+const playerOneCard = document.getElementById("playerOneCard");
 const playerTwoCard = document.getElementById("playerTwoCard");
-const playerTwoBanner = document.getElementById("playerTwoBanner");
-const playerTwoAvatar = document.getElementById("playerTwoAvatar");
-const playerTwoName = document.getElementById("playerTwoName");
-const playerTwoLevel = document.getElementById("playerTwoLevel");
-
 const instructionsCard = document.getElementById("instructionsCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyBtn = document.getElementById("verifyBtn");
@@ -69,31 +60,49 @@ function getProfileLevel(profile) {
 }
 
 function updatePlayerOne(match) {
-    const profile = match.creatorProfile;
+    if (!match.creatorUsername) {
+        renderMatchPlayerCard(playerOneCard, null, "PLAYER 1", true);
+        return;
+    }
 
-    playerOneName.textContent = match.creatorUsername || "Player 1";
-    playerOneLevel.textContent = "Level " + getProfileLevel(profile);
-    playerOneAvatar.src = "../assets/profile/" + getProfileImage(profile, "avatar") + ".png";
-    playerOneBanner.src = "../assets/profile/" + getProfileImage(profile, "banner") + ".png";
+    loadPlayerProfile(match.creatorUsername)
+        .then(function (profile) {
+            renderMatchPlayerCard(playerOneCard, profile, "PLAYER 1", false);
+        })
+        .catch(function () {
+            renderMatchPlayerCard(
+                playerOneCard,
+                normalizePlayerProfile({
+                    username: match.creatorUsername,
+                    level: 1
+                }),
+                "PLAYER 1",
+                false
+            );
+        });
 }
 
 function updatePlayerTwo(match) {
     if (!match.opponentUsername) {
-        playerTwoName.textContent = "Waiting...";
-        playerTwoLevel.textContent = "Waiting";
-        playerTwoAvatar.src = "../assets/profile/avatar1.png";
-        playerTwoBanner.src = "../assets/profile/banner1.png";
-        playerTwoCard.classList.add("waiting-card");
+        renderMatchPlayerCard(playerTwoCard, null, "PLAYER 2", true);
         return;
     }
 
-    const profile = match.opponentProfile;
-
-    playerTwoName.textContent = match.opponentUsername || "Player 2";
-    playerTwoLevel.textContent = "Level " + getProfileLevel(profile);
-    playerTwoAvatar.src = "../assets/profile/" + getProfileImage(profile, "avatar") + ".png";
-    playerTwoBanner.src = "../assets/profile/" + getProfileImage(profile, "banner") + ".png";
-    playerTwoCard.classList.remove("waiting-card");
+    loadPlayerProfile(match.opponentUsername)
+        .then(function (profile) {
+            renderMatchPlayerCard(playerTwoCard, profile, "PLAYER 2", false);
+        })
+        .catch(function () {
+            renderMatchPlayerCard(
+                playerTwoCard,
+                normalizePlayerProfile({
+                    username: match.opponentUsername,
+                    level: 1
+                }),
+                "PLAYER 2",
+                false
+            );
+        });
 }
 
 function updateTimer() {

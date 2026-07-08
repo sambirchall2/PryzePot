@@ -162,3 +162,79 @@ function renderHomeProfileCard(container, profile) {
         </div>
     `;
 }
+function renderMatchPlayerCard(container, profile, label, isWaiting) {
+    if (!container) return;
+
+    if (isWaiting || !profile) {
+        container.classList.add("waiting-card");
+        container.innerHTML = `
+            <img class="pp-match-banner" src="../assets/profile/banner1.png" alt="Waiting Banner">
+            <div class="pp-match-overlay"></div>
+
+            <div class="pp-match-content">
+                <div class="pp-avatar-wrap pp-avatar-match">
+                    <img class="pp-avatar" src="../assets/profile/avatar1.png" alt="Waiting">
+                </div>
+
+                <div class="pp-match-info">
+                    <span>${label}</span>
+                    <strong>Waiting...</strong>
+                    <p>Waiting</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    container.classList.remove("waiting-card");
+
+    container.innerHTML = `
+        <img
+            class="pp-match-banner"
+            src="${getCosmeticImagePath(profile.banner, "Banner")}"
+            alt="Player Banner"
+        >
+
+        <div class="pp-match-overlay"></div>
+
+        <div class="pp-match-content">
+
+            <div class="pp-avatar-wrap pp-avatar-match">
+                <img
+                    class="pp-avatar"
+                    src="${getCosmeticImagePath(profile.avatar, "Avatar")}"
+                    alt="Avatar"
+                >
+
+                ${
+                    profile.frame
+                        ? `<img class="pp-frame" src="${getCosmeticImagePath(profile.frame, "Frame")}" alt="Frame">`
+                        : ""
+                }
+            </div>
+
+            <div class="pp-match-info">
+                <span>${label}</span>
+
+                <strong>${profile.username}</strong>
+
+                <div class="pp-match-rewards">
+                    ${
+                        profile.badge
+                            ? `<img class="pp-badge" src="${getCosmeticImagePath(profile.badge, "Badge")}" alt="Badge">`
+                            : ""
+                    }
+
+                    ${
+                        profile.title
+                            ? `<div class="pp-title">${profile.title}</div>`
+                            : ""
+                    }
+                </div>
+
+                <p>Level ${profile.level || 1}</p>
+            </div>
+
+        </div>
+    `;
+}

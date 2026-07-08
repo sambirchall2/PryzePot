@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Match Ready | PryzePot</title>
     <link rel="stylesheet" href="match-room.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
 </head>
 <body>
 
@@ -45,17 +46,13 @@
 
         <div class="versus-area">
 
-            <div id="playerOneCard" class="profile-player-card">
-                <img id="playerOneBanner" class="player-banner" src="../assets/profile/banner1.png" alt="Player Banner">
-                <div class="player-overlay"></div>
+    <div id="playerOneCard" class="profile-player-card"></div>
 
-                <div class="player-content">
-                    <img id="playerOneAvatar" class="player-avatar" src="../assets/profile/avatar1.png" alt="Player One">
-                    <span>PLAYER 1</span>
-                    <strong id="playerOneName">Loading...</strong>
-                    <p id="playerOneLevel">Level 1</p>
-                </div>
-            </div>
+    <div class="vs-badge">VS</div>
+
+    <div id="playerTwoCard" class="profile-player-card waiting-card"></div>
+
+</div>
 
             <div class="vs-badge">VS</div>
 
@@ -98,6 +95,7 @@
 
 </main>
 
+<script src="../js/profile-system.js"></script>
 <script src="match-room.js"></script>
 
 </body>
