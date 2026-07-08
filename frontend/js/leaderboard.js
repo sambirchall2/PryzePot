@@ -19,12 +19,20 @@ function formatMoney(amount) {
     return "$" + Number(amount || 0).toLocaleString();
 }
 
-function getAvatarPath(avatar) {
-    return "../assets/profile/" + (avatar || "avatar1") + ".png";
-}
-
-function getBannerPath(banner) {
-    return "../assets/profile/" + (banner || "banner1") + ".png";
+function normalizeLeaderboardPlayer(player) {
+    return normalizePlayerProfile({
+        username: player.username,
+        profile_picture: player.equipped_avatar || player.profile_picture || "avatar1",
+        profile_banner: player.equipped_banner || player.profile_banner || "banner1",
+        equipped_avatar: player.equipped_avatar || player.profile_picture || "avatar1",
+        equipped_banner: player.equipped_banner || player.profile_banner || "banner1",
+        equipped_frame: player.equipped_frame || null,
+        equipped_badge: player.equipped_badge || null,
+        equipped_title: player.equipped_title || null,
+        level: player.level || 1,
+        xp: player.xp || 0,
+        balance: player.balance || 0
+    });
 }
 
 function showToast(message) {
@@ -97,13 +105,21 @@ function renderPodium(players) {
 
         return `
             <div class="podium-card rank-${rank}${userClass}" data-username="${player.username}">
-                <img class="podium-banner" src="${getBannerPath(player.profile_banner)}" alt="">
+                <img class="podium-banner" src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).banner, "Banner")}" alt="">
                 <div class="podium-overlay"></div>
 
                 <div class="rank-badge">#${rank}</div>
 
                 <div class="podium-content">
-                    <img class="podium-avatar" src="${getAvatarPath(player.profile_picture)}" alt="">
+                    <div class="pp-avatar-wrap pp-avatar-leaderboard-podium">
+    <img class="pp-avatar" src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).avatar, "Avatar")}" alt="">
+
+    ${
+        normalizeLeaderboardPlayer(player).frame
+            ? `<img class="pp-frame" src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).frame, "Frame")}" alt="Frame">`
+            : ""
+    }
+</div>
                     <div class="podium-name">${player.username}</div>
                     <div class="podium-money">${formatMoney(player.lifetime_winnings)}</div>
                     <div class="podium-record">${getTotalWins(player)}W - ${getTotalLosses(player)}L</div>
@@ -138,13 +154,29 @@ function renderLeaderboard(players) {
 
         return `
             <div class="leaderboard-row${userClass}" data-username="${player.username}">
-                <img class="row-banner-bg" src="${getBannerPath(player.profile_banner)}" alt="">
+                <img
+    class="row-banner-bg"
+    src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).banner, "Banner")}"
+    alt=""
+>
                 <div class="row-banner-overlay"></div>
 
                 <div class="rank-number">#${player.rank}</div>
 
                 <div class="player-cell">
-                    <img class="row-avatar" src="${getAvatarPath(player.profile_picture)}" alt="">
+                    <div class="pp-avatar-wrap pp-avatar-leaderboard-row">
+    <img
+        class="pp-avatar"
+        src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).avatar, "Avatar")}"
+        alt=""
+    >
+
+    ${
+        normalizeLeaderboardPlayer(player).frame
+            ? `<img class="pp-frame" src="${getCosmeticImagePath(normalizeLeaderboardPlayer(player).frame, "Frame")}" alt="">`
+            : ""
+    }
+</div>
 
                     <div class="player-meta">
                         <div class="player-name">
@@ -185,7 +217,11 @@ function renderYourRank(players) {
     }
 
     yourRankCard.innerHTML = `
-        <img class="your-banner-bg" src="${getBannerPath(userPlayer.profile_banner)}" alt="">
+        <img
+    class="your-banner-bg"
+    src="${getCosmeticImagePath(normalizeLeaderboardPlayer(userPlayer).banner, "Banner")}"
+    alt=""
+>
         <div class="your-banner-overlay"></div>
 
         <div class="your-content">
@@ -195,7 +231,19 @@ function renderYourRank(players) {
                 <div class="rank-number">#${userPlayer.rank}</div>
 
                 <div class="player-cell">
-                    <img class="row-avatar" src="${getAvatarPath(userPlayer.profile_picture)}" alt="">
+                    <div class="pp-avatar-wrap pp-avatar-leaderboard-row">
+    <img
+        class="pp-avatar"
+        src="${getCosmeticImagePath(normalizeLeaderboardPlayer(userPlayer).avatar, "Avatar")}"
+        alt=""
+    >
+
+    ${
+        normalizeLeaderboardPlayer(userPlayer).frame
+            ? `<img class="pp-frame" src="${getCosmeticImagePath(normalizeLeaderboardPlayer(userPlayer).frame, "Frame")}" alt="">`
+            : ""
+    }
+</div>
 
                     <div class="player-meta">
                         <div class="player-name">

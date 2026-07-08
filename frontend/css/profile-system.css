@@ -348,3 +348,48 @@
     font-size: 7px;
     padding: 3px 7px;
 }
+.pp-avatar-leaderboard-podium {
+    width: 66px;
+    height: 66px;
+    margin: 0 auto;
+}
+
+.pp-avatar-leaderboard-podium .pp-avatar {
+    width: 52px;
+    height: 52px;
+}
+
+.pp-avatar-leaderboard-podium .pp-frame {
+    width: 68px;
+    height: 68px;
+}
+
+.rank-1 .pp-avatar-leaderboard-podium {
+    width: 78px;
+    height: 78px;
+}
+
+.rank-1 .pp-avatar-leaderboard-podium .pp-avatar {
+    width: 64px;
+    height: 64px;
+}
+
+.rank-1 .pp-avatar-leaderboard-podium .pp-frame {
+    width: 82px;
+    height: 82px;
+}
+.pp-avatar-leaderboard-row{
+    width:54px;
+    height:54px;
+    flex-shrink:0;
+}
+
+.pp-avatar-leaderboard-row .pp-avatar{
+    width:42px;
+    height:42px;
+}
+
+.pp-avatar-leaderboard-row .pp-frame{
+    width:56px;
+    height:56px;
+}
