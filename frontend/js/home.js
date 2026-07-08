@@ -1,99 +1,40 @@
 const username = localStorage.getItem("username");
-const balance = localStorage.getItem("balance");
-const level = localStorage.getItem("level") || "1";
-const profilePicture = localStorage.getItem("profilePicture") || "avatar1";
-const profileBanner = localStorage.getItem("profileBanner") || "banner1";
-
-const notificationBell = document.getElementById("notificationBell");
-const notificationCount = document.getElementById("notificationCount");
 
 if (!username) {
     window.location.href = "index.html";
 }
 
-const usernameDisplay = document.getElementById("usernameDisplay");
-const balanceDisplay = document.getElementById("balanceDisplay");
-const levelDisplay = document.getElementById("levelDisplay");
+const notificationBell = document.getElementById("notificationBell");
+const notificationCount = document.getElementById("notificationCount");
+const homeProfileCard = document.getElementById("homeProfileCard");
 
-const xpDisplay = document.getElementById("xpDisplay");
-const nextLevelDisplay = document.getElementById("nextLevelDisplay");
-const xpFill = document.getElementById("xpFill");
+function loadHomeProfile() {
+    if (!homeProfileCard) return;
 
-const homeAvatarImage = document.getElementById("homeAvatarImage");
-const homeBannerImage = document.getElementById("homeBannerImage");
-const homeFrameImage = document.getElementById("homeFrameImage");
-const homeBadgeImage = document.getElementById("homeBadgeImage");
-const homeTitleText = document.getElementById("homeTitleText");
+    loadPlayerProfile(username)
+        .then(function (profile) {
+            localStorage.setItem("profilePicture", profile.avatar);
+            localStorage.setItem("profileBanner", profile.banner);
+            localStorage.setItem("level", profile.level);
+            localStorage.setItem("xp", profile.xp);
 
-if (usernameDisplay) usernameDisplay.textContent = username;
-if (balanceDisplay) balanceDisplay.textContent = balance || "0";
-if (levelDisplay) levelDisplay.textContent = "Level " + level;
+            renderHomeProfileCard(homeProfileCard, profile);
+        })
+        .catch(function (error) {
+            console.log("HOME PROFILE LOAD ERROR:", error);
 
-setImageIfExists(homeAvatarImage, profilePicture, "Avatar", "avatar1");
-setImageIfExists(homeBannerImage, profileBanner, "Banner", "banner1");
+            const fallbackProfile = normalizePlayerProfile({
+                username: username,
+                profile_picture: localStorage.getItem("profilePicture") || "avatar1",
+                profile_banner: localStorage.getItem("profileBanner") || "banner1",
+                level: localStorage.getItem("level") || 1,
+                xp: localStorage.getItem("xp") || 0,
+                balance: localStorage.getItem("balance") || 0
+            });
 
-function updateXpBar(user) {
-    const xpProgress = user.xp_progress;
-
-    if (!xpProgress) return;
-
-    if (xpFill) {
-        xpFill.style.width = xpProgress.progress_percent + "%";
-    }
-
-    if (xpDisplay) {
-        xpDisplay.textContent =
-            xpProgress.current_xp + " / " + xpProgress.next_level_xp + " XP";
-    }
-
-    if (nextLevelDisplay) {
-        nextLevelDisplay.textContent = "Lvl " + xpProgress.next_level;
-    }
+            renderHomeProfileCard(homeProfileCard, fallbackProfile);
+        });
 }
-
-fetch("https://api.pryzepot.com/api/users/" + encodeURIComponent(username) + "/profile")
-    .then(function (response) {
-        return response.json();
-    })
-    .then(function (data) {
-        if (!data.success || !data.user) return;
-
-        const user = data.user;
-
-        const savedAvatar = user.equipped_avatar || user.profile_picture || "avatar1";
-        const savedBanner = user.equipped_banner || user.profile_banner || "banner1";
-        const savedLevel = user.level || 1;
-        const savedXp = user.xp || 0;
-
-        localStorage.setItem("profilePicture", savedAvatar);
-        localStorage.setItem("profileBanner", savedBanner);
-        localStorage.setItem("profileCompleted", String(user.profile_completed || false));
-        localStorage.setItem("level", savedLevel);
-        localStorage.setItem("xp", savedXp);
-
-        setImageIfExists(homeAvatarImage, savedAvatar, "Avatar", "avatar1");
-        setImageIfExists(homeBannerImage, savedBanner, "Banner", "banner1");
-        setImageIfExists(homeFrameImage, user.equipped_frame, "Frame", null);
-        setImageIfExists(homeBadgeImage, user.equipped_badge, "Badge", null);
-
-        if (homeTitleText) {
-            if (user.equipped_title) {
-                homeTitleText.textContent = user.equipped_title;
-                homeTitleText.classList.remove("hidden");
-            } else {
-                homeTitleText.classList.add("hidden");
-            }
-        }
-
-        if (levelDisplay) {
-            levelDisplay.textContent = "Level " + savedLevel;
-        }
-
-        updateXpBar(user);
-    })
-    .catch(function (error) {
-        console.log("HOME PROFILE LOAD ERROR:", error);
-    });
 
 const clashPlayBtn = document.getElementById("clashPlayBtn");
 
@@ -118,13 +59,13 @@ const profileBtn = document.getElementById("profileBtn");
 const friendsBtn = document.getElementById("friendsBtn");
 
 function openMenu() {
-    sideMenu.classList.add("open");
-    menuOverlay.classList.add("open");
+    if (sideMenu) sideMenu.classList.add("open");
+    if (menuOverlay) menuOverlay.classList.add("open");
 }
 
 function closeMenu() {
-    sideMenu.classList.remove("open");
-    menuOverlay.classList.remove("open");
+    if (sideMenu) sideMenu.classList.remove("open");
+    if (menuOverlay) menuOverlay.classList.remove("open");
 }
 
 if (menuToggle) {
@@ -151,19 +92,16 @@ if (friendsBtn) {
 function logout() {
     localStorage.removeItem("username");
     localStorage.removeItem("balance");
-
     localStorage.removeItem("profilePicture");
     localStorage.removeItem("profileBanner");
     localStorage.removeItem("profileCompleted");
     localStorage.removeItem("xp");
     localStorage.removeItem("level");
-
     localStorage.removeItem("clashPlayerTag");
     localStorage.removeItem("clashPlayerName");
     localStorage.removeItem("clashTrophies");
     localStorage.removeItem("clashExpLevel");
     localStorage.removeItem("clashFriendLink");
-
     localStorage.removeItem("entryFee");
     localStorage.removeItem("currentMatchId");
     localStorage.removeItem("matchResult");
@@ -226,9 +164,6 @@ if (notificationBell) {
     });
 }
 
-loadNotificationCount();
-setInterval(loadNotificationCount, 15000);
-
 function sendHeartbeat() {
     if (!username) return;
 
@@ -246,9 +181,6 @@ function sendHeartbeat() {
     });
 }
 
-sendHeartbeat();
-setInterval(sendHeartbeat, 30000);
-
 const leaderboardCard = document.getElementById("leaderboardCard");
 
 if (leaderboardCard) {
@@ -264,3 +196,10 @@ if (vaultHomeBanner) {
         window.location.href = "../Vault/vault.html";
     });
 }
+
+loadHomeProfile();
+loadNotificationCount();
+sendHeartbeat();
+
+setInterval(loadNotificationCount, 15000);
+setInterval(sendHeartbeat, 30000);

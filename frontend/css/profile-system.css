@@ -1,0 +1,216 @@
+.hidden {
+    display: none !important;
+}
+
+/* ---------- Shared PryzePot Profile System ---------- */
+
+.pp-avatar-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pp-avatar {
+    border-radius: 50%;
+    object-fit: cover;
+    background: #050505;
+    border: 3px solid #c8ff00;
+    box-shadow:
+        0 0 18px rgba(200,255,0,.45),
+        inset 0 0 18px rgba(200,255,0,.12);
+    position: relative;
+    z-index: 2;
+}
+
+.pp-frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    object-fit: contain;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+}
+
+.pp-badge {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.pp-title {
+    max-width: 104px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    color: #c8ff00;
+    background: rgba(0,0,0,.72);
+    border: 1px solid rgba(200,255,0,.42);
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Home Profile Card ---------- */
+
+.pp-home-card {
+    margin: 12px 16px 8px;
+    height: 124px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(182,255,0,.28);
+    box-shadow: 0 0 24px rgba(182,255,0,.10);
+    background: #050505;
+}
+
+.pp-home-banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.pp-home-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.86), rgba(0,0,0,.30)),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.80));
+}
+
+.pp-home-inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 13px 14px;
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.pp-avatar-home {
+    width: 82px;
+    height: 82px;
+}
+
+.pp-avatar-home .pp-avatar {
+    width: 68px;
+    height: 68px;
+}
+
+.pp-avatar-home .pp-frame {
+    width: 86px;
+    height: 86px;
+}
+
+.pp-home-main {
+    min-width: 0;
+}
+
+.pp-home-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+}
+
+.pp-home-left {
+    min-width: 0;
+}
+
+.pp-home-left h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 900;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 10px rgba(0,0,0,.80);
+}
+
+.pp-home-xp-text {
+    margin-top: 18px;
+    color: rgba(255,255,255,.88);
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.pp-home-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 7px;
+}
+
+.pp-home-reward-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-height: 28px;
+}
+
+.pp-home-stats {
+    display: flex;
+    gap: 6px;
+}
+
+.pp-home-stats span {
+    min-width: 50px;
+    padding: 5px 8px;
+    text-align: center;
+    color: #c8ff00;
+    background: rgba(0,0,0,.72);
+    border: 1px solid rgba(200,255,0,.25);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.pp-xp-bottom {
+    margin-top: 5px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.pp-xp-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,.18);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(182,255,0,.18);
+}
+
+.pp-xp-fill {
+    height: 100%;
+    width: 0%;
+    background: #c8ff00;
+    border-radius: 999px;
+    box-shadow: 0 0 12px rgba(200,255,0,.55);
+    transition: width .35s ease;
+}
+
+.pp-next-level {
+    color: rgba(255,255,255,.86);
+    font-size: 10px;
+    font-weight: 900;
+    white-space: nowrap;
+}
