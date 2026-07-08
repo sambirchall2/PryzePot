@@ -1930,7 +1930,7 @@ app.get("/api/leaderboard", async function (req, res) {
 
     const usersResult = await supabase
         .from("users")
-        .select("username, profile_picture, profile_banner, xp, level");
+        .select("username, profile_picture, profile_banner, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, xp, level");
 
     if (usersResult.error) {
         console.log("LEADERBOARD USERS ERROR:", usersResult.error);
