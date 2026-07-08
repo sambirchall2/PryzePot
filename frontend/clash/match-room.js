@@ -20,6 +20,8 @@ const currentMatchId = localStorage.getItem("currentMatchId");
 const currentUsername = localStorage.getItem("username");
 
 let currentMatch = null;
+let lastPlayerOneUsername = null;
+let lastPlayerTwoUsername = null;
 
 if (!currentMatchId) {
     window.location.href = "match-board.html";
@@ -37,26 +39,6 @@ function formatCountdown(milliseconds) {
     const seconds = totalSeconds % 60;
 
     return minutes + ":" + seconds.toString().padStart(2, "0");
-}
-
-function getProfileImage(profile, type) {
-    if (!profile) {
-        return type === "banner" ? "banner1" : "avatar1";
-    }
-
-    if (type === "banner") {
-        return profile.profile_banner || "banner1";
-    }
-
-    return profile.profile_picture || "avatar1";
-}
-
-function getProfileLevel(profile) {
-    if (!profile || !profile.level) {
-        return 1;
-    }
-
-    return profile.level;
 }
 
 function updatePlayerOne(match) {
@@ -133,8 +115,15 @@ function updateRoomState(match) {
     entryDisplay.textContent = "$" + match.entryFee;
     prizeDisplay.textContent = "$" + Number(match.entryFee) * 2;
 
+    if (lastPlayerOneUsername !== match.creatorUsername) {
+    lastPlayerOneUsername = match.creatorUsername;
     updatePlayerOne(match);
+}
+
+if (lastPlayerTwoUsername !== match.opponentUsername) {
+    lastPlayerTwoUsername = match.opponentUsername;
     updatePlayerTwo(match);
+}
 
     if (match.status === "Completed") {
         localStorage.setItem("lastVerifiedMatch", JSON.stringify(match));
