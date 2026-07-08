@@ -579,9 +579,11 @@ body {
 }
 
 .home-profile-content .profile-frame{
-   width:86px;
+    width:86px;
     height:86px;
-    transform:translate(-50%,-50%) scale(1.02);
+    left:50%;
+    top:51%;
+    transform:translate(calc(-50% - 2px), -50%) scale(1.03);
 }
 .home-right{
     grid-area:right;
