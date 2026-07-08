@@ -583,7 +583,7 @@ body {
     height:86px;
     left:50%;
     top:51%;
-    transform:translate(calc(-50% - 2px), -50%) scale(1.03);
+    transform:translate(calc(-50% - 3px), -50%) scale(1.03);
 }
 .home-right{
     grid-area:right;
