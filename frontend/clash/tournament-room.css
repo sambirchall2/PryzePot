@@ -354,3 +354,74 @@ h1 {
     font-weight: 950;
     flex-shrink: 0;
 }
+/* ---------- Tournament Room Compact Cards ---------- */
+
+.pp-tournament-player-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(8,12,8,0.9);
+    border: 1px solid rgba(183,255,0,0.22);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.pp-tournament-player-card.filled {
+    border-color: rgba(183,255,0,0.65);
+}
+
+.pp-avatar-tournament {
+    width: 54px;
+    height: 54px;
+}
+
+.pp-avatar-tournament .pp-avatar {
+    width: 44px;
+    height: 44px;
+    border-width: 2px;
+}
+
+.pp-avatar-tournament .pp-frame {
+    width: 58px;
+    height: 58px;
+}
+
+.pp-tournament-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pp-tournament-player-name {
+    font-size: 15px;
+    font-weight: 950;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pp-tournament-player-level {
+    margin-top: 3px;
+    color: #b7ff00;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.pp-tournament-rewards {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pp-tournament-rewards .pp-badge {
+    width: 22px;
+    height: 22px;
+}
+
+.pp-tournament-rewards .pp-title {
+    max-width: 120px;
+    font-size: 8px;
+    padding: 4px 8px;
+}

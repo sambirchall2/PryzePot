@@ -238,3 +238,63 @@ function renderMatchPlayerCard(container, profile, label, isWaiting) {
         </div>
     `;
 }
+function buildTournamentPlayerCard(profile, isFilled) {
+    const safeProfile = normalizePlayerProfile(profile || {});
+
+    if (!isFilled) {
+        return `
+            <div class="pp-tournament-player-card">
+                <div class="pp-avatar-wrap pp-avatar-tournament">
+                    <img class="pp-avatar" src="../assets/profile/avatar1.png" alt="Open Slot">
+                </div>
+
+                <div class="pp-tournament-player-info">
+                    <div class="pp-tournament-player-name">Waiting...</div>
+                    <div class="pp-tournament-player-level">Open Slot</div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="pp-tournament-player-card filled">
+            <div class="pp-avatar-wrap pp-avatar-tournament">
+                <img
+                    class="pp-avatar"
+                    src="${getCosmeticImagePath(safeProfile.avatar, "Avatar")}"
+                    alt="${safeProfile.username}"
+                >
+
+                ${
+                    safeProfile.frame
+                        ? `<img class="pp-frame" src="${getCosmeticImagePath(safeProfile.frame, "Frame")}" alt="Frame">`
+                        : ""
+                }
+            </div>
+
+            <div class="pp-tournament-player-info">
+                <div class="pp-tournament-player-name">
+                    ${safeProfile.username}
+                </div>
+
+                <div class="pp-tournament-player-level">
+                    Level ${safeProfile.level || 1}
+                </div>
+
+                <div class="pp-tournament-rewards">
+                    ${
+                        safeProfile.badge
+                            ? `<img class="pp-badge" src="${getCosmeticImagePath(safeProfile.badge, "Badge")}" alt="Badge">`
+                            : ""
+                    }
+
+                    ${
+                        safeProfile.title
+                            ? `<div class="pp-title">${safeProfile.title}</div>`
+                            : ""
+                    }
+                </div>
+            </div>
+        </div>
+    `;
+}

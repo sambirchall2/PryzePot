@@ -313,3 +313,38 @@
 .waiting-card .pp-avatar {
     filter: grayscale(1);
 }
+/* ---------- Tournament Bracket Cosmetics ---------- */
+
+.pp-avatar-bracket {
+    width: 48px;
+    height: 48px;
+}
+
+.pp-avatar-bracket .pp-avatar {
+    width: 38px;
+    height: 38px;
+    border-width: 2px;
+}
+
+.pp-avatar-bracket .pp-frame {
+    width: 52px;
+    height: 52px;
+}
+
+.pp-bracket-rewards {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pp-bracket-rewards .pp-badge {
+    width: 18px;
+    height: 18px;
+}
+
+.pp-bracket-rewards .pp-title {
+    max-width: 96px;
+    font-size: 7px;
+    padding: 3px 7px;
+}

@@ -29,12 +29,12 @@ function openProfile(usernameValue) {
 }
 
 function getDefaultProfile(usernameValue) {
-    return {
+    return normalizePlayerProfile({
         username: usernameValue || "Player",
         profile_picture: "avatar1",
         profile_banner: "banner1",
         level: 1
-    };
+    });
 }
 
 async function getUserProfile(usernameValue) {
@@ -55,8 +55,9 @@ async function getUserProfile(usernameValue) {
             return profileCache[usernameValue];
         }
 
-        profileCache[usernameValue] = data.user;
-        return data.user;
+        profileCache[usernameValue] = normalizePlayerProfile(data.user);
+        return profileCache[usernameValue];
+
     } catch (error) {
         console.log("TOURNAMENT PROFILE LOAD ERROR:", error);
         profileCache[usernameValue] = getDefaultProfile(usernameValue);
@@ -95,33 +96,25 @@ function getTotalRounds(matches) {
 }
 
 function buildPlayerCard(usernameValue, profile, isFilled) {
-    const avatar = profile.profile_picture || "avatar1";
-    const level = profile.level || 1;
+    if (!isFilled) {
+        return buildTournamentPlayerCard(null, false);
+    }
 
-    return `
-        <div class="tournament-player-card ${isFilled ? "filled" : ""}">
-            <img
-                class="tournament-avatar"
-                src="../assets/profile/${avatar}.png"
-                alt="${usernameValue || "Waiting"}"
-            >
+    const safeProfile = normalizePlayerProfile({
+        ...profile,
+        username: usernameValue
+    });
 
-            <div class="tournament-player-info">
-                <div class="tournament-player-name">
-                    ${usernameValue || "Waiting..."}
-                </div>
-
-                <div class="tournament-player-level">
-                    ${isFilled ? "Level " + level : "Open Slot"}
-                </div>
-            </div>
-        </div>
-    `;
+    return buildTournamentPlayerCard(safeProfile, true);
 }
 
 function buildBracketPlayer(usernameValue, profile, match, tournamentIsComplete) {
-    const avatar = profile.profile_picture || "avatar1";
-    const level = profile.level || 1;
+    const safeProfile = usernameValue
+        ? normalizePlayerProfile({
+            ...profile,
+            username: usernameValue
+        })
+        : null;
 
     let resultClass = "";
     let clickableClass = "";
@@ -138,23 +131,63 @@ function buildBracketPlayer(usernameValue, profile, match, tournamentIsComplete)
         clickableClass = " clickable-profile";
     }
 
+    if (!safeProfile) {
+        return `
+            <div
+                class="bracket-player-row ${resultClass}${clickableClass}"
+                data-profile-username="">
+                <div class="pp-avatar-wrap pp-avatar-bracket">
+                    <img class="pp-avatar" src="../assets/profile/avatar1.png" alt="TBD">
+                </div>
+
+                <div class="bracket-player-text">
+                    <div class="bracket-player-name">TBD</div>
+                    <div class="bracket-player-level">Waiting</div>
+                </div>
+            </div>
+        `;
+    }
+
     return `
         <div
             class="bracket-player-row ${resultClass}${clickableClass}"
             data-profile-username="${usernameValue || ""}">
-            <img
-                class="bracket-avatar"
-                src="../assets/profile/${avatar}.png"
-                alt="${usernameValue || "TBD"}"
-            >
+
+            <div class="pp-avatar-wrap pp-avatar-bracket">
+                <img
+                    class="pp-avatar"
+                    src="${getCosmeticImagePath(safeProfile.avatar, "Avatar")}"
+                    alt="${safeProfile.username}"
+                >
+
+                ${
+                    safeProfile.frame
+                        ? `<img class="pp-frame" src="${getCosmeticImagePath(safeProfile.frame, "Frame")}" alt="Frame">`
+                        : ""
+                }
+            </div>
 
             <div class="bracket-player-text">
                 <div class="bracket-player-name">
-                    ${usernameValue || "TBD"}
+                    ${safeProfile.username}
                 </div>
 
                 <div class="bracket-player-level">
-                    ${usernameValue ? "Level " + level : "Waiting"}
+                    Level ${safeProfile.level || 1}
+                </div>
+
+                <div class="pp-bracket-rewards">
+                    ${
+                        safeProfile.badge
+                            ? `<img class="pp-badge" src="${getCosmeticImagePath(safeProfile.badge, "Badge")}" alt="Badge">`
+                            : ""
+                    }
+
+                    ${
+                        safeProfile.title
+                            ? `<div class="pp-title">${safeProfile.title}</div>`
+                            : ""
+                    }
                 </div>
             </div>
         </div>
