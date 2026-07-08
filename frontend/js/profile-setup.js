@@ -242,10 +242,6 @@ selectedBanner = {
     cosmetic_image: localStorage.getItem("profileBanner") || "banner1"
 };
 
-selectedFrame = null;
-selectedBadge = null;
-selectedTitle = null;
-
     updateProfilePreview();
 }
 
@@ -287,12 +283,51 @@ function saveProfile(profileCompleted) {
     skipProfileBtn.disabled = true;
 
     Promise.all([
-        equipCosmetic(selectedAvatar),
-        equipCosmetic(selectedBanner),
-        equipCosmetic(selectedFrame),
-        equipCosmetic(selectedBadge),
-        equipCosmetic(selectedTitle)
-    ])
+    equipCosmetic(selectedAvatar),
+    equipCosmetic(selectedBanner),
+
+    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            cosmeticType: "Frame",
+            cosmeticId: selectedFrame ? selectedFrame.cosmetic_id : null
+        })
+    }).then(function (response) {
+        return response.json();
+    }),
+
+    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            cosmeticType: "Badge",
+            cosmeticId: selectedBadge ? selectedBadge.cosmetic_id : null
+        })
+    }).then(function (response) {
+        return response.json();
+    }),
+
+    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            cosmeticType: "Title",
+            cosmeticId: selectedTitle ? selectedTitle.cosmetic_id : null
+        })
+    }).then(function (response) {
+        return response.json();
+    })
+])
     .then(function () {
         return fetch("https://api.pryzepot.com/api/users/save-profile", {
             method: "POST",
@@ -344,8 +379,38 @@ function loadUnlockedCosmetics() {
 
             unlockedCosmetics = data.cosmetics || [];
 
-            if (unlockedCosmetics.length === 0) {
-                alert("No Vault cosmetics unlocked yet. Log out and back in once, then try again.");
+            return fetch("https://api.pryzepot.com/api/users/" + encodeURIComponent(username) + "/profile");
+        })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (profileData) {
+            if (profileData.success && profileData.user) {
+                const user = profileData.user;
+
+                if (user.equipped_frame) {
+                    selectedFrame = {
+                        cosmetic_id: user.equipped_frame,
+                        cosmetic_type: "Frame",
+                        cosmetic_image: user.equipped_frame
+                    };
+                }
+
+                if (user.equipped_badge) {
+                    selectedBadge = {
+                        cosmetic_id: user.equipped_badge,
+                        cosmetic_type: "Badge",
+                        cosmetic_image: user.equipped_badge
+                    };
+                }
+
+                if (user.equipped_title) {
+                    selectedTitle = {
+                        cosmetic_id: user.equipped_title,
+                        cosmetic_type: "Title",
+                        cosmetic_name: user.equipped_title
+                    };
+                }
             }
 
             renderCosmetics();
@@ -353,6 +418,7 @@ function loadUnlockedCosmetics() {
         .catch(function (error) {
             console.log("LOAD COSMETICS ERROR:", error);
             alert("Could not load unlocked cosmetics.");
+            renderCosmetics();
         });
 }
 

@@ -1797,7 +1797,7 @@ app.post("/api/users/equip-cosmetic", async function (req, res) {
     const cosmeticType = req.body.cosmeticType;
     const cosmeticId = req.body.cosmeticId;
 
-    if (!username || !cosmeticType || !cosmeticId) {
+    if (!username || !cosmeticType) {
         res.json({
             success: false,
             message: "Missing cosmetic information."
@@ -1815,6 +1815,54 @@ app.post("/api/users/equip-cosmetic", async function (req, res) {
         return;
     }
 
+    const updatePayload = {};
+
+    if (cosmeticType === "Avatar") {
+        updatePayload.equipped_avatar = cosmeticId || null;
+    }
+
+    if (cosmeticType === "Banner") {
+        updatePayload.equipped_banner = cosmeticId || null;
+    }
+
+    if (cosmeticType === "Frame") {
+        updatePayload.equipped_frame = cosmeticId || null;
+    }
+
+    if (cosmeticType === "Badge") {
+        updatePayload.equipped_badge = cosmeticId || null;
+    }
+
+    if (cosmeticType === "Title") {
+        updatePayload.equipped_title = cosmeticId || null;
+    }
+
+    if (!cosmeticId) {
+        const unequipResult = await supabase
+            .from("users")
+            .update(updatePayload)
+            .eq("username", username)
+            .select()
+            .single();
+
+        if (unequipResult.error) {
+            console.log("UNEQUIP COSMETIC ERROR:", unequipResult.error);
+
+            res.json({
+                success: false,
+                message: "Could not unequip cosmetic."
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: "Cosmetic unequipped.",
+            user: unequipResult.data
+        });
+        return;
+    }
+
     const ownedResult = await supabase
         .from("user_cosmetics")
         .select("*")
@@ -1828,28 +1876,6 @@ app.post("/api/users/equip-cosmetic", async function (req, res) {
             message: "You have not unlocked this cosmetic yet."
         });
         return;
-    }
-
-    const updatePayload = {};
-
-    if (cosmeticType === "Avatar") {
-        updatePayload.equipped_avatar = cosmeticId;
-    }
-
-    if (cosmeticType === "Banner") {
-        updatePayload.equipped_banner = cosmeticId;
-    }
-
-    if (cosmeticType === "Frame") {
-        updatePayload.equipped_frame = cosmeticId;
-    }
-
-    if (cosmeticType === "Badge") {
-        updatePayload.equipped_badge = cosmeticId;
-    }
-
-    if (cosmeticType === "Title") {
-        updatePayload.equipped_title = cosmeticId;
     }
 
     const updateResult = await supabase
