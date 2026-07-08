@@ -2042,8 +2042,9 @@ app.get("/api/leaderboard", async function (req, res) {
         return {
             username: user.username,
             profile_picture: user.profile_picture || "avatar1",
-            profile_banner: user.profile_banner || "banner1",
-            xp: Number(user.xp) || 0,
+profile_banner: user.profile_banner || "banner1",
+equipped_frame: user.equipped_frame || null,
+xp: Number(user.xp) || 0,
             level: calculateLevelFromXp(user.xp || 0),
             lifetime_winnings: stats ? stats.lifetime_winnings : 0,
             one_v_one_wins: stats ? stats.one_v_one_wins : 0,
