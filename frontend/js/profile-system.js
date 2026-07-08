@@ -24,6 +24,19 @@ function getCosmeticImagePath(value, type) {
 
     return "";
 }
+function setImageIfExists(element, value, type, fallback) {
+    if (!element) return;
+
+    const imagePath = getCosmeticImagePath(value || fallback, type);
+
+    if (imagePath) {
+        element.src = imagePath;
+        element.classList.remove("hidden");
+    } else {
+        element.classList.add("hidden");
+        element.removeAttribute("src");
+    }
+}
 
 function normalizePlayerProfile(user) {
     user = user || {};
