@@ -334,10 +334,20 @@ async function renderTournamentRoom(tournament, players, matches) {
     for (let i = 0; i < tournamentSize; i++) {
         if (players[i]) {
             const profile = await getUserProfile(players[i].username);
-            playerList.innerHTML += buildPlayerCard(players[i].username, profile, true);
+
+            playerList.innerHTML += buildPlayerCard(
+                players[i].username,
+                profile,
+                true
+            );
         } else {
             const profile = getDefaultProfile("Waiting...");
-            playerList.innerHTML += buildPlayerCard(null, profile, false);
+
+            playerList.innerHTML += buildPlayerCard(
+                null,
+                profile,
+                false
+            );
         }
     }
 
@@ -353,7 +363,9 @@ async function renderTournamentRoom(tournament, players, matches) {
     });
 
     const alreadyShown =
-        localStorage.getItem("advancedTournamentMatch_" + currentTournamentId);
+        localStorage.getItem(
+            "advancedTournamentMatch_" + currentTournamentId
+        );
 
     if (
         userFinalMatch &&
@@ -377,71 +389,67 @@ async function renderTournamentRoom(tournament, players, matches) {
             );
         })
         .sort(function (a, b) {
-            return Number(b.round_number) - Number(a.round_number);
+            return (
+                Number(b.round_number) -
+                Number(a.round_number)
+            );
         })[0];
-        // Tournament finished.
-// Decide where THIS player belongs.
-if (
-    tournament.status === "Completed" &&
-    championMatch &&
-    championMatch.winner_username
-) {
 
-    // Current player won.
-    if (championMatch.winner_username === username) {
+    // Tournament completed.
+    // Send this player to the correct results page.
+    if (
+        tournament.status === "Completed" &&
+        championMatch &&
+        championMatch.winner_username
+    ) {
+        const completedTournamentKey =
+            "completedTournament_" + currentTournamentId;
 
         const alreadyRedirected =
-            localStorage.getItem("completedTournament_" + currentTournamentId);
+            localStorage.getItem(completedTournamentKey);
 
         if (!alreadyRedirected) {
-
-            localStorage.setItem(
-                "completedTournament_" + currentTournamentId,
-                "winner"
-            );
-
             localStorage.setItem(
                 "lastTournamentChampion",
                 JSON.stringify({
-                    winnerUsername: championMatch.winner_username,
-                    winnerTag: championMatch.winner_tag,
-                    prizePool: prizePool,
-                    tournamentSize: tournamentSize,
-                    entryFee: entryFee
+                    winnerUsername:
+                        championMatch.winner_username,
+                    winnerTag:
+                        championMatch.winner_tag,
+                    prizePool:
+                        prizePool,
+                    tournamentSize:
+                        tournamentSize,
+                    entryFee:
+                        entryFee
                 })
             );
 
-            window.location.href = "tournament-winner.html";
+            if (
+                championMatch.winner_username === username
+            ) {
+                localStorage.setItem(
+                    completedTournamentKey,
+                    "winner"
+                );
+
+                window.location.href =
+                    "tournament-winner.html";
+
+                return;
+            }
+
+            localStorage.setItem(
+                completedTournamentKey,
+                "loser"
+            );
+
+            window.location.href =
+                "tournament-loser.html";
+
             return;
         }
-
-    } else {
-
-    const alreadyRedirected =
-        localStorage.getItem("completedTournament_" + currentTournamentId);
-
-    if (!alreadyRedirected) {
-
-        localStorage.setItem(
-            "completedTournament_" + currentTournamentId,
-            "loser"
-        );
-
-        localStorage.setItem(
-            "lastTournamentChampion",
-            JSON.stringify({
-                winnerUsername: championMatch.winner_username,
-                winnerTag: championMatch.winner_tag,
-                prizePool: prizePool,
-                tournamentSize: tournamentSize,
-                entryFee: entryFee
-            })
-        );
-
-        window.location.href = "tournament-loser.html";
-        return;
     }
-}
 
     if (
         tournament.status === "Completed" &&
@@ -451,11 +459,14 @@ if (
             "🏆 Tournament Champion: " +
             championMatch.winner_username;
     } else if (tournament.status === "Open") {
-        statusCard.textContent = "Waiting for tournament to fill...";
+        statusCard.textContent =
+            "Waiting for tournament to fill...";
     } else if (tournament.status === "Full") {
-        statusCard.textContent = "Tournament full. Bracket is ready.";
+        statusCard.textContent =
+            "Tournament full. Bracket is ready.";
     } else if (tournament.status === "Cancelled") {
-        statusCard.textContent = "Tournament cancelled.";
+        statusCard.textContent =
+            "Tournament cancelled.";
     }
 
     if (
@@ -467,6 +478,115 @@ if (
         cancelTournamentBtn.classList.add("hidden");
     }
 }
+
+function loadTournamentRoom() {
+    fetch(
+        API_BASE_URL +
+        "/api/tournaments/" +
+        currentTournamentId
+    )
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                alert(data.message);
+
+                window.location.href =
+                    "match-board.html";
+
+                return;
+            }
+
+            renderTournamentRoom(
+                data.tournament,
+                data.players,
+                data.matches || []
+            );
+        })
+        .catch(function (error) {
+            console.log(
+                "TOURNAMENT ROOM ERROR:",
+                error
+            );
+
+            alert("Could not load tournament room.");
+        });
+}
+
+if (cancelTournamentBtn) {
+    cancelTournamentBtn.addEventListener(
+        "click",
+        function () {
+            if (!currentTournamentId || !username) {
+                alert("Missing tournament information.");
+                return;
+            }
+
+            const confirmed =
+                confirm("Cancel this tournament?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            fetch(
+                API_BASE_URL +
+                "/api/tournaments/" +
+                currentTournamentId +
+                "/cancel",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        username: username
+                    })
+                }
+            )
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    alert(data.message);
+
+                    if (data.success) {
+                        localStorage.removeItem(
+                            "currentTournamentId"
+                        );
+
+                        window.location.href =
+                            "match-board.html";
+                    }
+                })
+                .catch(function (error) {
+                    console.log(
+                        "CANCEL TOURNAMENT ERROR:",
+                        error
+                    );
+
+                    alert(
+                        "Could not cancel tournament."
+                    );
+                });
+        }
+    );
+}
+
+if (advanceContinueBtn) {
+    advanceContinueBtn.addEventListener(
+        "click",
+        function () {
+            advanceModal.classList.add("hidden");
+        }
+    );
+}
+
+loadTournamentRoom();
+
+setInterval(loadTournamentRoom, 5000);
 
 function loadTournamentRoom() {
     fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
@@ -536,4 +656,4 @@ if (advanceContinueBtn) {
 
 loadTournamentRoom();
 
-setInterval(loadTournamentRoom, 5000);
+setInterval(loadTournamentRoom, 5000);}
