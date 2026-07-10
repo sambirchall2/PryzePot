@@ -379,6 +379,69 @@ async function renderTournamentRoom(tournament, players, matches) {
         .sort(function (a, b) {
             return Number(b.round_number) - Number(a.round_number);
         })[0];
+        // Tournament finished.
+// Decide where THIS player belongs.
+if (
+    tournament.status === "Completed" &&
+    championMatch &&
+    championMatch.winner_username
+) {
+
+    // Current player won.
+    if (championMatch.winner_username === username) {
+
+        const alreadyRedirected =
+            localStorage.getItem("completedTournament_" + currentTournamentId);
+
+        if (!alreadyRedirected) {
+
+            localStorage.setItem(
+                "completedTournament_" + currentTournamentId,
+                "winner"
+            );
+
+            localStorage.setItem(
+                "lastTournamentChampion",
+                JSON.stringify({
+                    winnerUsername: championMatch.winner_username,
+                    winnerTag: championMatch.winner_tag,
+                    prizePool: prizePool,
+                    tournamentSize: tournamentSize,
+                    entryFee: entryFee
+                })
+            );
+
+            window.location.href = "tournament-winner.html";
+            return;
+        }
+
+    } else {
+
+    const alreadyRedirected =
+        localStorage.getItem("completedTournament_" + currentTournamentId);
+
+    if (!alreadyRedirected) {
+
+        localStorage.setItem(
+            "completedTournament_" + currentTournamentId,
+            "loser"
+        );
+
+        localStorage.setItem(
+            "lastTournamentChampion",
+            JSON.stringify({
+                winnerUsername: championMatch.winner_username,
+                winnerTag: championMatch.winner_tag,
+                prizePool: prizePool,
+                tournamentSize: tournamentSize,
+                entryFee: entryFee
+            })
+        );
+
+        window.location.href = "tournament-loser.html";
+        return;
+    }
+}
 
     if (
         tournament.status === "Completed" &&

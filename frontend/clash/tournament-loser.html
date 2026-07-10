@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Complete | PryzePot</title>
+    <link rel="stylesheet" href="tournament-winner.css">
+</head>
+<body>
+
+<main class="winner-page">
+
+    <div class="champion-card">
+
+        <img
+    class="tournament-logo"
+    src="../assets/pryzepot-header.png"
+    alt="PryzePot"
+>
+
+        <p class="eyebrow">TOURNAMENT COMPLETE</p>
+
+        <h1>ELIMINATED</h1>
+
+        <div id="championProfileCard" class="champion-profile-card">
+            <img id="winnerBanner" class="winner-banner" src="../assets/profile/banner1.png" alt="Champion Banner">
+            <div class="winner-overlay"></div>
+
+            <div class="winner-content">
+                <img id="winnerAvatar" class="winner-avatar" src="../assets/profile/avatar1.png" alt="Champion Avatar">
+
+                <div>
+                    <div id="winnerName" class="winner-name">Champion</div>
+                    <div id="winnerLevel" class="winner-level">Level 1</div>
+                    <div id="winnerTag" class="winner-tag">#TAG</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="tap-profile-text">
+            Tournament Champion
+        </p>
+
+        <div class="reward-row">
+
+            <div class="reward-box">
+                <span>Result</span>
+                <strong>Eliminated</strong>
+            </div>
+
+            <div class="reward-box">
+                <span>Winner</span>
+                <strong id="rewardAmount">Champion</strong>
+            </div>
+
+        </div>
+
+        <button id="backHomeBtn" class="back-home-btn">
+            BACK HOME
+        </button>
+
+    </div>
+
+</main>
+
+<script src="tournament-loser.js"></script>
+
+</body>
+</html>

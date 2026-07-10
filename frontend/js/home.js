@@ -196,10 +196,86 @@ if (vaultHomeBanner) {
         window.location.href = "../Vault/vault.html";
     });
 }
+const activeTournamentBanner =
+    document.getElementById("activeTournamentBanner");
 
+const returnTournamentBtn =
+    document.getElementById("returnTournamentBtn");
+
+function clearSavedTournament() {
+    const savedTournamentId =
+        localStorage.getItem("currentTournamentId");
+
+    if (savedTournamentId) {
+        localStorage.removeItem(
+            "completedTournament_" + savedTournamentId
+        );
+
+        localStorage.removeItem(
+            "advancedTournamentMatch_" + savedTournamentId
+        );
+    }
+
+    localStorage.removeItem("currentTournamentId");
+    localStorage.removeItem("currentTournamentMatchId");
+    localStorage.removeItem("lastTournamentChampion");
+}
+
+function loadActiveTournament() {
+    const savedTournamentId =
+        localStorage.getItem("currentTournamentId");
+
+    if (!savedTournamentId || !activeTournamentBanner) {
+        return;
+    }
+
+    fetch(
+        "https://api.pryzepot.com/api/tournaments/" +
+        encodeURIComponent(savedTournamentId)
+    )
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            if (
+                !data.success ||
+                !data.tournament
+            ) {
+                clearSavedTournament();
+                return;
+            }
+
+            const isParticipant = (data.players || []).some(function (player) {
+                return player.username === username;
+            });
+
+            if (!isParticipant) {
+                clearSavedTournament();
+                return;
+            }
+
+            if (data.tournament.status === "Cancelled") {
+                clearSavedTournament();
+                return;
+            }
+
+            activeTournamentBanner.classList.remove("hidden");
+        })
+        .catch(function (error) {
+            console.log("ACTIVE TOURNAMENT LOAD ERROR:", error);
+        });
+}
+
+if (returnTournamentBtn) {
+    returnTournamentBtn.addEventListener("click", function () {
+        window.location.href =
+            "../clash/tournament-room.html";
+    });
+}
 loadHomeProfile();
 loadNotificationCount();
 sendHeartbeat();
+loadActiveTournament();
 
 setInterval(loadNotificationCount, 15000);
 setInterval(sendHeartbeat, 30000);

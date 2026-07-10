@@ -1120,6 +1120,7 @@ app.post("/api/matches/:id/join", async function (req, res) {
 });
 app.post("/api/tournament-matches/:id/verify", async function (req, res) {
     const tournamentMatchId = Number(req.params.id);
+    const requestingUsername = req.body.username;
 
     const found = await supabase
         .from("tournament_matches")
@@ -1321,16 +1322,26 @@ if (winners.length === 1) {
         })
         .eq("id", foundMatch.tournament_id);
 
-    res.json({
-        success: true,
-        champion: true,
-        message: winners[0].username + " is the tournament champion!",
-        winnerUsername: winners[0].username,
-        winnerTag: winners[0].tag,
-        loserUsername: loserUsername,
-        loserTag: loserTag,
-        match: completed.data
-    });
+    const playerState =
+    requestingUsername === winners[0].username
+        ? "champion"
+        : "eliminated";
+
+res.json({
+    success: true,
+    champion: requestingUsername === winners[0].username,
+    playerState: playerState,
+
+    message: winners[0].username + " is the tournament champion!",
+
+    winnerUsername: winners[0].username,
+    winnerTag: winners[0].tag,
+
+    loserUsername: loserUsername,
+    loserTag: loserTag,
+
+    match: completed.data
+});
     return;
 }
 

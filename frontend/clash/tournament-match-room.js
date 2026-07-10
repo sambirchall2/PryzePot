@@ -212,12 +212,14 @@ verifyMatchBtn.addEventListener("click", function () {
             return;
         }
 
-        if (data.champion) {
+        if (data.playerState === "champion") {
+
     fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
         .then(function (response) {
             return response.json();
         })
         .then(function (tournamentData) {
+
             const tournament = tournamentData.tournament || {};
 
             const entryFee = Number(tournament.entry_fee || 0);
@@ -237,6 +239,7 @@ verifyMatchBtn.addEventListener("click", function () {
             window.location.href = "tournament-winner.html";
         })
         .catch(function () {
+
             localStorage.setItem(
                 "lastTournamentChampion",
                 JSON.stringify(data)

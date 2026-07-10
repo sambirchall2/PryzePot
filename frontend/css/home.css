@@ -347,3 +347,60 @@ body {
 .vault-home-banner:hover {
     transform: translateY(-1px);
 }
+.active-tournament-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    margin: 14px 16px 20px;
+    padding: 16px;
+
+    border: 1px solid rgba(200, 255, 0, 0.45);
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(200, 255, 0, 0.12),
+            rgba(9, 13, 20, 0.96)
+        );
+
+    box-shadow: 0 0 22px rgba(200, 255, 0, 0.08);
+}
+
+.active-tournament-banner.hidden {
+    display: none;
+}
+
+.active-tournament-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.active-tournament-text strong {
+    color: #c8ff00;
+    font-size: 14px;
+    letter-spacing: 0.7px;
+}
+
+.active-tournament-text span {
+    color: #c7cbd1;
+    font-size: 12px;
+}
+
+#returnTournamentBtn {
+    flex-shrink: 0;
+    padding: 11px 16px;
+
+    border: none;
+    border-radius: 9px;
+
+    background: #c8ff00;
+    color: #080b10;
+
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
