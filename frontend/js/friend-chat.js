@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 if (!username) {
@@ -55,10 +53,7 @@ function formatTime(timestamp) {
 }
 
 function loadFriendProfile() {
-    fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(friendUsername) + "/profile")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/users/" + encodeURIComponent(friendUsername) + "/profile")
         .then(function (data) {
             if (!data.success || !data.user) {
                 showToast("Could not load friend.", "error");
@@ -120,16 +115,12 @@ function renderMessages(messages) {
 }
 
 function loadMessages() {
-    fetch(
-        API_BASE_URL +
+    apiFetch(
         "/api/friends/messages/" +
         encodeURIComponent(username) +
         "/" +
         encodeURIComponent(friendUsername)
     )
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             if (!data.success) {
                 messagesContainer.innerHTML = `
@@ -154,20 +145,13 @@ function sendMessage() {
 
     sendButton.disabled = true;
 
-    fetch(API_BASE_URL + "/api/friends/messages/send", {
+    apiFetch("/api/friends/messages/send", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            senderUsername: username,
             receiverUsername: friendUsername,
             message: message
         })
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             sendButton.disabled = false;
 
@@ -238,20 +222,13 @@ if (sendChallengeButton) {
         sendChallengeButton.disabled = true;
         sendChallengeButton.textContent = "Sending...";
 
-        fetch(API_BASE_URL + "/api/friends/challenge", {
+        apiFetch("/api/friends/challenge", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
             body: JSON.stringify({
-                challengerUsername: username,
                 receiverUsername: friendUsername,
                 entryFee: selectedChallengeFee
             })
         })
-            .then(function (response) {
-                return response.json();
-            })
             .then(function (data) {
                 if (!data.success) {
                     showToast(data.message || "Could not send challenge.", "error");

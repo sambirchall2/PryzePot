@@ -1,5 +1,3 @@
-const PROFILE_SYSTEM_API_BASE_URL = "https://api.pryzepot.com";
-
 function getCosmeticImagePath(value, type) {
     if (!value) return "";
 
@@ -66,10 +64,7 @@ function normalizePlayerProfile(user) {
 }
 
 function loadPlayerProfile(username) {
-    return fetch(PROFILE_SYSTEM_API_BASE_URL + "/api/users/" + encodeURIComponent(username) + "/profile")
-        .then(function (response) {
-            return response.json();
-        })
+    return apiFetch("/api/users/" + encodeURIComponent(username) + "/profile")
         .then(function (data) {
             if (!data.success || !data.user) {
                 throw new Error(data.message || "Could not load profile.");

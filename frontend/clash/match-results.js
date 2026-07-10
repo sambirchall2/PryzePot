@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const resultTitle = document.getElementById("resultTitle");
 const resultSubtitle = document.getElementById("resultSubtitle");
 
@@ -106,10 +104,7 @@ function getProfileLevel(profile) {
 function updateResultXpBar(xpAmount) {
     if (!currentUsername) return;
 
-    fetch(API_BASE_URL + "/api/users/" + currentUsername + "/profile")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/users/" + currentUsername + "/profile")
         .then(function (data) {
             if (!data.success || !data.user || !data.user.xp_progress) return;
 

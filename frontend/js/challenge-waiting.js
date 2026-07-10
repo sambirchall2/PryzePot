@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const challengeId = localStorage.getItem("pendingChallengeId");
 const username = localStorage.getItem("username");
 
@@ -89,10 +87,7 @@ function handleCancelled() {
 }
 
 function checkChallengeStatus() {
-    fetch(API_BASE_URL + "/api/friends/challenge/" + challengeId)
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/friends/challenge/" + challengeId)
         .then(function (data) {
             if (!data.success || !data.challenge) {
                 return;
@@ -138,18 +133,10 @@ function cancelChallenge() {
     cancelWaitingBtn.disabled = true;
     cancelWaitingBtn.textContent = "CANCELLING...";
 
-    fetch(API_BASE_URL + "/api/friends/challenge/" + challengeId + "/cancel", {
+    apiFetch("/api/friends/challenge/" + challengeId + "/cancel", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username
-        })
+        body: JSON.stringify({})
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function () {
             localStorage.removeItem("pendingChallengeId");
             window.location.href = "home.html";

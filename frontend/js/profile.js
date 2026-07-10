@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const loggedInUsername = localStorage.getItem("username");
 
 if (!loggedInUsername) {
@@ -120,16 +118,12 @@ function loadFriendStatus() {
         return;
     }
 
-    fetch(
-        API_BASE_URL +
+    apiFetch(
         "/api/friends/status/" +
         encodeURIComponent(loggedInUsername) +
         "/" +
         encodeURIComponent(viewedUsername)
     )
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             if (!data.success) {
                 profileActionButton.textContent = "Add Friend";
@@ -195,19 +189,12 @@ return;
 function sendFriendRequest() {
     setButtonLoading("Sending...");
 
-    fetch(API_BASE_URL + "/api/friends/request", {
+    apiFetch("/api/friends/request", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            senderUsername: loggedInUsername,
             receiverUsername: viewedUsername
         })
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
             loadFriendStatus();
@@ -227,18 +214,10 @@ function acceptFriendRequest(requestId) {
 
     setButtonLoading("Accepting...");
 
-    fetch(API_BASE_URL + "/api/friends/requests/" + requestId + "/accept", {
+    apiFetch("/api/friends/requests/" + requestId + "/accept", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: loggedInUsername
-        })
+        body: JSON.stringify({})
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
             loadFriendStatus();
@@ -258,19 +237,12 @@ function removeFriend() {
     removeFriendButton.disabled = true;
     removeFriendButton.textContent = "Removing...";
 
-    fetch(API_BASE_URL + "/api/friends/remove", {
+    apiFetch("/api/friends/remove", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: loggedInUsername,
             friendUsername: viewedUsername
         })
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
 
@@ -291,10 +263,7 @@ function removeFriend() {
 }
 
 function loadProfile() {
-    fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(viewedUsername) + "/profile")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/users/" + encodeURIComponent(viewedUsername) + "/profile")
         .then(function (data) {
             if (!data.success || !data.user) {
                 showToast(data.message || "Profile not found.", "error");
@@ -419,20 +388,13 @@ if (sendChallengeButton) {
         sendChallengeButton.disabled = true;
         sendChallengeButton.textContent = "Sending...";
 
-        fetch(API_BASE_URL + "/api/friends/challenge", {
+        apiFetch("/api/friends/challenge", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
             body: JSON.stringify({
-                challengerUsername: loggedInUsername,
                 receiverUsername: viewedUsername,
                 entryFee: selectedChallengeFee
             })
         })
-            .then(function (response) {
-                return response.json();
-            })
             .then(function (data) {
 
     if (!data.success) {

@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 if (!username) {
@@ -126,10 +124,7 @@ function searchPlayers() {
         return;
     }
 
-    fetch(API_BASE_URL + "/api/users/search/" + encodeURIComponent(query))
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/users/search/" + encodeURIComponent(query))
         .then(function (data) {
             searchResults.innerHTML = "";
 
@@ -189,24 +184,14 @@ function loadFriends() {
         </div>
     `;
 
-    fetch(API_BASE_URL + "/api/friends/unread/" + encodeURIComponent(username))
-    .then(function (response) {
-        return response.json();
-    })
+    apiFetch("/api/friends/unread/" + encodeURIComponent(username))
     .then(function (unreadData) {
 
         unreadMessagesByUser = unreadData.unread || {};
 
-        return fetch(
-            API_BASE_URL +
-            "/api/friends/" +
-            encodeURIComponent(username)
-        );
+        return apiFetch("/api/friends/" + encodeURIComponent(username));
 
     })
-    .then(function (response) {
-            return response.json();
-        })
         .then(async function (data) {
             if (!data.success) {
                 friendsList.innerHTML = `
@@ -232,11 +217,9 @@ function loadFriends() {
             const offlineFriends = [];
 
             for (const friendUsername of friends) {
-                const response = await fetch(
-                    API_BASE_URL + "/api/users/" + encodeURIComponent(friendUsername) + "/profile"
+                const result = await apiFetch(
+                    "/api/users/" + encodeURIComponent(friendUsername) + "/profile"
                 );
-
-                const result = await response.json();
 
                 if (!result.success || !result.user) continue;
 

@@ -4,7 +4,6 @@ const friendLinkInput = document.getElementById("friendLinkInput");
 const verifyBtn = document.getElementById("verifyBtn");
 const statusText = document.getElementById("statusText");
 
-const API_BASE_URL = "https://api.pryzepot.com";
 const username = localStorage.getItem("username");
 
 if (backBtn) {
@@ -92,18 +91,12 @@ verifyBtn.addEventListener("click", function () {
     verifyBtn.textContent = "VERIFYING...";
     verifyBtn.disabled = true;
 
-    fetch(API_BASE_URL + "/api/clash/verify-player", {
+    apiFetch("/api/clash/verify-player", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
             playerTag: playerTag
         })
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             if (data.success !== true) {
                 alert(data.message);
@@ -119,13 +112,9 @@ verifyBtn.addEventListener("click", function () {
             localStorage.setItem("clashExpLevel", data.player.expLevel);
             localStorage.setItem("clashFriendLink", friendLink);
 
-            return fetch(API_BASE_URL + "/api/users/save-clash", {
+            return apiFetch("/api/users/save-clash", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
                 body: JSON.stringify({
-                    username: username,
                     clashTag: data.player.tag,
                     clashName: data.player.name,
                     clashFriendLink: friendLink,
@@ -133,9 +122,6 @@ verifyBtn.addEventListener("click", function () {
                     clashExpLevel: data.player.expLevel
                 })
             })
-                .then(function (saveResponse) {
-                    return saveResponse.json();
-                })
                 .then(function (saveData) {
                     if (saveData.success !== true) {
                         alert(saveData.message || "Clash verified, but could not save to account.");

@@ -71,7 +71,7 @@ signInButton.addEventListener("click", function () {
     signInButton.textContent = "LOADING...";
     signInButton.disabled = true;
 
-    let apiUrl = "https://api.pryzepot.com/api/login";
+    let apiPath = "/api/login";
 
     const requestBody = {
         email: email,
@@ -79,19 +79,13 @@ signInButton.addEventListener("click", function () {
     };
 
     if (isSignupMode) {
-        apiUrl = "https://api.pryzepot.com/api/signup";
+        apiPath = "/api/signup";
         requestBody.username = username;
     }
 
-    fetch(apiUrl, {
+    apiFetch(apiPath, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify(requestBody)
-    })
-    .then(function (response) {
-        return response.json();
     })
     .then(function (data) {
         if (!data.success) {
@@ -100,17 +94,11 @@ signInButton.addEventListener("click", function () {
             return;
         }
 
+        localStorage.setItem("authToken", data.token);
         localStorage.setItem("username", data.user.username);
         localStorage.setItem("balance", data.user.balance);
 
-        fetch(
-            "https://api.pryzepot.com/api/users/" +
-            data.user.username +
-            "/profile"
-        )
-        .then(function (response) {
-            return response.json();
-        })
+        apiFetch("/api/users/" + data.user.username + "/profile")
         .then(function (profileData) {
             if (!profileData.success || !profileData.user) {
                 window.location.href = "../html/profile-setup.html";

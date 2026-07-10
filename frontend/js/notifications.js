@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 const backButton = document.getElementById("backButton");
@@ -25,10 +23,7 @@ function getDefaultProfile(usernameValue) {
 }
 
 function loadUserProfile(usernameValue) {
-    return fetch(API_BASE_URL + "/api/users/" + encodeURIComponent(usernameValue) + "/profile")
-        .then(function (response) {
-            return response.json();
-        })
+    return apiFetch("/api/users/" + encodeURIComponent(usernameValue) + "/profile")
         .then(function (data) {
             if (!data.success || !data.user) {
                 return getDefaultProfile(usernameValue);
@@ -44,18 +39,10 @@ function loadUserProfile(usernameValue) {
 /* Friend Requests */
 
 function acceptRequest(requestId) {
-    fetch(API_BASE_URL + "/api/friends/requests/" + requestId + "/accept", {
+    apiFetch("/api/friends/requests/" + requestId + "/accept", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username
-        })
+        body: JSON.stringify({})
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
             loadFriendRequests();
@@ -67,18 +54,10 @@ function acceptRequest(requestId) {
 }
 
 function declineRequest(requestId) {
-    fetch(API_BASE_URL + "/api/friends/requests/" + requestId + "/decline", {
+    apiFetch("/api/friends/requests/" + requestId + "/decline", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username
-        })
+        body: JSON.stringify({})
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
             loadFriendRequests();
@@ -151,10 +130,7 @@ function loadFriendRequests() {
         </div>
     `;
 
-    fetch(API_BASE_URL + "/api/friends/requests/" + encodeURIComponent(username))
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/friends/requests/" + encodeURIComponent(username))
         .then(async function (data) {
             if (!data.success) {
                 renderEmptyRequests();
@@ -186,18 +162,10 @@ function loadFriendRequests() {
 /* Friend Challenges */
 
 function acceptChallenge(challengeId) {
-    fetch(API_BASE_URL + "/api/friends/challenges/" + challengeId + "/accept", {
+    apiFetch("/api/friends/challenges/" + challengeId + "/accept", {
     method: "POST",
-    headers: {
-        "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-        username: username
-    })
+    body: JSON.stringify({})
 })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
 
     if (!data.success) {
@@ -227,15 +195,9 @@ function acceptChallenge(challengeId) {
 }
 
 function declineChallenge(challengeId) {
-    fetch(API_BASE_URL + "/api/friends/challenges/" + challengeId + "/decline", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        }
+    apiFetch("/api/friends/challenges/" + challengeId + "/decline", {
+        method: "POST"
     })
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             showToast(data.message, "success");
             loadFriendChallenges();
@@ -301,10 +263,7 @@ function loadFriendChallenges() {
         </div>
     `;
 
-    fetch(API_BASE_URL + "/api/friends/challenges/" + encodeURIComponent(username))
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/friends/challenges/" + encodeURIComponent(username))
         .then(function (data) {
             if (!data.success) {
                 renderEmptyChallenges();

@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const backBtn = document.getElementById("backBtn");
 const roundLabel = document.getElementById("roundLabel");
 
@@ -49,8 +47,7 @@ async function getUserProfile(usernameValue) {
     }
 
     try {
-        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
-        const data = await response.json();
+        const data = await apiFetch("/api/users/" + usernameValue + "/profile");
 
         if (!data.success || !data.user) {
             profileCache[usernameValue] = getDefaultProfile(usernameValue);
@@ -131,10 +128,7 @@ async function renderTournamentMatch(match) {
 }
 
 function loadTournamentMatch() {
-    fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/tournaments/" + currentTournamentId)
         .then(function (data) {
             if (!data.success) {
                 alert(data.message);
@@ -191,17 +185,9 @@ verifyMatchBtn.addEventListener("click", function () {
     verifyMatchBtn.textContent = "VERIFYING...";
     verifyMatchBtn.disabled = true;
 
-    fetch(API_BASE_URL + "/api/tournament-matches/" + currentTournamentMatchId + "/verify", {
+    apiFetch("/api/tournament-matches/" + currentTournamentMatchId + "/verify", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username
-        })
-    })
-    .then(function (response) {
-        return response.json();
+        body: JSON.stringify({})
     })
     .then(function (data) {
         if (!data.success) {
@@ -214,10 +200,7 @@ verifyMatchBtn.addEventListener("click", function () {
 
         if (data.playerState === "champion") {
 
-    fetch(API_BASE_URL + "/api/tournaments/" + currentTournamentId)
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/tournaments/" + currentTournamentId)
         .then(function (tournamentData) {
 
             const tournament = tournamentData.tournament || {};

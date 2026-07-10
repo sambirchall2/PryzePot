@@ -3,8 +3,6 @@ const entryAmountDisplay = document.getElementById("entryAmountDisplay");
 const playerTagDisplay = document.getElementById("playerTagDisplay");
 const postMatchBtn = document.getElementById("postMatchBtn");
 
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 const entryFee = localStorage.getItem("entryFee");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
@@ -43,22 +41,15 @@ postMatchBtn.addEventListener("click", function () {
 
     if (createType === "tournament" && tournamentSize) {
         const tournamentData = {
-    username: username,
     playerTag: clashPlayerTag,
     friendLink: clashFriendLink,
     tournamentSize: Number(tournamentSize),
     entryFee: Number(entryFee)
 };
 
-        fetch(API_BASE_URL + "/api/tournaments", {
+        apiFetch("/api/tournaments", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
             body: JSON.stringify(tournamentData)
-        })
-        .then(function (response) {
-            return response.json();
         })
         .then(function (data) {
             if (data.success === true) {
@@ -86,21 +77,14 @@ postMatchBtn.addEventListener("click", function () {
     }
 
     const matchData = {
-        username: username,
         playerTag: clashPlayerTag,
         friendLink: clashFriendLink,
         entryFee: Number(entryFee)
     };
 
-    fetch(API_BASE_URL + "/api/matches", {
+    apiFetch("/api/matches", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify(matchData)
-    })
-    .then(function (response) {
-        return response.json();
     })
     .then(function (data) {
         if (data.success === true) {

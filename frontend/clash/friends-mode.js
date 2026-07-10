@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 if (!username) {
@@ -126,10 +124,7 @@ function loadFriendsMode() {
     onlineFriendsList.innerHTML = `<div class="loading-card">Loading...</div>`;
     offlineFriendsList.innerHTML = `<div class="loading-card">Loading...</div>`;
 
-    fetch(API_BASE_URL + "/api/friends/" + encodeURIComponent(username))
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/friends/" + encodeURIComponent(username))
         .then(async function (data) {
             if (!data.success || !data.friends || data.friends.length === 0) {
                 onlineFriendsList.innerHTML =
@@ -143,13 +138,11 @@ function loadFriendsMode() {
             const offlineCards = [];
 
             for (const friendUsername of data.friends) {
-                const response = await fetch(
-                    API_BASE_URL + "/api/users/" +
+                const result = await apiFetch(
+                    "/api/users/" +
                     encodeURIComponent(friendUsername) +
                     "/profile"
                 );
-
-                const result = await response.json();
 
                 if (!result.success || !result.user) continue;
 
@@ -225,20 +218,13 @@ if (sendChallengeButton) {
         sendChallengeButton.disabled = true;
         sendChallengeButton.textContent = "Sending...";
 
-        fetch(API_BASE_URL + "/api/friends/challenge", {
+        apiFetch("/api/friends/challenge", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
             body: JSON.stringify({
-                challengerUsername: username,
                 receiverUsername: selectedFriendUsername,
                 entryFee: selectedChallengeFee
             })
         })
-            .then(function (response) {
-                return response.json();
-            })
             .then(function (data) {
                 if (!data.success) {
                     showToast(data.message || "Could not send challenge.", "error");

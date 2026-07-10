@@ -90,6 +90,7 @@ if (friendsBtn) {
 }
 
 function logout() {
+    localStorage.removeItem("authToken");
     localStorage.removeItem("username");
     localStorage.removeItem("balance");
     localStorage.removeItem("profilePicture");
@@ -120,15 +121,8 @@ function loadNotificationCount() {
     if (!username || !notificationCount) return;
 
     Promise.all([
-        fetch("https://api.pryzepot.com/api/friends/requests/" + encodeURIComponent(username))
-            .then(function (response) {
-                return response.json();
-            }),
-
-        fetch("https://api.pryzepot.com/api/friends/challenges/" + encodeURIComponent(username))
-            .then(function (response) {
-                return response.json();
-            })
+        apiFetch("/api/friends/requests/" + encodeURIComponent(username)),
+        apiFetch("/api/friends/challenges/" + encodeURIComponent(username))
     ])
         .then(function (results) {
             const requestData = results[0];
@@ -167,14 +161,9 @@ if (notificationBell) {
 function sendHeartbeat() {
     if (!username) return;
 
-    fetch("https://api.pryzepot.com/api/users/heartbeat", {
+    apiFetch("/api/users/heartbeat", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            username: username
-        })
+        body: JSON.stringify({})
     })
     .catch(function (error) {
         console.log("HEARTBEAT ERROR:", error);
@@ -229,13 +218,7 @@ function loadActiveTournament() {
         return;
     }
 
-    fetch(
-        "https://api.pryzepot.com/api/tournaments/" +
-        encodeURIComponent(savedTournamentId)
-    )
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/tournaments/" + encodeURIComponent(savedTournamentId))
         .then(function (data) {
             if (
                 !data.success ||

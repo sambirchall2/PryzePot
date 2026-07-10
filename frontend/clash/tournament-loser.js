@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const backHomeBtn = document.getElementById("backHomeBtn");
 const championProfileCard = document.getElementById("championProfileCard");
 
@@ -41,15 +39,11 @@ function loadChampionProfile() {
         return;
     }
 
-    fetch(
-        API_BASE_URL +
+    apiFetch(
         "/api/users/" +
         encodeURIComponent(championData.winnerUsername) +
         "/profile"
     )
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             if (!data.success || !data.user) {
                 return;

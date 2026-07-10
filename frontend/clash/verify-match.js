@@ -1,7 +1,5 @@
 const verifyStatus = document.getElementById("verifyStatus");
 
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const selectedMatchId = localStorage.getItem("selectedMatchId");
 
 async function verifyMatch() {
@@ -16,20 +14,14 @@ async function verifyMatch() {
 
     try {
 
-        const response = await fetch(
-            API_BASE_URL +
+        const data = await apiFetch(
             "/api/matches/" +
             selectedMatchId +
             "/verify",
             {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                method: "POST"
             }
         );
-
-        const data = await response.json();
 
         console.log("VERIFY RESPONSE:", data);
 

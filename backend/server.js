@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const supabase = require("./supabase");
 
 const app = express();
@@ -16,6 +18,38 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json());
+
+const JWT_EXPIRES_IN = "30d";
+
+function signToken(username) {
+    return jwt.sign({ username: username }, process.env.JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN
+    });
+}
+
+function requireAuth(req, res, next) {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+    if (!token) {
+        res.status(401).json({
+            success: false,
+            message: "Not authenticated."
+        });
+        return;
+    }
+
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        req.username = payload.username;
+        next();
+    } catch (error) {
+        res.status(401).json({
+            success: false,
+            message: "Session expired or invalid. Please log in again."
+        });
+    }
+}
 
 const OPEN_MATCH_EXPIRATION_MINUTES = 10;
 const ACTIVE_MATCH_EXPIRATION_MINUTES = 30;
@@ -515,12 +549,14 @@ app.post("/api/signup", async function (req, res) {
         return;
     }
 
+    const passwordHash = await bcrypt.hash(password, 10);
+
     const newUser = await supabase
         .from("users")
         .insert({
             username: username,
             email: email,
-            password: password,
+            password: passwordHash,
             balance: 0
         })
         .select()
@@ -539,6 +575,7 @@ app.post("/api/signup", async function (req, res) {
     res.json({
         success: true,
         message: "Account created!",
+        token: signToken(newUser.data.username),
         user: {
             username: newUser.data.username,
             balance: newUser.data.balance
@@ -554,14 +591,29 @@ app.post("/api/login", async function (req, res) {
         .from("users")
         .select("*")
         .eq("email", email)
-        .eq("password", password)
         .maybeSingle();
 
     if (foundUser.error) {
         console.log("LOGIN ERROR:", foundUser.error);
     }
 
-    if (foundUser.data) {
+    const storedPassword = foundUser.data ? foundUser.data.password : null;
+    const isBcryptHash = typeof storedPassword === "string" && storedPassword.startsWith("$2");
+
+    const passwordMatches = isBcryptHash
+        ? storedPassword && (await bcrypt.compare(password, storedPassword))
+        : storedPassword === password;
+
+    if (foundUser.data && passwordMatches) {
+        if (!isBcryptHash) {
+            const upgradedHash = await bcrypt.hash(password, 10);
+
+            await supabase
+                .from("users")
+                .update({ password: upgradedHash })
+                .eq("username", foundUser.data.username);
+        }
+
         await unlockVaultRewards(
             foundUser.data.username,
             foundUser.data.level || calculateLevelFromXp(foundUser.data.xp || 0)
@@ -569,9 +621,10 @@ app.post("/api/login", async function (req, res) {
         res.json({
             success: true,
             message: "Login successful!",
+            token: signToken(foundUser.data.username),
             user: {
                 username: foundUser.data.username,
-                balance: foundUser.data.balance    
+                balance: foundUser.data.balance
             }
         });
     } else {
@@ -671,10 +724,10 @@ app.get("/api/matches", async function (req, res) {
         matches: result.data.map(dbMatchToFrontend)
     });
 });
-app.post("/api/matches", async function (req, res) {
+app.post("/api/matches", requireAuth, async function (req, res) {
     await expireOldMatches();
 
-    const username = req.body.username;
+    const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
     const entryFee = req.body.entryFee;
@@ -735,9 +788,9 @@ app.post("/api/matches", async function (req, res) {
         match: dbMatchToFrontend(result.data)
     });
 });
-app.post("/api/tournaments/:id/cancel", async function (req, res) {
+app.post("/api/tournaments/:id/cancel", requireAuth, async function (req, res) {
     const tournamentId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     const tournamentResult = await supabase
         .from("tournaments")
@@ -793,9 +846,9 @@ app.post("/api/tournaments/:id/cancel", async function (req, res) {
 });
 
 
-app.post("/api/tournaments", async function (req, res) {
-    
-    const username = req.body.username;
+app.post("/api/tournaments", requireAuth, async function (req, res) {
+
+    const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
     const tournamentSize = req.body.tournamentSize;
@@ -923,9 +976,9 @@ res.json({
     matches: matchesResult.data || []
 });
 });
-app.post("/api/tournaments/:id/join", async function (req, res) {
+app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
     const tournamentId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
 
@@ -1038,11 +1091,11 @@ app.post("/api/tournaments/:id/join", async function (req, res) {
         tournament: updateResult.data
     });
 });
-app.post("/api/matches/:id/join", async function (req, res) {
+app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     await expireOldMatches();
 
     const matchId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
 
@@ -1118,9 +1171,9 @@ app.post("/api/matches/:id/join", async function (req, res) {
         match: dbMatchToFrontend(update.data)
     });
 });
-app.post("/api/tournament-matches/:id/verify", async function (req, res) {
+app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req, res) {
     const tournamentMatchId = Number(req.params.id);
-    const requestingUsername = req.body.username;
+    const requestingUsername = req.username;
 
     const found = await supabase
         .from("tournament_matches")
@@ -1137,6 +1190,17 @@ app.post("/api/tournament-matches/:id/verify", async function (req, res) {
     }
 
     const foundMatch = found.data;
+
+    if (
+        requestingUsername !== foundMatch.player_one &&
+        requestingUsername !== foundMatch.player_two
+    ) {
+        res.status(403).json({
+            success: false,
+            message: "Only the players in this match can verify it."
+        });
+        return;
+    }
 
     if (foundMatch.status === "Completed") {
         res.json({
@@ -1418,7 +1482,7 @@ return;
         });
     }
 });
-app.post("/api/matches/:id/verify", async function (req, res) {
+app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
     await expireOldMatches();
 
     const matchId = Number(req.params.id);
@@ -1438,6 +1502,17 @@ app.post("/api/matches/:id/verify", async function (req, res) {
     }
 
     const foundMatch = found.data;
+
+    if (
+        req.username !== foundMatch.creator_username &&
+        req.username !== foundMatch.opponent_username
+    ) {
+        res.status(403).json({
+            success: false,
+            message: "Only the players in this match can verify it."
+        });
+        return;
+    }
 
     if (foundMatch.status === "Completed") {
         res.json({
@@ -1587,11 +1662,11 @@ const loserXpProfile = await awardXpToUser(loserUsername, loserXpEarned);
     }
 });
 
-app.post("/api/matches/:id/cancel", async function (req, res) {
+app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
     await expireOldMatches();
 
     const matchId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     const found = await supabase
         .from("matches")
@@ -1683,9 +1758,9 @@ app.get("/api/matches/:id", async function (req, res) {
         match: match
     });
 });
-app.post("/api/users/save-clash", async function (req, res) {
+app.post("/api/users/save-clash", requireAuth, async function (req, res) {
 
-    const username = req.body.username;
+    const username = req.username;
     const clashTag = req.body.clashTag;
     const clashName = req.body.clashName;
     const clashFriendLink = req.body.clashFriendLink;
@@ -1722,8 +1797,8 @@ app.post("/api/users/save-clash", async function (req, res) {
         message: "Clash account saved."
     });
 });
-app.post("/api/users/save-profile", async function (req, res) {
-    const username = req.body.username;
+app.post("/api/users/save-profile", requireAuth, async function (req, res) {
+    const username = req.username;
     const profilePicture = req.body.profilePicture;
     const profileBanner = req.body.profileBanner;
     const profileCompleted = req.body.profileCompleted;
@@ -1803,8 +1878,8 @@ app.get("/api/users/:username/cosmetics", async function (req, res) {
     });
 });
 
-app.post("/api/users/equip-cosmetic", async function (req, res) {
-    const username = req.body.username;
+app.post("/api/users/equip-cosmetic", requireAuth, async function (req, res) {
+    const username = req.username;
     const cosmeticType = req.body.cosmeticType;
     const cosmeticId = req.body.cosmeticId;
 
@@ -2275,8 +2350,8 @@ function normalizeFriendPair(usernameOne, usernameTwo) {
     };
 }
 
-app.post("/api/friends/request", async function (req, res) {
-    const senderUsername = req.body.senderUsername;
+app.post("/api/friends/request", requireAuth, async function (req, res) {
+    const senderUsername = req.username;
     const receiverUsername = req.body.receiverUsername;
 
     if (!senderUsername || !receiverUsername) {
@@ -2385,8 +2460,16 @@ app.post("/api/friends/request", async function (req, res) {
     });
 });
 
-app.get("/api/friends/requests/:username", async function (req, res) {
+app.get("/api/friends/requests/:username", requireAuth, async function (req, res) {
     const username = req.params.username;
+
+    if (req.username !== username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view another user's friend requests."
+        });
+        return;
+    }
 
     const result = await supabase
         .from("friend_requests")
@@ -2409,9 +2492,9 @@ app.get("/api/friends/requests/:username", async function (req, res) {
     });
 });
 
-app.post("/api/friends/requests/:id/accept", async function (req, res) {
+app.post("/api/friends/requests/:id/accept", requireAuth, async function (req, res) {
     const requestId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     const requestResult = await supabase
         .from("friend_requests")
@@ -2475,9 +2558,9 @@ app.post("/api/friends/requests/:id/accept", async function (req, res) {
     });
 });
 
-app.post("/api/friends/requests/:id/decline", async function (req, res) {
+app.post("/api/friends/requests/:id/decline", requireAuth, async function (req, res) {
     const requestId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     const requestResult = await supabase
         .from("friend_requests")
@@ -2517,8 +2600,16 @@ app.post("/api/friends/requests/:id/decline", async function (req, res) {
     });
 });
 
-app.get("/api/friends/:username", async function (req, res) {
+app.get("/api/friends/:username", requireAuth, async function (req, res) {
     const username = req.params.username;
+
+    if (req.username !== username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view another user's friends list."
+        });
+        return;
+    }
 
     const result = await supabase
         .from("friends")
@@ -2546,9 +2637,17 @@ app.get("/api/friends/:username", async function (req, res) {
     });
 });
 
-app.get("/api/friends/status/:viewerUsername/:profileUsername", async function (req, res) {
+app.get("/api/friends/status/:viewerUsername/:profileUsername", requireAuth, async function (req, res) {
     const viewerUsername = req.params.viewerUsername;
     const profileUsername = req.params.profileUsername;
+
+    if (req.username !== viewerUsername) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view this friend status."
+        });
+        return;
+    }
 
     if (viewerUsername === profileUsername) {
         res.json({
@@ -2613,8 +2712,8 @@ app.get("/api/friends/status/:viewerUsername/:profileUsername", async function (
         status: "none"
     });
 });
-app.post("/api/users/heartbeat", async function (req, res) {
-    const username = req.body.username;
+app.post("/api/users/heartbeat", requireAuth, async function (req, res) {
+    const username = req.username;
 
     if (!username) {
         res.json({
@@ -2636,8 +2735,8 @@ app.post("/api/users/heartbeat", async function (req, res) {
     });
 });
 
-app.post("/api/friends/remove", async function (req, res) {
-    const username = req.body.username;
+app.post("/api/friends/remove", requireAuth, async function (req, res) {
+    const username = req.username;
     const friendUsername = req.body.friendUsername;
 
     if (!username || !friendUsername) {
@@ -2671,9 +2770,9 @@ app.post("/api/friends/remove", async function (req, res) {
         message: "Friend removed."
     });
 });
-app.post("/api/friends/challenge", async function (req, res) {
+app.post("/api/friends/challenge", requireAuth, async function (req, res) {
 
-    const challengerUsername = req.body.challengerUsername;
+    const challengerUsername = req.username;
     const receiverUsername = req.body.receiverUsername;
     const entryFee = Number(req.body.entryFee);
 
@@ -2759,9 +2858,17 @@ app.post("/api/friends/challenge", async function (req, res) {
     });
 
 });
-app.get("/api/friends/challenges/:username", async function (req, res) {
+app.get("/api/friends/challenges/:username", requireAuth, async function (req, res) {
 
     const username = req.params.username;
+
+    if (req.username !== username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view another user's challenges."
+        });
+        return;
+    }
 
     const result = await supabase
         .from("friend_challenges")
@@ -2787,7 +2894,7 @@ app.get("/api/friends/challenges/:username", async function (req, res) {
     });
 
 });
-app.get("/api/friends/challenge/:id", async function (req, res) {
+app.get("/api/friends/challenge/:id", requireAuth, async function (req, res) {
     const challengeId = Number(req.params.id);
 
     const result = await supabase
@@ -2805,6 +2912,18 @@ app.get("/api/friends/challenge/:id", async function (req, res) {
     }
 
     const challenge = result.data;
+
+    if (
+        req.username !== challenge.challenger_username &&
+        req.username !== challenge.receiver_username
+    ) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view this challenge."
+        });
+        return;
+    }
+
     const now = Date.now();
     const challengeAge = now - Number(challenge.created_at || 0);
     const fiveMinutes = 5 * 60 * 1000;
@@ -2833,9 +2952,9 @@ app.get("/api/friends/challenge/:id", async function (req, res) {
         challenge: challenge
     });
 });
-app.post("/api/friends/challenge/:id/cancel", async function (req, res) {
+app.post("/api/friends/challenge/:id/cancel", requireAuth, async function (req, res) {
     const challengeId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     if (!username) {
         res.json({
@@ -2903,9 +3022,9 @@ app.post("/api/friends/challenge/:id/cancel", async function (req, res) {
         challenge: updateResult.data
     });
 });
-app.post("/api/friends/challenges/:id/accept", async function (req, res) {
+app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req, res) {
     const challengeId = Number(req.params.id);
-    const username = req.body.username;
+    const username = req.username;
 
     const challengeResult = await supabase
         .from("friend_challenges")
@@ -2990,9 +3109,31 @@ app.post("/api/friends/challenges/:id/accept", async function (req, res) {
         match: dbMatchToFrontend(matchResult.data)
     });
 });
-app.post("/api/friends/challenges/:id/decline", async function (req, res) {
+app.post("/api/friends/challenges/:id/decline", requireAuth, async function (req, res) {
 
     const challengeId = Number(req.params.id);
+
+    const challengeResult = await supabase
+        .from("friend_challenges")
+        .select("*")
+        .eq("id", challengeId)
+        .maybeSingle();
+
+    if (!challengeResult.data) {
+        res.json({
+            success: false,
+            message: "Challenge not found."
+        });
+        return;
+    }
+
+    if (challengeResult.data.receiver_username !== req.username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot decline this challenge."
+        });
+        return;
+    }
 
     const updateResult = await supabase
         .from("friend_challenges")
@@ -3021,8 +3162,8 @@ app.post("/api/friends/challenges/:id/decline", async function (req, res) {
     });
 
 });
-app.post("/api/friends/messages/send", async function (req, res) {
-    const senderUsername = req.body.senderUsername;
+app.post("/api/friends/messages/send", requireAuth, async function (req, res) {
+    const senderUsername = req.username;
     const receiverUsername = req.body.receiverUsername;
     const message = (req.body.message || "").trim();
 
@@ -3088,9 +3229,17 @@ app.post("/api/friends/messages/send", async function (req, res) {
     });
 });
 
-app.get("/api/friends/messages/:username/:friendUsername", async function (req, res) {
+app.get("/api/friends/messages/:username/:friendUsername", requireAuth, async function (req, res) {
     const username = req.params.username;
     const friendUsername = req.params.friendUsername;
+
+    if (req.username !== username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view another user's messages."
+        });
+        return;
+    }
 
     const pair = normalizeFriendPair(username, friendUsername);
 
@@ -3144,9 +3293,17 @@ app.get("/api/friends/messages/:username/:friendUsername", async function (req, 
         messages: result.data || []
     });
 });
-app.get("/api/friends/unread/:username", async function (req, res) {
+app.get("/api/friends/unread/:username", requireAuth, async function (req, res) {
 
     const username = req.params.username;
+
+    if (req.username !== username) {
+        res.status(403).json({
+            success: false,
+            message: "You cannot view another user's unread messages."
+        });
+        return;
+    }
 
     const result = await supabase
         .from("friend_messages")

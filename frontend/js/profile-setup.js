@@ -262,18 +262,12 @@ function equipCosmetic(cosmetic) {
         });
     }
 
-    return fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+    return apiFetch("/api/users/equip-cosmetic", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: username,
             cosmeticType: cosmetic.cosmetic_type,
             cosmeticId: cosmetic.cosmetic_id
         })
-    }).then(function (response) {
-        return response.json();
     });
 }
 
@@ -286,64 +280,39 @@ function saveProfile(profileCompleted) {
     equipCosmetic(selectedAvatar),
     equipCosmetic(selectedBanner),
 
-    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+    apiFetch("/api/users/equip-cosmetic", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: username,
             cosmeticType: "Frame",
             cosmeticId: selectedFrame ? selectedFrame.cosmetic_id : null
         })
-    }).then(function (response) {
-        return response.json();
     }),
 
-    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+    apiFetch("/api/users/equip-cosmetic", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: username,
             cosmeticType: "Badge",
             cosmeticId: selectedBadge ? selectedBadge.cosmetic_id : null
         })
-    }).then(function (response) {
-        return response.json();
     }),
 
-    fetch("https://api.pryzepot.com/api/users/equip-cosmetic", {
+    apiFetch("/api/users/equip-cosmetic", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: username,
             cosmeticType: "Title",
             cosmeticId: selectedTitle ? selectedTitle.cosmetic_id : null
         })
-    }).then(function (response) {
-        return response.json();
     })
 ])
     .then(function () {
-        return fetch("https://api.pryzepot.com/api/users/save-profile", {
+        return apiFetch("/api/users/save-profile", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
             body: JSON.stringify({
-                username: username,
                 profilePicture: selectedAvatar ? selectedAvatar.cosmetic_id : "avatar1",
                 profileBanner: selectedBanner ? selectedBanner.cosmetic_id : "banner1",
                 profileCompleted: profileCompleted
             })
         });
-    })
-    .then(function (response) {
-        return response.json();
     })
     .then(function (data) {
         if (!data.success) {
@@ -367,10 +336,7 @@ function saveProfile(profileCompleted) {
 }
 
 function loadUnlockedCosmetics() {
-    fetch("https://api.pryzepot.com/api/users/" + encodeURIComponent(username) + "/cosmetics")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/users/" + encodeURIComponent(username) + "/cosmetics")
         .then(function (data) {
             if (!data.success) {
                 alert(data.message || "Could not load cosmetics.");
@@ -379,10 +345,7 @@ function loadUnlockedCosmetics() {
 
             unlockedCosmetics = data.cosmetics || [];
 
-            return fetch("https://api.pryzepot.com/api/users/" + encodeURIComponent(username) + "/profile");
-        })
-        .then(function (response) {
-            return response.json();
+            return apiFetch("/api/users/" + encodeURIComponent(username) + "/profile");
         })
         .then(function (profileData) {
             if (profileData.success && profileData.user) {

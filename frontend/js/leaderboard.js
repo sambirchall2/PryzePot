@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 
 if (!username) {
@@ -289,16 +287,12 @@ function renderLoadingState() {
 function loadLeaderboard() {
     renderLoadingState();
 
-    fetch(
-        API_BASE_URL +
+    apiFetch(
         "/api/leaderboard?game=" +
         encodeURIComponent(selectedGame) +
         "&time=" +
         encodeURIComponent(selectedTime)
     )
-        .then(function (response) {
-            return response.json();
-        })
         .then(function (data) {
             if (!data.success) {
                 showToast(data.message || "Could not load leaderboard");

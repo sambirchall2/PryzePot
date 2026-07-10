@@ -2,8 +2,6 @@ const backBtn = document.getElementById("backBtn");
 const matchesContainer = document.getElementById("matchesContainer");
 const tournamentsContainer = document.getElementById("tournamentsContainer");
 
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashFriendLink = localStorage.getItem("clashFriendLink");
@@ -30,8 +28,7 @@ async function getUserProfile(usernameValue) {
     }
 
     try {
-        const response = await fetch(API_BASE_URL + "/api/users/" + usernameValue + "/profile");
-        const data = await response.json();
+        const data = await apiFetch("/api/users/" + usernameValue + "/profile");
 
         if (!data.success || !data.user) {
             profileCache[usernameValue] = getDefaultProfile(usernameValue);
@@ -110,19 +107,12 @@ function autoJoinPendingTournament() {
 
     localStorage.removeItem("pendingTournamentId");
 
-    fetch(API_BASE_URL + "/api/tournaments/" + pendingTournamentId + "/join", {
+    apiFetch("/api/tournaments/" + pendingTournamentId + "/join", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
-            username: username,
             playerTag: clashPlayerTag,
             friendLink: clashFriendLink
         })
-    })
-    .then(function (response) {
-        return response.json();
     })
     .then(function (data) {
         if (!data.success) {
@@ -328,19 +318,12 @@ function attachButtonListeners() {
                 return;
             }
 
-            fetch(API_BASE_URL + "/api/matches/" + matchId + "/join", {
+            apiFetch("/api/matches/" + matchId + "/join", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
                 body: JSON.stringify({
-                    username: username,
                     playerTag: clashPlayerTag,
                     friendLink: clashFriendLink
                 })
-            })
-            .then(function (response) {
-                return response.json();
             })
             .then(function (data) {
                 if (data.success === true) {
@@ -362,17 +345,9 @@ function attachButtonListeners() {
         button.addEventListener("click", function () {
             const matchId = button.dataset.matchId;
 
-            fetch(API_BASE_URL + "/api/matches/" + matchId + "/cancel", {
+            apiFetch("/api/matches/" + matchId + "/cancel", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username: username
-                })
-            })
-            .then(function (response) {
-                return response.json();
+                body: JSON.stringify({})
             })
             .then(function (data) {
                 alert(data.message);
@@ -392,10 +367,7 @@ function attachButtonListeners() {
 }
 
 function loadTournaments() {
-    fetch(API_BASE_URL + "/api/tournaments")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/tournaments")
         .then(function (data) {
             if (!data.success) return;
 
@@ -408,10 +380,7 @@ function loadTournaments() {
 }
 
 function loadMatches() {
-    fetch(API_BASE_URL + "/api/matches")
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/matches")
         .then(function (data) {
             if (!data.success) {
                 matchesContainer.innerHTML = `

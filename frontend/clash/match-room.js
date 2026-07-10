@@ -14,8 +14,6 @@ const instructionsCard = document.getElementById("instructionsCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyBtn = document.getElementById("verifyBtn");
 
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const currentMatchId = localStorage.getItem("currentMatchId");
 const currentUsername = localStorage.getItem("username");
 
@@ -168,10 +166,7 @@ if (lastPlayerTwoUsername !== match.opponentUsername) {
 }
 
 function loadMatchRoom() {
-    fetch(API_BASE_URL + "/api/matches/" + currentMatchId)
-        .then(function (response) {
-            return response.json();
-        })
+    apiFetch("/api/matches/" + currentMatchId)
         .then(function (data) {
             if (!data.success) {
                 alert(data.message);

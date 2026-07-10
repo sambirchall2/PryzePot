@@ -1,5 +1,3 @@
-const API_BASE_URL = "https://api.pryzepot.com";
-
 const tournamentSizeDisplay = document.getElementById("tournamentSize");
 const entryFeeDisplay = document.getElementById("entryFee");
 const prizePoolDisplay = document.getElementById("prizePool");
@@ -48,14 +46,11 @@ async function getUserProfile(usernameValue) {
     }
 
     try {
-        const response = await fetch(
-            API_BASE_URL +
+        const data = await apiFetch(
             "/api/users/" +
             encodeURIComponent(usernameValue) +
             "/profile"
         );
-
-        const data = await response.json();
 
         profileCache[usernameValue] =
             data.success && data.user
@@ -769,14 +764,10 @@ async function renderTournamentRoom(
 
 async function loadTournamentRoom() {
     try {
-        const response = await fetch(
-            API_BASE_URL +
+        const data = await apiFetch(
             "/api/tournaments/" +
             currentTournamentId
         );
-
-        const data =
-            await response.json();
 
         if (!data.success) {
             alert(
@@ -835,26 +826,16 @@ if (cancelTournamentBtn) {
                 true;
 
             try {
-                const response =
-                    await fetch(
-                        API_BASE_URL +
+                const data =
+                    await apiFetch(
                         "/api/tournaments/" +
                         currentTournamentId +
                         "/cancel",
                         {
                             method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-                            body: JSON.stringify({
-                                username: username
-                            })
+                            body: JSON.stringify({})
                         }
                     );
-
-                const data =
-                    await response.json();
 
                 alert(
                     data.message ||
