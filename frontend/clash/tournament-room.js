@@ -143,23 +143,10 @@ function getRoundTitle(
     return "Round " + roundNumber;
 }
 
-function getTotalRounds(matches) {
-    if (
-        !matches ||
-        matches.length === 0
-    ) {
-        return 1;
-    }
+function getTotalRounds(tournamentSize) {
+    const size = Number(tournamentSize) || 1;
 
-    return matches.reduce(
-        function (highest, match) {
-            return Math.max(
-                highest,
-                Number(match.round_number) || 1
-            );
-        },
-        1
-    );
+    return Math.max(1, Math.round(Math.log2(size)));
 }
 
 function buildPlayerCard(
@@ -351,7 +338,7 @@ async function renderBracket(
         tournament.status === "Completed";
 
     const totalRounds =
-        getTotalRounds(matches);
+        getTotalRounds(tournament && tournament.tournament_size);
 
     const matchesByRound = {};
 
@@ -638,7 +625,7 @@ async function renderTournamentRoom(
     );
 
     const totalRounds =
-        getTotalRounds(matches);
+        getTotalRounds(tournament.tournament_size);
 
     const userFinalMatch =
         matches.find(function (match) {

@@ -446,6 +446,36 @@ async function expireOldMatches() {
         .lt("verify_expires_at", now);
 }
 
+async function expireStaleTournaments() {
+    const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    await supabase
+        .from("tournaments")
+        .update({ status: "Cancelled" })
+        .eq("status", "Open")
+        .lt("created_at", staleCutoff);
+
+    const staleMatches = await supabase
+        .from("tournament_matches")
+        .select("tournament_id")
+        .eq("status", "Ready")
+        .lt("created_at", staleCutoff);
+
+    const staleTournamentIds = [...new Set(
+        (staleMatches.data || []).map(function (match) {
+            return match.tournament_id;
+        })
+    )];
+
+    if (staleTournamentIds.length > 0) {
+        await supabase
+            .from("tournaments")
+            .update({ status: "Cancelled" })
+            .in("id", staleTournamentIds)
+            .eq("status", "Full");
+    }
+}
+
 app.get("/api/test", function (req, res) {
     res.json({
         success: true,
@@ -1055,16 +1085,36 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
-    const newPlayerCount = Number(tournament.current_players) + 1;
+    const countResult = await supabase
+        .from("tournament_players")
+        .select("*", { count: "exact", head: true })
+        .eq("tournament_id", tournamentId);
+
+    const actualCount = countResult.count || 0;
+
+    if (actualCount > Number(tournament.max_players)) {
+        await supabase
+            .from("tournament_players")
+            .delete()
+            .eq("tournament_id", tournamentId)
+            .eq("username", username);
+
+        res.json({
+            success: false,
+            message: "This tournament is already full."
+        });
+        return;
+    }
+
     const newStatus =
-        newPlayerCount >= Number(tournament.max_players)
+        actualCount >= Number(tournament.max_players)
             ? "Full"
             : "Open";
 
     const updateResult = await supabase
         .from("tournaments")
         .update({
-            current_players: newPlayerCount,
+            current_players: actualCount,
             status: newStatus
         })
         .eq("id", tournamentId)
@@ -1211,6 +1261,20 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
         res.json({
             success: false,
             message: "Tournament match is not ready for verification."
+        });
+        return;
+    }
+
+    const parentTournament = await supabase
+        .from("tournaments")
+        .select("status")
+        .eq("id", foundMatch.tournament_id)
+        .maybeSingle();
+
+    if (!parentTournament.data || parentTournament.data.status !== "Full") {
+        res.json({
+            success: false,
+            message: "This tournament is no longer active."
         });
         return;
     }
@@ -3448,4 +3512,6 @@ app.listen(PORT, function () {
 });
 
 expireOldMatches();
+expireStaleTournaments();
 setInterval(expireOldMatches, 60 * 1000);
+setInterval(expireStaleTournaments, 60 * 1000);

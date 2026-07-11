@@ -122,16 +122,26 @@ if (advanceContinueBtn) {
     });
 }
 
-async function renderTournamentMatch(match) {
+function getRoundTitle(roundNumber, totalRounds) {
+    const roundsLeft = totalRounds - roundNumber;
+
+    if (roundsLeft === 0) return "Championship";
+    if (roundsLeft === 1) return "Semifinals";
+    if (roundsLeft === 2) return "Quarterfinals";
+    if (roundsLeft === 3) return "Round of 16";
+    if (roundsLeft === 4) return "Round of 32";
+    if (roundsLeft === 5) return "Round of 64";
+    if (roundsLeft === 6) return "Round of 128";
+
+    return "Round " + roundNumber;
+}
+
+async function renderTournamentMatch(match, tournamentSize) {
     currentMatch = match;
 
-    if (Number(match.round_number) === 1) {
-        roundLabel.textContent = "Semifinal";
-    } else if (Number(match.round_number) === 2) {
-        roundLabel.textContent = "Final";
-    } else {
-        roundLabel.textContent = "Round " + match.round_number;
-    }
+    const totalRounds = Math.max(1, Math.round(Math.log2(Number(tournamentSize) || 1)));
+
+    roundLabel.textContent = getRoundTitle(Number(match.round_number), totalRounds);
 
     await warmProfileCache([match.player_one, match.player_two]);
 
@@ -175,7 +185,7 @@ function loadTournamentMatch() {
                 return;
             }
 
-            renderTournamentMatch(foundMatch);
+            renderTournamentMatch(foundMatch, data.tournament && data.tournament.tournament_size);
         })
         .catch(function (error) {
             console.log("TOURNAMENT MATCH LOAD ERROR:", error);
