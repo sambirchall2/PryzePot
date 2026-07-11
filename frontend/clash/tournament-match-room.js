@@ -37,6 +37,33 @@ function getDefaultProfile(usernameValue) {
     };
 }
 
+async function warmProfileCache(usernames) {
+    const missing = [...new Set(usernames)].filter(function (usernameValue) {
+        return usernameValue && !profileCache[usernameValue];
+    });
+
+    if (missing.length === 0) return;
+
+    try {
+        const data = await apiFetch("/api/users/profiles-batch", {
+            method: "POST",
+            body: JSON.stringify({ usernames: missing })
+        });
+
+        const profiles = data.profiles || {};
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = profiles[usernameValue] || getDefaultProfile(usernameValue);
+        });
+    } catch (error) {
+        console.log("BATCH TOURNAMENT MATCH PROFILE LOAD ERROR:", error);
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        });
+    }
+}
+
 async function getUserProfile(usernameValue) {
     if (!usernameValue) {
         return getDefaultProfile("Player");
@@ -105,6 +132,8 @@ async function renderTournamentMatch(match) {
     } else {
         roundLabel.textContent = "Round " + match.round_number;
     }
+
+    await warmProfileCache([match.player_one, match.player_two]);
 
     const playerOneProfile = await getUserProfile(match.player_one);
     const playerTwoProfile = await getUserProfile(match.player_two);

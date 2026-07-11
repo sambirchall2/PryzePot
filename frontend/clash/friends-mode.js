@@ -137,16 +137,18 @@ function loadFriendsMode() {
             const onlineCards = [];
             const offlineCards = [];
 
+            const batchResult = await apiFetch("/api/users/profiles-batch", {
+                method: "POST",
+                body: JSON.stringify({ usernames: data.friends })
+            });
+
+            const profiles = batchResult.profiles || {};
+
             for (const friendUsername of data.friends) {
-                const result = await apiFetch(
-                    "/api/users/" +
-                    encodeURIComponent(friendUsername) +
-                    "/profile"
-                );
+                const user = profiles[friendUsername];
 
-                if (!result.success || !result.user) continue;
+                if (!user) continue;
 
-                const user = result.user;
                 const online = isOnline(user.last_seen);
                 const card = createFriendCard(user, online);
 

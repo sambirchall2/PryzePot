@@ -216,14 +216,19 @@ function loadFriends() {
             const onlineFriends = [];
             const offlineFriends = [];
 
+            const batchResult = await apiFetch("/api/users/profiles-batch", {
+                method: "POST",
+                body: JSON.stringify({ usernames: friends })
+            });
+
+            const profiles = batchResult.profiles || {};
+
             for (const friendUsername of friends) {
-                const result = await apiFetch(
-                    "/api/users/" + encodeURIComponent(friendUsername) + "/profile"
-                );
+                const user = profiles[friendUsername];
 
-                if (!result.success || !result.user) continue;
+                if (!user) continue;
 
-                const friendCard = createFriendCard(result.user);
+                const friendCard = createFriendCard(user);
 
                 if (friendCard.online) {
                     onlineFriends.push(friendCard.card);

@@ -36,6 +36,35 @@ function getDefaultProfile(usernameValue) {
     });
 }
 
+async function warmProfileCache(usernames) {
+    const missing = [...new Set(usernames)].filter(function (usernameValue) {
+        return usernameValue && !profileCache[usernameValue];
+    });
+
+    if (missing.length === 0) return;
+
+    try {
+        const data = await apiFetch("/api/users/profiles-batch", {
+            method: "POST",
+            body: JSON.stringify({ usernames: missing })
+        });
+
+        const profiles = data.profiles || {};
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = profiles[usernameValue]
+                ? normalizePlayerProfile(profiles[usernameValue])
+                : getDefaultProfile(usernameValue);
+        });
+    } catch (error) {
+        console.log("BATCH TOURNAMENT PROFILE LOAD ERROR:", error);
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        });
+    }
+}
+
 async function getUserProfile(usernameValue) {
     if (!usernameValue) {
         return getDefaultProfile("Player");
@@ -527,6 +556,16 @@ async function renderTournamentRoom(
     matches
 ) {
     currentTournament = tournament;
+
+    const allUsernames = players
+        .map(function (player) { return player.username; })
+        .concat(
+            matches.flatMap(function (match) {
+                return [match.player_one, match.player_two];
+            })
+        );
+
+    await warmProfileCache(allUsernames);
 
     const tournamentSize =
         Number(

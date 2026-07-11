@@ -701,11 +701,11 @@ app.post("/api/clash/verify-player", async function (req, res) {
 });
 
 app.get("/api/matches", async function (req, res) {
-    await expireOldMatches();
-
     const result = await supabase
         .from("matches")
-        .select("*")
+        .select(
+            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at"
+        )
         .in("status", ["Waiting for opponent", "Match ready"])
         .order("id", { ascending: false });
 
@@ -725,8 +725,6 @@ app.get("/api/matches", async function (req, res) {
     });
 });
 app.post("/api/matches", requireAuth, async function (req, res) {
-    await expireOldMatches();
-
     const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
@@ -923,7 +921,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
 app.get("/api/tournaments", async function (req, res) {
     const result = await supabase
         .from("tournaments")
-        .select("*")
+        .select("id, entry_fee, max_players, current_players, tournament_size")
         .eq("status", "Open")
         .order("id", { ascending: false });
 
@@ -1092,8 +1090,6 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
     });
 });
 app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
-    await expireOldMatches();
-
     const matchId = Number(req.params.id);
     const username = req.username;
     const playerTag = req.body.playerTag;
@@ -1507,8 +1503,6 @@ return;
     }
 });
 app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
-    await expireOldMatches();
-
     const matchId = Number(req.params.id);
 
     const found = await supabase
@@ -1703,8 +1697,6 @@ const loserXpProfile = await awardXpToUser(loserUsername, loserXpEarned);
 });
 
 app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
-    await expireOldMatches();
-
     const matchId = Number(req.params.id);
     const username = req.username;
 
@@ -1752,8 +1744,6 @@ app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
 });
 
 app.get("/api/matches/:id", async function (req, res) {
-    await expireOldMatches();
-
     const matchId = Number(req.params.id);
 
     const found = await supabase
@@ -2056,7 +2046,7 @@ app.get("/api/leaderboard", async function (req, res) {
 
     const usersResult = await supabase
         .from("users")
-        .select("username, profile_picture, profile_banner, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, xp, level");
+        .select("username, profile_picture, profile_banner, equipped_frame, xp");
 
     if (usersResult.error) {
         console.log("LEADERBOARD USERS ERROR:", usersResult.error);
@@ -2381,6 +2371,67 @@ app.get("/api/users/:username/profile", async function (req, res) {
 }
     });
 });
+app.post("/api/users/profiles-batch", async function (req, res) {
+    const usernames = Array.isArray(req.body.usernames) ? req.body.usernames : [];
+
+    const cleanUsernames = usernames
+        .filter(function (username) {
+            return typeof username === "string" && username.length > 0;
+        })
+        .slice(0, 100);
+
+    if (cleanUsernames.length === 0) {
+        res.json({
+            success: true,
+            profiles: {}
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .select(
+            "username, balance, profile_picture, profile_banner, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, xp, level, last_seen"
+        )
+        .in("username", cleanUsernames);
+
+    if (result.error) {
+        console.log("LOAD BATCH PROFILES ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not load profiles."
+        });
+        return;
+    }
+
+    const profiles = {};
+
+    (result.data || []).forEach(function (user) {
+        const xp = Number(user.xp) || 0;
+
+        profiles[user.username] = {
+            username: user.username,
+            balance: user.balance || 0,
+            profile_picture: user.profile_picture || "avatar1",
+            profile_banner: user.profile_banner || "banner1",
+            equipped_avatar: user.equipped_avatar || null,
+            equipped_banner: user.equipped_banner || null,
+            equipped_frame: user.equipped_frame || null,
+            equipped_badge: user.equipped_badge || null,
+            equipped_title: user.equipped_title || null,
+            xp: xp,
+            level: calculateLevelFromXp(xp),
+            last_seen: user.last_seen || 0
+        };
+    });
+
+    res.json({
+        success: true,
+        profiles: profiles
+    });
+});
+
 function normalizeFriendPair(usernameOne, usernameTwo) {
     const names = [usernameOne, usernameTwo].sort();
 
@@ -3395,3 +3446,6 @@ app.listen(PORT, function () {
         console.log("Supabase env missing.");
     }
 });
+
+expireOldMatches();
+setInterval(expireOldMatches, 60 * 1000);

@@ -18,6 +18,33 @@ function getDefaultProfile(usernameValue) {
     };
 }
 
+async function warmProfileCache(usernames) {
+    const missing = [...new Set(usernames)].filter(function (usernameValue) {
+        return usernameValue && !profileCache[usernameValue];
+    });
+
+    if (missing.length === 0) return;
+
+    try {
+        const data = await apiFetch("/api/users/profiles-batch", {
+            method: "POST",
+            body: JSON.stringify({ usernames: missing })
+        });
+
+        const profiles = data.profiles || {};
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = profiles[usernameValue] || getDefaultProfile(usernameValue);
+        });
+    } catch (error) {
+        console.log("BATCH PROFILE LOAD ERROR:", error);
+
+        missing.forEach(function (usernameValue) {
+            profileCache[usernameValue] = getDefaultProfile(usernameValue);
+        });
+    }
+}
+
 async function getUserProfile(usernameValue) {
     if (!usernameValue) {
         return getDefaultProfile("Player");
@@ -210,6 +237,10 @@ async function renderMatches() {
     }
 
     matchesContainer.innerHTML = "";
+
+    await warmProfileCache(visibleMatches.map(function (match) {
+        return match.creatorUsername;
+    }));
 
     for (const match of visibleMatches) {
         const timeLeft = getMatchTimeLeft(match);
