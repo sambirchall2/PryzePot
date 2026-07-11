@@ -6,6 +6,8 @@ const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashFriendLink = localStorage.getItem("clashFriendLink");
 
+const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
+
 let loadedMatches = [];
 const profileCache = {};
 
@@ -177,6 +179,12 @@ function renderTournaments() {
             Number(tournament.entry_fee) *
             Number(tournament.max_players);
 
+        const expiresAt =
+            new Date(tournament.created_at).getTime() +
+            TOURNAMENT_OPEN_EXPIRATION_MINUTES * 60 * 1000;
+
+        const timeLeft = expiresAt - Date.now();
+
         card.innerHTML = `
             <div class="match-game">
                 Clash Royale Tournament
@@ -196,6 +204,10 @@ function renderTournaments() {
 
             <div class="match-timer">
                 Prize Pool: $${prizePool}
+            </div>
+
+            <div class="match-timer">
+                Expires in: ${formatCountdown(timeLeft)}
             </div>
 
             <button

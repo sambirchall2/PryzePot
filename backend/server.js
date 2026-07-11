@@ -951,7 +951,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
 app.get("/api/tournaments", async function (req, res) {
     const result = await supabase
         .from("tournaments")
-        .select("id, entry_fee, max_players, current_players, tournament_size")
+        .select("id, entry_fee, max_players, current_players, tournament_size, created_at")
         .eq("status", "Open")
         .order("id", { ascending: false });
 
