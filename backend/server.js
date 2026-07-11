@@ -1336,8 +1336,24 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
                 clash_battle_id: result.battleId
             })
             .eq("id", tournamentMatchId)
+            .eq("status", "Ready")
             .select()
             .single();
+
+        if (completed.error || !completed.data) {
+            const alreadyCompleted = await supabase
+                .from("tournament_matches")
+                .select("*")
+                .eq("id", tournamentMatchId)
+                .maybeSingle();
+
+            res.json({
+                success: true,
+                message: "Tournament match already verified.",
+                match: alreadyCompleted.data || foundMatch
+            });
+            return;
+        }
 
         const roundMatchesResult = await supabase
     .from("tournament_matches")
@@ -1456,9 +1472,17 @@ for (let i = 0; i < winners.length; i += 2) {
 }
 
 if (nextRoundMatches.length > 0) {
-    await supabase
+    const nextRoundInsert = await supabase
         .from("tournament_matches")
         .insert(nextRoundMatches);
+
+    const isDuplicatePairing =
+        nextRoundInsert.error &&
+        nextRoundInsert.error.code === "23505";
+
+    if (nextRoundInsert.error && !isDuplicatePairing) {
+        console.log("CREATE NEXT ROUND ERROR:", nextRoundInsert.error);
+    }
 }
 
 const nextRoundLabel =
@@ -1620,8 +1644,24 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                 verified_at: Date.now()
             })
             .eq("id", matchId)
+            .eq("status", "Match ready")
             .select()
             .single();
+
+        if (completed.error || !completed.data) {
+            const alreadyCompleted = await supabase
+                .from("matches")
+                .select("*")
+                .eq("id", matchId)
+                .maybeSingle();
+
+            res.json({
+                success: true,
+                message: "Match already verified.",
+                match: dbMatchToFrontend(alreadyCompleted.data || foundMatch)
+            });
+            return;
+        }
 
         await supabase
             .from("match_results")
