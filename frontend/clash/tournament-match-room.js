@@ -22,6 +22,8 @@ const currentTournamentMatchId = localStorage.getItem("currentTournamentMatchId"
 const username = localStorage.getItem("username");
 
 let currentMatch = null;
+let currentTournamentSize = null;
+let redirectingToLoserScreen = false;
 const profileCache = {};
 
 if (!currentTournamentId || !currentTournamentMatchId) {
@@ -136,7 +138,59 @@ function getRoundTitle(roundNumber, totalRounds) {
     return "Round " + roundNumber;
 }
 
+function handleLossIfNeeded(match, tournamentSize) {
+    if (!match || match.status !== "Completed") return false;
+    if (!match.winner_username || match.winner_username === username) return false;
+    if (redirectingToLoserScreen) return true;
+
+    redirectingToLoserScreen = true;
+
+    const totalRounds = Math.max(1, Math.round(Math.log2(Number(tournamentSize) || 1)));
+    const isFinalRound = Number(match.round_number) === totalRounds;
+
+    if (isFinalRound) {
+        apiFetch("/api/tournaments/" + currentTournamentId)
+            .then(function (tournamentData) {
+                const tournament = tournamentData.tournament || {};
+                const entryFee = Number(tournament.entry_fee || 0);
+                const size = Number(tournament.tournament_size || 0);
+                const prizePool = entryFee * size;
+
+                localStorage.setItem(
+                    "lastTournamentChampion",
+                    JSON.stringify({
+                        winnerUsername: match.winner_username,
+                        winnerTag: match.winner_tag,
+                        entryFee: entryFee,
+                        tournamentSize: size,
+                        prizePool: prizePool
+                    })
+                );
+
+                window.location.href = "tournament-loser.html";
+            })
+            .catch(function () {
+                localStorage.setItem(
+                    "lastTournamentChampion",
+                    JSON.stringify({
+                        winnerUsername: match.winner_username,
+                        winnerTag: match.winner_tag
+                    })
+                );
+
+                window.location.href = "tournament-loser.html";
+            });
+    } else {
+        localStorage.removeItem("lastTournamentChampion");
+        window.location.href = "tournament-loser.html";
+    }
+
+    return true;
+}
+
 async function renderTournamentMatch(match, tournamentSize) {
+    if (handleLossIfNeeded(match, tournamentSize)) return;
+
     currentMatch = match;
 
     const totalRounds = Math.max(1, Math.round(Math.log2(Number(tournamentSize) || 1)));
@@ -185,7 +239,9 @@ function loadTournamentMatch() {
                 return;
             }
 
-            renderTournamentMatch(foundMatch, data.tournament && data.tournament.tournament_size);
+            currentTournamentSize = data.tournament && data.tournament.tournament_size;
+
+            renderTournamentMatch(foundMatch, currentTournamentSize);
         })
         .catch(function (error) {
             console.log("TOURNAMENT MATCH LOAD ERROR:", error);
@@ -234,6 +290,10 @@ verifyMatchBtn.addEventListener("click", function () {
 
             verifyMatchBtn.textContent = "VERIFY MATCH";
             verifyMatchBtn.disabled = false;
+            return;
+        }
+
+        if (handleLossIfNeeded(data.match, currentTournamentSize)) {
             return;
         }
 

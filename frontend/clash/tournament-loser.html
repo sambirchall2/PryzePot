@@ -18,7 +18,7 @@
     alt="PryzePot"
 >
 
-        <p class="eyebrow">TOURNAMENT COMPLETE</p>
+        <p id="pageEyebrow" class="eyebrow">TOURNAMENT COMPLETE</p>
 
         <h1>ELIMINATED</h1>
 
@@ -37,11 +37,15 @@
             </div>
         </div>
 
-        <p class="tap-profile-text">
+        <p id="tapProfileText" class="tap-profile-text">
             Tournament Champion
         </p>
 
-        <div class="reward-row">
+        <p id="inProgressMessage" class="tap-profile-text" style="display: none;">
+            The bracket continues without you — check back to see who wins.
+        </p>
+
+        <div id="rewardRow" class="reward-row">
 
             <div class="reward-box">
                 <span>Result</span>
@@ -57,6 +61,10 @@
 
         <button id="backHomeBtn" class="back-home-btn">
             BACK HOME
+        </button>
+
+        <button id="watchBracketBtn" class="back-home-btn">
+            WATCH BRACKET
         </button>
 
     </div>
