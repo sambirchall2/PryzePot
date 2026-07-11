@@ -12,6 +12,16 @@ const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
 
+const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
+
+function formatCountdown(milliseconds) {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return minutes + ":" + seconds.toString().padStart(2, "0");
+}
+
 let currentTournament = null;
 const profileCache = {};
 
@@ -756,8 +766,15 @@ async function renderTournamentRoom(
         } else if (
             tournament.status === "Open"
         ) {
+            const expiresAt =
+                new Date(tournament.created_at).getTime() +
+                TOURNAMENT_OPEN_EXPIRATION_MINUTES * 60 * 1000;
+
+            const timeLeft = expiresAt - Date.now();
+
             statusCard.textContent =
-                "Waiting for tournament to fill...";
+                "Waiting for tournament to fill... Expires in: " +
+                formatCountdown(timeLeft);
         } else if (
             tournament.status === "Full"
         ) {
