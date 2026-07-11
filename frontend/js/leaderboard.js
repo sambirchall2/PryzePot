@@ -51,15 +51,13 @@ function openProfile(playerUsername) {
 
 function getTotalWins(player) {
     return (
-        Number(player.one_v_one_wins || 0) +
-        Number(player.tournament_match_wins || 0)
+        Number(player.one_v_one_wins || 0)
     );
 }
 
 function getTotalLosses(player) {
     return (
-        Number(player.one_v_one_losses || 0) +
-        Number(player.tournament_match_losses || 0)
+        Number(player.one_v_one_losses || 0)
     );
 }
 
