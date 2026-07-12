@@ -604,7 +604,7 @@ function buildRoundMatches(entries, tournamentId, roundNumber) {
                 loser_username: null,
                 loser_tag: null,
 
-                verified_at: new Date().toISOString(),
+                verified_at: Date.now(),
                 clash_battle_id: null,
 
                 status: "Completed"
