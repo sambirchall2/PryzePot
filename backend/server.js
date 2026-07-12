@@ -54,6 +54,9 @@ function requireAuth(req, res, next) {
 const OPEN_MATCH_EXPIRATION_MINUTES = 10;
 const ACTIVE_MATCH_EXPIRATION_MINUTES = 30;
 
+const SEASON_ZERO_SIZE = 128;
+const SEASON_ZERO_DEADLINE = new Date("2026-09-05T20:00:00-04:00");
+
 function cleanTag(tag) {
     return tag.replace("#", "").toUpperCase();
 }
@@ -453,7 +456,12 @@ async function expireStaleTournaments() {
         .from("tournaments")
         .update({ status: "Cancelled" })
         .eq("status", "Open")
+        .neq("tournament_size", SEASON_ZERO_SIZE)
         .lt("created_at", staleCutoff);
+
+    if (Date.now() > SEASON_ZERO_DEADLINE.getTime()) {
+        await launchOrCancelSeasonZero();
+    }
 
     const staleMatches = await supabase
         .from("tournament_matches")
@@ -476,6 +484,84 @@ async function expireStaleTournaments() {
     }
 }
 
+async function launchOrCancelSeasonZero() {
+    const tournamentResult = await supabase
+        .from("tournaments")
+        .select("id")
+        .eq("status", "Open")
+        .eq("tournament_size", SEASON_ZERO_SIZE)
+        .maybeSingle();
+
+    if (tournamentResult.error || !tournamentResult.data) {
+        return;
+    }
+
+    const tournamentId = tournamentResult.data.id;
+
+    const playersResult = await supabase
+        .from("tournament_players")
+        .select("id")
+        .eq("tournament_id", tournamentId);
+
+    const playerCount = (playersResult.data || []).length;
+
+    if (playerCount < 2) {
+        await supabase
+            .from("tournaments")
+            .update({ status: "Cancelled" })
+            .eq("id", tournamentId);
+        return;
+    }
+
+    // No one is kicked: an odd player out gets a bye instead (see
+    // buildRoundMatches), so the tournament launches with everyone
+    // who joined.
+    await supabase
+        .from("tournaments")
+        .update({
+            current_players: playerCount,
+            max_players: playerCount,
+            status: "Full"
+        })
+        .eq("id", tournamentId);
+
+    await createTournamentBracket(tournamentId);
+}
+
+async function ensureSeasonZeroTournament() {
+    const existing = await supabase
+        .from("tournaments")
+        .select("id")
+        .eq("tournament_size", SEASON_ZERO_SIZE)
+        .in("status", ["Open", "Full"]);
+
+    if (existing.error) {
+        console.log("SEASON ZERO LOOKUP ERROR:", existing.error);
+        return;
+    }
+
+    if (existing.data && existing.data.length > 0) {
+        return;
+    }
+
+    const insertResult = await supabase
+        .from("tournaments")
+        .insert({
+            creator_username: "PryzePot",
+            game: "Clash Royale",
+            tournament_size: SEASON_ZERO_SIZE,
+            entry_fee: 0,
+            current_players: 0,
+            max_players: SEASON_ZERO_SIZE,
+            status: "Open",
+            winner_username: null
+        });
+
+    if (insertResult.error) {
+        console.log("CREATE SEASON ZERO ERROR:", insertResult.error);
+    }
+}
+
 app.get("/api/test", function (req, res) {
     res.json({
         success: true,
@@ -486,6 +572,71 @@ function shufflePlayers(players) {
     return players.sort(function () {
         return Math.random() - 0.5;
     });
+}
+
+// Pairs entries into a round. An odd one out gets a "bye": a
+// pre-completed, one-player match that auto-advances them instead of
+// anyone being dropped or kicked.
+function buildRoundMatches(entries, tournamentId, roundNumber) {
+    const matches = [];
+
+    for (let i = 0; i < entries.length; i += 2) {
+        const playerOne = entries[i];
+        const playerTwo = entries[i + 1];
+
+        if (!playerOne) continue;
+
+        if (!playerTwo) {
+            matches.push({
+                tournament_id: tournamentId,
+                round_number: roundNumber,
+
+                player_one: playerOne.username,
+                player_one_tag: playerOne.tag,
+                player_one_friend_link: playerOne.friendLink,
+
+                player_two: null,
+                player_two_tag: null,
+                player_two_friend_link: null,
+
+                winner_username: playerOne.username,
+                winner_tag: playerOne.tag,
+                loser_username: null,
+                loser_tag: null,
+
+                verified_at: new Date().toISOString(),
+                clash_battle_id: null,
+
+                status: "Completed"
+            });
+            continue;
+        }
+
+        matches.push({
+            tournament_id: tournamentId,
+            round_number: roundNumber,
+
+            player_one: playerOne.username,
+            player_one_tag: playerOne.tag,
+            player_one_friend_link: playerOne.friendLink,
+
+            player_two: playerTwo.username,
+            player_two_tag: playerTwo.tag,
+            player_two_friend_link: playerTwo.friendLink,
+
+            winner_username: null,
+            winner_tag: null,
+            loser_username: null,
+            loser_tag: null,
+
+            verified_at: null,
+            clash_battle_id: null,
+
+            status: "Ready"
+        });
+    }
+
+    return matches;
 }
 
 async function createTournamentBracket(tournamentId) {
@@ -510,34 +661,15 @@ async function createTournamentBracket(tournamentId) {
 
     const players = shufflePlayers(playersResult.data);
 
-    const bracketMatches = [];
+    const entries = players.map(function (player) {
+        return {
+            username: player.username,
+            tag: player.player_tag,
+            friendLink: player.friend_link
+        };
+    });
 
-    for (let i = 0; i < players.length; i += 2) {
-        if (!players[i] || !players[i + 1]) continue;
-
-        bracketMatches.push({
-    tournament_id: tournamentId,
-    round_number: 1,
-
-    player_one: players[i].username,
-    player_one_tag: players[i].player_tag,
-    player_one_friend_link: players[i].friend_link,
-
-    player_two: players[i + 1].username,
-    player_two_tag: players[i + 1].player_tag,
-    player_two_friend_link: players[i + 1].friend_link,
-
-    winner_username: null,
-    winner_tag: null,
-    loser_username: null,
-    loser_tag: null,
-
-    verified_at: null,
-    clash_battle_id: null,
-
-    status: "Ready"
-});
-    }
+    const bracketMatches = buildRoundMatches(entries, tournamentId, 1);
 
     if (bracketMatches.length === 0) {
         return;
@@ -882,7 +1014,13 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
     const tournamentSize = req.body.tournamentSize;
     const entryFee = req.body.entryFee;
 
-    if (!username || !playerTag || !tournamentSize || !entryFee) {
+    if (
+        !username ||
+        !playerTag ||
+        !tournamentSize ||
+        entryFee === undefined ||
+        entryFee === null
+    ) {
         res.json({
             success: false,
             message: "Missing tournament information."
@@ -890,7 +1028,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         return;
     }
 
-    if (![4, 8, 16].includes(Number(tournamentSize))) {
+    if (![4, 8, 16, SEASON_ZERO_SIZE].includes(Number(tournamentSize))) {
         res.json({
             success: false,
             message: "Invalid tournament size."
@@ -953,6 +1091,7 @@ app.get("/api/tournaments", async function (req, res) {
         .from("tournaments")
         .select("id, entry_fee, max_players, current_players, tournament_size, created_at")
         .eq("status", "Open")
+        .neq("tournament_size", SEASON_ZERO_SIZE)
         .order("id", { ascending: false });
 
     if (result.error) {
@@ -966,6 +1105,29 @@ app.get("/api/tournaments", async function (req, res) {
     res.json({
         success: true,
         tournaments: result.data
+    });
+});
+app.get("/api/tournaments/season-zero", async function (req, res) {
+    const result = await supabase
+        .from("tournaments")
+        .select("id, current_players, max_players, status")
+        .eq("tournament_size", SEASON_ZERO_SIZE)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (result.error || !result.data) {
+        res.json({
+            success: false,
+            message: "Season Zero tournament not found."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        tournament: result.data,
+        deadline: SEASON_ZERO_DEADLINE.toISOString()
     });
 });
 app.get("/api/tournaments/:id", async function (req, res) {
@@ -1502,34 +1664,11 @@ if (existingNextRound.data && existingNextRound.data.length > 0) {
     return;
 }
 
-const nextRoundMatches = [];
-
-for (let i = 0; i < winners.length; i += 2) {
-    if (!winners[i] || !winners[i + 1]) continue;
-
-    nextRoundMatches.push({
-        tournament_id: foundMatch.tournament_id,
-        round_number: nextRoundNumber,
-
-        player_one: winners[i].username,
-        player_one_tag: winners[i].tag,
-        player_one_friend_link: winners[i].friendLink,
-
-        player_two: winners[i + 1].username,
-        player_two_tag: winners[i + 1].tag,
-        player_two_friend_link: winners[i + 1].friendLink,
-
-        winner_username: null,
-        winner_tag: null,
-        loser_username: null,
-        loser_tag: null,
-
-        verified_at: null,
-        clash_battle_id: null,
-
-        status: "Ready"
-    });
-}
+const nextRoundMatches = buildRoundMatches(
+    winners,
+    foundMatch.tournament_id,
+    nextRoundNumber
+);
 
 if (nextRoundMatches.length > 0) {
     const nextRoundInsert = await supabase
@@ -3513,5 +3652,6 @@ app.listen(PORT, function () {
 
 expireOldMatches();
 expireStaleTournaments();
+ensureSeasonZeroTournament();
 setInterval(expireOldMatches, 60 * 1000);
 setInterval(expireStaleTournaments, 60 * 1000);

@@ -1,6 +1,8 @@
 const backBtn = document.getElementById("backBtn");
 const matchesContainer = document.getElementById("matchesContainer");
 const tournamentsContainer = document.getElementById("tournamentsContainer");
+const seasonZeroStatus = document.getElementById("seasonZeroStatus");
+const seasonZeroJoinBtn = document.getElementById("seasonZeroJoinBtn");
 
 const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
@@ -448,11 +450,62 @@ function loadMatches() {
         });
 }
 
+function loadSeasonZero() {
+    if (!seasonZeroStatus && !seasonZeroJoinBtn) return;
+
+    apiFetch("/api/tournaments/season-zero")
+        .then(function (data) {
+            if (!data.success) return;
+
+            const tournament = data.tournament;
+
+            if (seasonZeroStatus) {
+                seasonZeroStatus.textContent =
+                    tournament.current_players + " / " + tournament.max_players + " Players Registered";
+            }
+
+            if (seasonZeroJoinBtn) {
+                if (tournament.status !== "Open") {
+                    seasonZeroJoinBtn.disabled = true;
+                    seasonZeroJoinBtn.textContent =
+                        tournament.status === "Full" ? "FULL" : "CLOSED";
+                } else {
+                    seasonZeroJoinBtn.disabled = false;
+                    seasonZeroJoinBtn.textContent = "JOIN";
+                    seasonZeroJoinBtn.dataset.tournamentId = tournament.id;
+                }
+            }
+        })
+        .catch(function (error) {
+            console.log("SEASON ZERO LOAD ERROR:", error);
+        });
+}
+
+if (seasonZeroJoinBtn) {
+    seasonZeroJoinBtn.addEventListener("click", function () {
+        if (!username) {
+            window.location.href = "../html/index.html";
+            return;
+        }
+
+        const tournamentId = seasonZeroJoinBtn.dataset.tournamentId;
+        if (!tournamentId) return;
+
+        localStorage.setItem("pendingTournamentId", tournamentId);
+        localStorage.setItem("afterConnectRedirect", "match-board.html");
+
+        window.location.href = "connect-clash.html";
+    });
+}
+
 loadMatches();
 loadTournaments();
+loadSeasonZero();
 autoJoinPendingTournament();
 
 setInterval(function () {
     loadMatches();
     loadTournaments();
 }, 5000);
+
+setInterval(loadSeasonZero, 20000);

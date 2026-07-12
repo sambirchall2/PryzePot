@@ -6,6 +6,7 @@ const statusCard = document.getElementById("statusCard");
 const cancelTournamentBtn = document.getElementById("cancelTournamentBtn");
 const bracketSection = document.getElementById("bracketSection");
 const bracketList = document.getElementById("bracketList");
+const roundTabs = document.getElementById("roundTabs");
 const advanceModal = document.getElementById("advanceModal");
 const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 
@@ -13,6 +14,9 @@ const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
 
 const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
+const SEASON_ZERO_SIZE = 128;
+const SEASON_ZERO_DEADLINE = new Date("2026-09-05T20:00:00-04:00").getTime();
+const ROSTER_PREVIEW_COUNT = 12;
 
 function formatCountdown(milliseconds) {
     const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -22,7 +26,23 @@ function formatCountdown(milliseconds) {
     return minutes + ":" + seconds.toString().padStart(2, "0");
 }
 
+function formatLongCountdown(milliseconds) {
+    const totalMinutes = Math.max(0, Math.floor(milliseconds / 60000));
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) return days + "d " + hours + "h";
+    if (hours > 0) return hours + "h " + minutes + "m";
+    return minutes + "m";
+}
+
 let currentTournament = null;
+let currentPlayers = [];
+let currentMatches = [];
+let rosterExpanded = false;
+let selectedRound = null;
+let selectedRoundTournamentId = null;
 const profileCache = {};
 
 if (!currentTournamentId) {
@@ -110,8 +130,9 @@ async function getUserProfile(usernameValue) {
 
 function isUserInTournamentMatch(match) {
     return (
-        match.player_one === username ||
-        match.player_two === username
+        Boolean(username) &&
+        (match.player_one === username ||
+            match.player_two === username)
     );
 }
 
@@ -156,7 +177,7 @@ function getRoundTitle(
 function getTotalRounds(tournamentSize) {
     const size = Number(tournamentSize) || 1;
 
-    return Math.max(1, Math.round(Math.log2(size)));
+    return Math.max(1, Math.ceil(Math.log2(size)));
 }
 
 function buildPlayerCard(
@@ -313,6 +334,18 @@ function buildBracketPlayer(
     `;
 }
 
+function pickDefaultRound(matchesByRound, roundNumbers) {
+    for (const roundNumber of roundNumbers) {
+        const hasIncomplete = matchesByRound[roundNumber].some(function (match) {
+            return match.status !== "Completed";
+        });
+
+        if (hasIncomplete) return roundNumber;
+    }
+
+    return roundNumbers[roundNumbers.length - 1];
+}
+
 async function renderBracket(
     matches,
     tournament
@@ -334,6 +367,8 @@ async function renderBracket(
 
         bracketList.innerHTML = "";
 
+        if (roundTabs) roundTabs.innerHTML = "";
+
         return;
     }
 
@@ -348,7 +383,7 @@ async function renderBracket(
         tournament.status === "Completed";
 
     const totalRounds =
-        getTotalRounds(tournament && tournament.tournament_size);
+        getTotalRounds(tournament && tournament.max_players);
 
     const matchesByRound = {};
 
@@ -375,8 +410,43 @@ async function renderBracket(
             }
         );
 
+    const roundNumbers = roundKeys.map(Number);
+
+    if (
+        selectedRoundTournamentId !== currentTournamentId ||
+        selectedRound === null ||
+        roundNumbers.indexOf(selectedRound) === -1
+    ) {
+        selectedRound = pickDefaultRound(matchesByRound, roundNumbers);
+        selectedRoundTournamentId = currentTournamentId;
+    }
+
+    if (roundTabs) {
+        roundTabs.innerHTML = "";
+
+        roundNumbers.forEach(function (roundNumber) {
+            const tabButton = document.createElement("button");
+
+            tabButton.className =
+                "round-tab" +
+                (roundNumber === selectedRound ? " active" : "");
+
+            tabButton.textContent = getRoundTitle(roundNumber, totalRounds);
+            tabButton.dataset.round = roundNumber;
+
+            tabButton.addEventListener("click", function () {
+                selectedRound = roundNumber;
+                renderBracket(matches, tournament);
+            });
+
+            roundTabs.appendChild(tabButton);
+        });
+    }
+
+    const visibleRoundKeys = [String(selectedRound)];
+
     for (
-        const roundKey of roundKeys
+        const roundKey of visibleRoundKeys
     ) {
         const roundNumber =
             Number(roundKey);
@@ -438,6 +508,8 @@ async function renderBracket(
             bracketCard.className =
                 "bracket-card";
 
+            const isBye = !match.player_two;
+
             const winnerDisplay =
                 match.status ===
                     "Completed" &&
@@ -449,6 +521,10 @@ async function renderBracket(
                         </div>
                     `
                     : "";
+
+            const statusText = isBye
+                ? "Bye — advances automatically"
+                : match.status;
 
             const enterButton =
                 match.status === "Ready" &&
@@ -478,20 +554,24 @@ async function renderBracket(
                         tournamentIsComplete
                     )}
 
-                    <strong class="bracket-vs">
-                        VS
-                    </strong>
+                    ${isBye
+                        ? `<div class="bracket-bye">BYE</div>`
+                        : `
+                            <strong class="bracket-vs">
+                                VS
+                            </strong>
 
-                    ${buildBracketPlayer(
-                        match.player_two,
-                        playerTwoProfile,
-                        match,
-                        tournamentIsComplete
-                    )}
+                            ${buildBracketPlayer(
+                                match.player_two,
+                                playerTwoProfile,
+                                match,
+                                tournamentIsComplete
+                            )}
+                        `}
                 </div>
 
                 <div class="bracket-status">
-                    ${match.status}
+                    ${statusText}
                 </div>
 
                 ${winnerDisplay}
@@ -553,6 +633,8 @@ async function renderTournamentRoom(
     matches
 ) {
     currentTournament = tournament;
+    currentPlayers = players;
+    currentMatches = matches;
 
     const allUsernames = players
         .map(function (player) { return player.username; })
@@ -566,7 +648,7 @@ async function renderTournamentRoom(
 
     const tournamentSize =
         Number(
-            tournament.tournament_size
+            tournament.max_players
         ) || 0;
 
     const entryFee =
@@ -577,27 +659,39 @@ async function renderTournamentRoom(
     const prizePool =
         tournamentSize * entryFee;
 
+    const isSeasonZero =
+        Number(tournament.tournament_size) === SEASON_ZERO_SIZE;
+
     if (tournamentSizeDisplay) {
         tournamentSizeDisplay.textContent =
             tournamentSize + " Players";
     }
 
     if (entryFeeDisplay) {
-        entryFeeDisplay.textContent =
-            "$" + entryFee;
+        entryFeeDisplay.textContent = isSeasonZero
+            ? "FREE"
+            : "$" + entryFee;
     }
 
     if (prizePoolDisplay) {
-        prizePoolDisplay.textContent =
-            "$" + prizePool;
+        prizePoolDisplay.textContent = isSeasonZero
+            ? "Gift Cards & Merch"
+            : "$" + prizePool;
     }
 
     if (playerList) {
         playerList.innerHTML = "";
 
+        const shouldCollapse =
+            tournamentSize > 16 && !rosterExpanded;
+
+        const visibleCount = shouldCollapse
+            ? ROSTER_PREVIEW_COUNT
+            : tournamentSize;
+
         for (
             let i = 0;
-            i < tournamentSize;
+            i < visibleCount;
             i++
         ) {
             if (players[i]) {
@@ -627,6 +721,27 @@ async function renderTournamentRoom(
                 );
             }
         }
+
+        if (tournamentSize > 16) {
+            const toggleBtn = document.createElement("button");
+
+            toggleBtn.className = "roster-toggle-btn";
+            toggleBtn.textContent = rosterExpanded
+                ? "Show less"
+                : "Show all " + tournamentSize + " players";
+
+            toggleBtn.addEventListener("click", function () {
+                rosterExpanded = !rosterExpanded;
+
+                renderTournamentRoom(
+                    currentTournament,
+                    currentPlayers,
+                    currentMatches
+                );
+            });
+
+            playerList.appendChild(toggleBtn);
+        }
     }
 
     await renderBracket(
@@ -635,7 +750,7 @@ async function renderTournamentRoom(
     );
 
     const totalRounds =
-        getTotalRounds(tournament.tournament_size);
+        getTotalRounds(tournament.max_players);
 
     const userFinalMatch =
         matches.find(function (match) {
@@ -766,15 +881,24 @@ async function renderTournamentRoom(
         } else if (
             tournament.status === "Open"
         ) {
-            const expiresAt =
-                new Date(tournament.created_at).getTime() +
-                TOURNAMENT_OPEN_EXPIRATION_MINUTES * 60 * 1000;
+            if (tournamentSize === SEASON_ZERO_SIZE) {
+                const timeLeft =
+                    SEASON_ZERO_DEADLINE - Date.now();
 
-            const timeLeft = expiresAt - Date.now();
+                statusCard.textContent =
+                    "Registration open... Closes in: " +
+                    formatLongCountdown(timeLeft);
+            } else {
+                const expiresAt =
+                    new Date(tournament.created_at).getTime() +
+                    TOURNAMENT_OPEN_EXPIRATION_MINUTES * 60 * 1000;
 
-            statusCard.textContent =
-                "Waiting for tournament to fill... Expires in: " +
-                formatCountdown(timeLeft);
+                const timeLeft = expiresAt - Date.now();
+
+                statusCard.textContent =
+                    "Waiting for tournament to fill... Expires in: " +
+                    formatCountdown(timeLeft);
+            }
         } else if (
             tournament.status === "Full"
         ) {

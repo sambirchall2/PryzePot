@@ -175,6 +175,60 @@ h1 {
     margin-bottom: 22px;
 }
 
+.round-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.round-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.round-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    border: 1px solid rgba(183,255,0,0.3);
+    border-radius: 999px;
+    background: rgba(183,255,0,0.06);
+    color: rgba(255,255,255,0.7);
+
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+
+    cursor: pointer;
+}
+
+.round-tab.active {
+    background: #b7ff00;
+    border-color: #b7ff00;
+    color: #050505;
+}
+
+.roster-toggle-btn {
+    width: 100%;
+    height: 46px;
+    margin-top: 4px;
+
+    border: 1px solid rgba(183,255,0,0.35);
+    border-radius: 12px;
+    background: rgba(183,255,0,0.06);
+    color: #b7ff00;
+
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+
+    cursor: pointer;
+}
+
 .round-header {
     display: flex;
     justify-content: space-between;
@@ -353,6 +407,20 @@ h1 {
     font-size: 12px;
     font-weight: 950;
     flex-shrink: 0;
+}
+
+.bracket-bye {
+    flex-shrink: 0;
+
+    border: 1px solid rgba(183,255,0,0.35);
+    border-radius: 999px;
+    background: rgba(183,255,0,0.08);
+    color: #b7ff00;
+
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.5px;
 }
 /* ---------- Tournament Room Compact Cards ---------- */
 

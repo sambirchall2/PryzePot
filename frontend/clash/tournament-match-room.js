@@ -145,7 +145,7 @@ function handleLossIfNeeded(match, tournamentSize) {
 
     redirectingToLoserScreen = true;
 
-    const totalRounds = Math.max(1, Math.round(Math.log2(Number(tournamentSize) || 1)));
+    const totalRounds = Math.max(1, Math.ceil(Math.log2(Number(tournamentSize) || 1)));
     const isFinalRound = Number(match.round_number) === totalRounds;
 
     if (isFinalRound) {
@@ -153,7 +153,7 @@ function handleLossIfNeeded(match, tournamentSize) {
             .then(function (tournamentData) {
                 const tournament = tournamentData.tournament || {};
                 const entryFee = Number(tournament.entry_fee || 0);
-                const size = Number(tournament.tournament_size || 0);
+                const size = Number(tournament.max_players || 0);
                 const prizePool = entryFee * size;
 
                 localStorage.setItem(
@@ -193,7 +193,7 @@ async function renderTournamentMatch(match, tournamentSize) {
 
     currentMatch = match;
 
-    const totalRounds = Math.max(1, Math.round(Math.log2(Number(tournamentSize) || 1)));
+    const totalRounds = Math.max(1, Math.ceil(Math.log2(Number(tournamentSize) || 1)));
 
     roundLabel.textContent = getRoundTitle(Number(match.round_number), totalRounds);
 
@@ -239,7 +239,7 @@ function loadTournamentMatch() {
                 return;
             }
 
-            currentTournamentSize = data.tournament && data.tournament.tournament_size;
+            currentTournamentSize = data.tournament && data.tournament.max_players;
 
             renderTournamentMatch(foundMatch, currentTournamentSize);
         })
@@ -305,7 +305,7 @@ verifyMatchBtn.addEventListener("click", function () {
             const tournament = tournamentData.tournament || {};
 
             const entryFee = Number(tournament.entry_fee || 0);
-            const tournamentSize = Number(tournament.tournament_size || 0);
+            const tournamentSize = Number(tournament.max_players || 0);
             const prizePool = entryFee * tournamentSize;
 
             localStorage.setItem(
