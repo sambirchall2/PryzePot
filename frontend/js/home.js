@@ -48,7 +48,7 @@ const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {
     joinTournamentBtn.addEventListener("click", function () {
-        window.location.href = "../clash/online.html";
+        window.location.href = "../clash/match-board.html";
     });
 }
 
