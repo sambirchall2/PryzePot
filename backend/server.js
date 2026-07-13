@@ -301,6 +301,20 @@ await unlockVaultRewards(username, newLevel);
 
 return updateResult.data;
 }
+
+async function adjustBalance(username, delta) {
+    const result = await supabase.rpc("adjust_balance", {
+        p_username: username,
+        p_delta: delta
+    });
+
+    if (result.error) {
+        console.log("ADJUST BALANCE ERROR:", username, delta, result.error.message);
+        return { success: false, message: result.error.message };
+    }
+
+    return { success: true, balance: result.data };
+}
 function dbMatchToFrontend(match) {
     return {
         id: match.id,
@@ -438,28 +452,94 @@ function findMatchingBattle(battles, match) {
 async function expireOldMatches() {
     const now = Date.now();
 
-    await supabase
+    const waiting = await supabase
         .from("matches")
-        .update({ status: "Expired" })
+        .select("id, creator_username, entry_fee")
         .eq("status", "Waiting for opponent")
         .lt("expires_at", now);
 
-    await supabase
+    for (const match of waiting.data || []) {
+        const updated = await supabase
+            .from("matches")
+            .update({ status: "Expired" })
+            .eq("id", match.id)
+            .eq("status", "Waiting for opponent")
+            .select()
+            .single();
+
+        if (!updated.error && updated.data) {
+            await adjustBalance(match.creator_username, Number(match.entry_fee) || 0);
+        }
+    }
+
+    const ready = await supabase
         .from("matches")
-        .update({ status: "Expired" })
+        .select("id, creator_username, opponent_username, entry_fee")
         .eq("status", "Match ready")
         .lt("verify_expires_at", now);
+
+    for (const match of ready.data || []) {
+        const updated = await supabase
+            .from("matches")
+            .update({ status: "Expired" })
+            .eq("id", match.id)
+            .eq("status", "Match ready")
+            .select()
+            .single();
+
+        if (!updated.error && updated.data) {
+            const fee = Number(match.entry_fee) || 0;
+
+            await adjustBalance(match.creator_username, fee);
+            await adjustBalance(match.opponent_username, fee);
+        }
+    }
+}
+
+async function cancelAndRefundTournament(tournamentId, fromStatus) {
+    const updated = await supabase
+        .from("tournaments")
+        .update({ status: "Cancelled" })
+        .eq("id", tournamentId)
+        .eq("status", fromStatus)
+        .select()
+        .single();
+
+    if (updated.error || !updated.data) {
+        return null;
+    }
+
+    const fee = Number(updated.data.entry_fee) || 0;
+
+    if (fee <= 0) {
+        return updated.data;
+    }
+
+    const players = await supabase
+        .from("tournament_players")
+        .select("username")
+        .eq("tournament_id", tournamentId);
+
+    for (const player of players.data || []) {
+        await adjustBalance(player.username, fee);
+    }
+
+    return updated.data;
 }
 
 async function expireStaleTournaments() {
     const staleCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    await supabase
+    const staleOpen = await supabase
         .from("tournaments")
-        .update({ status: "Cancelled" })
+        .select("id")
         .eq("status", "Open")
         .neq("tournament_size", SEASON_ZERO_SIZE)
         .lt("created_at", staleCutoff);
+
+    for (const tournament of staleOpen.data || []) {
+        await cancelAndRefundTournament(tournament.id, "Open");
+    }
 
     if (Date.now() > SEASON_ZERO_DEADLINE.getTime()) {
         await launchOrCancelSeasonZero();
@@ -477,12 +557,8 @@ async function expireStaleTournaments() {
         })
     )];
 
-    if (staleTournamentIds.length > 0) {
-        await supabase
-            .from("tournaments")
-            .update({ status: "Cancelled" })
-            .in("id", staleTournamentIds)
-            .eq("status", "Full");
+    for (const tournamentId of staleTournamentIds) {
+        await cancelAndRefundTournament(tournamentId, "Full");
     }
 }
 
@@ -892,12 +968,22 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     const username = req.username;
     const playerTag = req.body.playerTag;
     const friendLink = req.body.friendLink;
-    const entryFee = req.body.entryFee;
+    const entryFee = Number(req.body.entryFee);
 
-    if (!username || !playerTag || !friendLink || !entryFee) {
+    if (!username || !playerTag || !friendLink || !(entryFee > 0)) {
         res.json({
             success: false,
             message: "Missing match information."
+        });
+        return;
+    }
+
+    const debit = await adjustBalance(username, -entryFee);
+
+    if (!debit.success) {
+        res.json({
+            success: false,
+            message: "Not enough P-Coins to post this match."
         });
         return;
     }
@@ -936,6 +1022,8 @@ app.post("/api/matches", requireAuth, async function (req, res) {
 
     if (result.error) {
         console.log("CREATE MATCH ERROR:", result.error);
+
+        await adjustBalance(username, entryFee);
 
         res.json({
             success: false,
@@ -986,17 +1074,12 @@ app.post("/api/tournaments/:id/cancel", requireAuth, async function (req, res) {
         return;
     }
 
-    const updateResult = await supabase
-        .from("tournaments")
-        .update({
-            status: "Cancelled"
-        })
-        .eq("id", tournamentId);
+    const cancelled = await cancelAndRefundTournament(tournamentId, "Open");
 
-    if (updateResult.error) {
+    if (!cancelled) {
         res.json({
             success: false,
-            message: "Could not cancel tournament."
+            message: "This tournament can no longer be cancelled."
         });
         return;
     }
@@ -1021,7 +1104,9 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         !playerTag ||
         !tournamentSize ||
         entryFee === undefined ||
-        entryFee === null
+        entryFee === null ||
+        !Number.isFinite(Number(entryFee)) ||
+        Number(entryFee) < 0
     ) {
         res.json({
             success: false,
@@ -1030,12 +1115,26 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         return;
     }
 
-    if (![4, 8, 16, SEASON_ZERO_SIZE].includes(Number(tournamentSize))) {
+    if (![4, 8, 16].includes(Number(tournamentSize))) {
         res.json({
             success: false,
             message: "Invalid tournament size."
         });
         return;
+    }
+
+    const tournamentEntryFee = Number(entryFee);
+
+    if (tournamentEntryFee > 0) {
+        const debit = await adjustBalance(username, -tournamentEntryFee);
+
+        if (!debit.success) {
+            res.json({
+                success: false,
+                message: "Not enough P-Coins to create this tournament."
+            });
+            return;
+        }
     }
 
     const tournamentResult = await supabase
@@ -1044,7 +1143,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
             creator_username: username,
             game: "Clash Royale",
             tournament_size: Number(tournamentSize),
-            entry_fee: Number(entryFee),
+            entry_fee: tournamentEntryFee,
             current_players: 1,
             max_players: Number(tournamentSize),
             status: "Open",
@@ -1055,6 +1154,10 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
 
     if (tournamentResult.error) {
         console.log("CREATE TOURNAMENT ERROR:", tournamentResult.error);
+
+        if (tournamentEntryFee > 0) {
+            await adjustBalance(username, tournamentEntryFee);
+        }
 
         res.json({
             success: false,
@@ -1075,9 +1178,18 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
     if (playerResult.error) {
         console.log("ADD TOURNAMENT PLAYER ERROR:", playerResult.error);
 
+        if (tournamentEntryFee > 0) {
+            await adjustBalance(username, tournamentEntryFee);
+        }
+
+        await supabase
+            .from("tournaments")
+            .update({ status: "Cancelled" })
+            .eq("id", tournamentResult.data.id);
+
         res.json({
             success: false,
-            message: "Tournament created, but player could not be added."
+            message: "Tournament could not be created."
         });
         return;
     }
@@ -1230,6 +1342,20 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
+    const tournamentEntryFee = Number(tournament.entry_fee) || 0;
+
+    if (tournamentEntryFee > 0) {
+        const debit = await adjustBalance(username, -tournamentEntryFee);
+
+        if (!debit.success) {
+            res.json({
+                success: false,
+                message: "Not enough P-Coins to join this tournament."
+            });
+            return;
+        }
+    }
+
     const playerResult = await supabase
         .from("tournament_players")
         .insert({
@@ -1241,6 +1367,10 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
 
     if (playerResult.error) {
         console.log("JOIN TOURNAMENT PLAYER ERROR:", playerResult.error);
+
+        if (tournamentEntryFee > 0) {
+            await adjustBalance(username, tournamentEntryFee);
+        }
 
         res.json({
             success: false,
@@ -1263,6 +1393,10 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
             .eq("tournament_id", tournamentId)
             .eq("username", username);
 
+        if (tournamentEntryFee > 0) {
+            await adjustBalance(username, tournamentEntryFee);
+        }
+
         res.json({
             success: false,
             message: "This tournament is already full."
@@ -1282,15 +1416,26 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
             status: newStatus
         })
         .eq("id", tournamentId)
+        .eq("status", "Open")
         .select()
         .single();
 
-    if (updateResult.error) {
+    if (updateResult.error || !updateResult.data) {
         console.log("UPDATE TOURNAMENT COUNT ERROR:", updateResult.error);
+
+        await supabase
+            .from("tournament_players")
+            .delete()
+            .eq("tournament_id", tournamentId)
+            .eq("username", username);
+
+        if (tournamentEntryFee > 0) {
+            await adjustBalance(username, tournamentEntryFee);
+        }
 
         res.json({
             success: false,
-            message: "Joined tournament, but player count could not update."
+            message: "This tournament is no longer open."
         });
         return;
     }
@@ -1348,6 +1493,17 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         });
         return;
     }
+
+    const debit = await adjustBalance(username, -Number(foundMatch.entry_fee));
+
+    if (!debit.success) {
+        res.json({
+            success: false,
+            message: "Not enough P-Coins to join this match."
+        });
+        return;
+    }
+
     const verificationStartedAt = Date.now();
     const update = await supabase
         .from("matches")
@@ -1362,15 +1518,18 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000
         })
         .eq("id", matchId)
+        .eq("status", "Waiting for opponent")
         .select()
         .single();
 
-    if (update.error) {
+    if (update.error || !update.data) {
         console.log("JOIN MATCH ERROR:", update.error);
+
+        await adjustBalance(username, Number(foundMatch.entry_fee));
 
         res.json({
             success: false,
-            message: "Could not join match."
+            message: "This match is no longer open."
         });
         return;
     }
@@ -1431,7 +1590,7 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
 
     const parentTournament = await supabase
         .from("tournaments")
-        .select("status")
+        .select("status, entry_fee, max_players")
         .eq("id", foundMatch.tournament_id)
         .maybeSingle();
 
@@ -1618,13 +1777,30 @@ const winners = roundMatches
     });
 
 if (winners.length === 1) {
-    await supabase
+    const tournamentCompletion = await supabase
         .from("tournaments")
         .update({
             winner_username: winners[0].username,
             status: "Completed"
         })
-        .eq("id", foundMatch.tournament_id);
+        .eq("id", foundMatch.tournament_id)
+        .eq("status", "Full")
+        .select()
+        .single();
+
+    if (!tournamentCompletion.error && tournamentCompletion.data) {
+        const prizePool =
+            Number(parentTournament.data.entry_fee || 0) *
+            Number(parentTournament.data.max_players || 0);
+
+        if (prizePool > 0) {
+            const payout = await adjustBalance(winners[0].username, prizePool);
+
+            if (!payout.success) {
+                console.log("TOURNAMENT PAYOUT ERROR:", winners[0].username, payout.message);
+            }
+        }
+    }
 
     const playerState =
     requestingUsername === winners[0].username
@@ -1800,8 +1976,32 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                     verified_at: Date.now()
                 })
                 .eq("id", matchId)
+                .eq("status", "Match ready")
                 .select()
                 .single();
+
+            if (drawUpdate.error || !drawUpdate.data) {
+                const alreadyVerified = await supabase
+                    .from("matches")
+                    .select("*")
+                    .eq("id", matchId)
+                    .maybeSingle();
+
+                const currentMatch = alreadyVerified.data || foundMatch;
+
+                res.json({
+                    success: true,
+                    draw: currentMatch.status === "Draw",
+                    message: "Match already verified.",
+                    match: dbMatchToFrontend(currentMatch)
+                });
+                return;
+            }
+
+            const drawFee = Number(drawUpdate.data.entry_fee) || 0;
+
+            await adjustBalance(drawUpdate.data.creator_username, drawFee);
+            await adjustBalance(drawUpdate.data.opponent_username, drawFee);
 
             res.json({
                 success: true,
@@ -1830,6 +2030,14 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             winnerTag = foundMatch.opponent_tag;
             loserUsername = foundMatch.creator_username;
             loserTag = foundMatch.creator_tag;
+        }
+
+        if (!winnerUsername) {
+            res.json({
+                success: false,
+                message: "Could not determine match winner."
+            });
+            return;
         }
 
         const completed = await supabase
@@ -1872,6 +2080,12 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                 loser_username: loserUsername,
                 loser_tag: loserTag
             });
+
+        const payout = await adjustBalance(winnerUsername, Number(completed.data.entry_fee) * 2);
+
+        if (!payout.success) {
+            console.log("MATCH PAYOUT ERROR:", winnerUsername, payout.message);
+        }
 
         const winnerXpEarned = getMatchXpForResult("win");
 const loserXpEarned = getMatchXpForResult("loss");
@@ -1937,10 +2151,23 @@ app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
         return;
     }
 
-    await supabase
+    const cancelled = await supabase
         .from("matches")
         .update({ status: "Cancelled" })
-        .eq("id", matchId);
+        .eq("id", matchId)
+        .eq("status", "Waiting for opponent")
+        .select()
+        .single();
+
+    if (cancelled.error || !cancelled.data) {
+        res.json({
+            success: false,
+            message: "You cannot cancel after an opponent joins."
+        });
+        return;
+    }
+
+    await adjustBalance(username, Number(cancelled.data.entry_fee));
 
     res.json({
         success: true,
@@ -2270,7 +2497,7 @@ app.get("/api/leaderboard", async function (req, res) {
 
     let completedTournamentsQuery = supabase
         .from("tournaments")
-        .select("entry_fee, winner_username, status")
+        .select("entry_fee, max_players, winner_username, status")
         .eq("status", "Completed");
 
     let tournamentMatchWinsQuery = supabase
@@ -2340,7 +2567,7 @@ app.get("/api/leaderboard", async function (req, res) {
 
         if (winner) {
             winner.tournament_wins += 1;
-            winner.lifetime_winnings += Number(tournament.entry_fee || 0) * 2;
+            winner.lifetime_winnings += Number(tournament.entry_fee || 0) * Number(tournament.max_players || 0);
         }
     });
 
@@ -2514,7 +2741,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
 
     const tournamentWins = await supabase
         .from("tournaments")
-        .select("id")
+        .select("id, entry_fee, max_players")
         .eq("winner_username", username)
         .eq("status", "Completed");
 
@@ -2529,6 +2756,12 @@ app.get("/api/users/:username/profile", async function (req, res) {
     if (completedWins.data) {
         completedWins.data.forEach(function (match) {
             lifetimeWinnings += Number(match.entry_fee || 0) * 2;
+        });
+    }
+
+    if (tournamentWins.data) {
+        tournamentWins.data.forEach(function (tournament) {
+            lifetimeWinnings += Number(tournament.entry_fee || 0) * Number(tournament.max_players || 0);
         });
     }
 
@@ -3130,7 +3363,7 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
     const receiverUsername = req.body.receiverUsername;
     const entryFee = Number(req.body.entryFee);
 
-    if (!challengerUsername || !receiverUsername || !entryFee) {
+    if (!challengerUsername || !receiverUsername || !(entryFee > 0)) {
         res.json({
             success: false,
             message: "Missing challenge information."
@@ -3178,6 +3411,16 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
         .eq("username", receiverUsername)
         .maybeSingle();
 
+    const debit = await adjustBalance(challengerUsername, -entryFee);
+
+    if (!debit.success) {
+        res.json({
+            success: false,
+            message: "Not enough P-Coins to send this challenge."
+        });
+        return;
+    }
+
     const insertResult = await supabase
         .from("friend_challenges")
         .insert({
@@ -3196,6 +3439,8 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
 
     if (insertResult.error) {
         console.log(insertResult.error);
+
+        await adjustBalance(challengerUsername, entryFee);
 
         res.json({
             success: false,
@@ -3290,12 +3535,20 @@ app.get("/api/friends/challenge/:id", requireAuth, async function (req, res) {
                 updated_at: now
             })
             .eq("id", challengeId)
+            .eq("status", "pending")
             .select()
             .single();
 
+        if (!expiredResult.error && expiredResult.data) {
+            await adjustBalance(
+                expiredResult.data.challenger_username,
+                Number(expiredResult.data.entry_fee) || 0
+            );
+        }
+
         res.json({
             success: true,
-            challenge: expiredResult.data
+            challenge: expiredResult.data || challenge
         });
 
         return;
@@ -3357,18 +3610,21 @@ app.post("/api/friends/challenge/:id/cancel", requireAuth, async function (req, 
             updated_at: Date.now()
         })
         .eq("id", challengeId)
+        .eq("status", "pending")
         .select()
         .single();
 
-    if (updateResult.error) {
+    if (updateResult.error || !updateResult.data) {
         console.log("CANCEL CHALLENGE ERROR:", updateResult.error);
 
         res.json({
             success: false,
-            message: "Could not cancel challenge."
+            message: "This challenge is no longer pending."
         });
         return;
     }
+
+    await adjustBalance(username, Number(updateResult.data.entry_fee) || 0);
 
     res.json({
         success: true,
@@ -3400,6 +3656,37 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
 
     if (challenge.status !== "pending") {
         res.json({ success: false, message: "This challenge is no longer pending." });
+        return;
+    }
+
+    const claimed = await supabase
+        .from("friend_challenges")
+        .update({
+            status: "accepted",
+            updated_at: Date.now()
+        })
+        .eq("id", challengeId)
+        .eq("status", "pending")
+        .select()
+        .single();
+
+    if (claimed.error || !claimed.data) {
+        res.json({ success: false, message: "This challenge is no longer pending." });
+        return;
+    }
+
+    const debit = await adjustBalance(username, -Number(challenge.entry_fee));
+
+    if (!debit.success) {
+        await supabase
+            .from("friend_challenges")
+            .update({ status: "pending", updated_at: Date.now() })
+            .eq("id", challengeId);
+
+        res.json({
+            success: false,
+            message: "Not enough P-Coins to accept this challenge."
+        });
         return;
     }
 
@@ -3438,6 +3725,13 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
     if (matchResult.error) {
         console.log("CREATE FRIEND MATCH ERROR:", matchResult.error);
 
+        await adjustBalance(username, Number(challenge.entry_fee));
+
+        await supabase
+            .from("friend_challenges")
+            .update({ status: "pending", updated_at: Date.now() })
+            .eq("id", challengeId);
+
         res.json({
             success: false,
             message: "Could not create friend match."
@@ -3448,7 +3742,6 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
     const updateResult = await supabase
         .from("friend_challenges")
         .update({
-            status: "accepted",
             match_id: matchResult.data.id,
             updated_at: Date.now()
         })
@@ -3496,10 +3789,11 @@ app.post("/api/friends/challenges/:id/decline", requireAuth, async function (req
             updated_at: Date.now()
         })
         .eq("id", challengeId)
+        .eq("status", "pending")
         .select()
         .single();
 
-    if (updateResult.error) {
+    if (updateResult.error || !updateResult.data) {
         console.log(updateResult.error);
 
         res.json({
@@ -3509,6 +3803,11 @@ app.post("/api/friends/challenges/:id/decline", requireAuth, async function (req
 
         return;
     }
+
+    await adjustBalance(
+        updateResult.data.challenger_username,
+        Number(updateResult.data.entry_fee) || 0
+    );
 
     res.json({
         success: true,
