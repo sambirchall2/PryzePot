@@ -404,3 +404,50 @@ body {
     font-weight: 800;
     cursor: pointer;
 }
+
+.daily-reward-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.daily-reward-popup.hidden {
+    display: none;
+}
+
+.daily-reward-card {
+    width: 260px;
+    padding: 30px 20px;
+    text-align: center;
+
+    border-radius: 20px;
+    border: 1px solid rgba(182, 255, 0, 0.4);
+    background: linear-gradient(180deg, #101f10 0%, #050505 100%);
+    box-shadow: 0 0 40px rgba(182, 255, 0, 0.25);
+}
+
+.daily-reward-coin {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    margin-bottom: 14px;
+}
+
+.daily-reward-title {
+    color: #b6ff00;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.daily-reward-amount {
+    font-size: 26px;
+    font-weight: 950;
+}

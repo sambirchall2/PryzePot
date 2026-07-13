@@ -20,7 +20,7 @@ winnerName.textContent = championUsername;
 winnerTag.textContent = championData.winnerTag || "";
 if (rewardAmount) {
     if (championData.prizePool && Number(championData.prizePool) > 0) {
-        rewardAmount.textContent = "$" + Number(championData.prizePool).toLocaleString();
+        rewardAmount.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(championData.prizePool).toLocaleString();
     } else {
         rewardAmount.textContent = "Glory";
     }

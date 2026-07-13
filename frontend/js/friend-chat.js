@@ -18,6 +18,10 @@ const friendStatus = document.getElementById("friendStatus");
 const challengeButton = document.getElementById("challengeButton");
 
 const messagesContainer = document.getElementById("messagesContainer");
+
+function challengeButtonLabel(fee) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
+}
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 
@@ -199,8 +203,8 @@ challengeFeeButtons.forEach(function (button) {
         selectedChallengeFee = Number(button.dataset.entryFee);
 
         sendChallengeButton.disabled = false;
-        sendChallengeButton.textContent =
-            "Send $" + selectedChallengeFee + " Challenge";
+        sendChallengeButton.innerHTML =
+            "Send " + challengeButtonLabel(selectedChallengeFee);
     });
 });
 
@@ -234,8 +238,8 @@ if (sendChallengeButton) {
                     showToast(data.message || "Could not send challenge.", "error");
 
                     sendChallengeButton.disabled = false;
-                    sendChallengeButton.textContent =
-                        "Send $" + selectedChallengeFee + " Challenge";
+                    sendChallengeButton.innerHTML =
+                        "Send " + challengeButtonLabel(selectedChallengeFee);
 
                     return;
                 }
@@ -250,8 +254,8 @@ if (sendChallengeButton) {
                 showToast("Could not send challenge.", "error");
 
                 sendChallengeButton.disabled = false;
-                sendChallengeButton.textContent =
-                    "Send $" + selectedChallengeFee + " Challenge";
+                sendChallengeButton.innerHTML =
+                    "Send " + challengeButtonLabel(selectedChallengeFee);
             });
     });
 }

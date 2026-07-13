@@ -57,6 +57,8 @@ const ACTIVE_MATCH_EXPIRATION_MINUTES = 30;
 const SEASON_ZERO_SIZE = 128;
 const SEASON_ZERO_DEADLINE = new Date("2026-09-05T20:00:00-04:00");
 
+const DAILY_REWARD_SCHEDULE = [25, 50, 75, 100, 125, 150, 175];
+
 function cleanTag(tag) {
     return tag.replace("#", "").toUpperCase();
 }
@@ -3026,6 +3028,64 @@ app.post("/api/users/heartbeat", requireAuth, async function (req, res) {
 
     res.json({
         success: true
+    });
+});
+
+app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
+    const username = req.username;
+
+    const foundUser = await supabase
+        .from("users")
+        .select("balance, login_streak, last_reward_date")
+        .eq("username", username)
+        .maybeSingle();
+
+    if (foundUser.error || !foundUser.data) {
+        res.json({
+            success: false,
+            message: "Could not load user."
+        });
+        return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const currentStreak = foundUser.data.login_streak || 0;
+    const lastRewardDate = foundUser.data.last_reward_date;
+    const currentBalance = foundUser.data.balance || 0;
+
+    if (lastRewardDate === today) {
+        res.json({
+            success: true,
+            alreadyClaimed: true,
+            streak: currentStreak,
+            balance: currentBalance
+        });
+        return;
+    }
+
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const newStreak = lastRewardDate === yesterday
+        ? (currentStreak >= 7 ? 1 : currentStreak + 1)
+        : 1;
+
+    const reward = DAILY_REWARD_SCHEDULE[newStreak - 1];
+    const newBalance = currentBalance + reward;
+
+    await supabase
+        .from("users")
+        .update({
+            balance: newBalance,
+            login_streak: newStreak,
+            last_reward_date: today
+        })
+        .eq("username", username);
+
+    res.json({
+        success: true,
+        alreadyClaimed: false,
+        reward: reward,
+        streak: newStreak,
+        balance: newBalance
     });
 });
 

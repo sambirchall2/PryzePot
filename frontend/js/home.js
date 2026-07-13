@@ -8,6 +8,29 @@ const notificationBell = document.getElementById("notificationBell");
 const notificationCount = document.getElementById("notificationCount");
 const homeProfileCard = document.getElementById("homeProfileCard");
 
+const dailyRewardPopup = document.getElementById("dailyRewardPopup");
+const dailyRewardStreak = document.getElementById("dailyRewardStreak");
+const dailyRewardAmount = document.getElementById("dailyRewardAmount");
+
+function showDailyRewardPopup(streak, reward) {
+    if (!dailyRewardPopup) return;
+
+    dailyRewardStreak.textContent = streak;
+    dailyRewardAmount.textContent = reward;
+
+    dailyRewardPopup.classList.remove("hidden");
+
+    setTimeout(function () {
+        dailyRewardPopup.classList.add("hidden");
+    }, 4000);
+}
+
+if (dailyRewardPopup) {
+    dailyRewardPopup.addEventListener("click", function () {
+        dailyRewardPopup.classList.add("hidden");
+    });
+}
+
 function loadHomeProfile() {
     if (!homeProfileCard) return;
 
@@ -170,6 +193,27 @@ function sendHeartbeat() {
     });
 }
 
+function claimDailyReward() {
+    if (!username) return;
+
+    apiFetch("/api/users/daily-reward", {
+        method: "POST",
+        body: JSON.stringify({})
+    })
+    .then(function (data) {
+        if (!data.success || data.alreadyClaimed) return;
+
+        localStorage.setItem("balance", data.balance);
+
+        showDailyRewardPopup(data.streak, data.reward);
+
+        loadHomeProfile();
+    })
+    .catch(function (error) {
+        console.log("DAILY REWARD ERROR:", error);
+    });
+}
+
 const leaderboardCard = document.getElementById("leaderboardCard");
 
 if (leaderboardCard) {
@@ -259,6 +303,7 @@ loadHomeProfile();
 loadNotificationCount();
 sendHeartbeat();
 loadActiveTournament();
+claimDailyReward();
 
 setInterval(loadNotificationCount, 15000);
 setInterval(sendHeartbeat, 30000);

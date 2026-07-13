@@ -34,7 +34,11 @@ const challengeFeeButtons = document.querySelectorAll(".challenge-fee-btn");
 const backButton = document.getElementById("backButton");
 
 function formatMoney(value) {
-    return "$" + Number(value || 0).toLocaleString();
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(value || 0).toLocaleString();
+}
+
+function challengeButtonLabel(fee) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
 }
 
 function setButtonLoading(text) {
@@ -326,7 +330,7 @@ if (profileTitle) {
                 xpFill.style.width = (xpProgress.progress_percent || 0) + "%";
             }, 150);
 
-            lifetimeWinnings.textContent =
+            lifetimeWinnings.innerHTML =
                 formatMoney(stats.lifetime_winnings);
 
             record.textContent =
@@ -366,8 +370,8 @@ challengeFeeButtons.forEach(function(button){
 
         sendChallengeButton.disabled = false;
 
-        sendChallengeButton.textContent =
-            "Send $" + selectedChallengeFee + " Challenge";
+        sendChallengeButton.innerHTML =
+            "Send " + challengeButtonLabel(selectedChallengeFee);
 
     });
 
@@ -403,8 +407,8 @@ if (sendChallengeButton) {
 
         sendChallengeButton.disabled = false;
 
-        sendChallengeButton.textContent =
-            "Send $" + selectedChallengeFee + " Challenge";
+        sendChallengeButton.innerHTML =
+            "Send " + challengeButtonLabel(selectedChallengeFee);
 
         return;
 
@@ -424,8 +428,8 @@ if (sendChallengeButton) {
                 showToast("Could not send challenge.", "error");
 
                 sendChallengeButton.disabled = false;
-                sendChallengeButton.textContent =
-                    "Send $" + selectedChallengeFee + " Challenge";
+                sendChallengeButton.innerHTML =
+                    "Send " + challengeButtonLabel(selectedChallengeFee);
             });
     });
 }

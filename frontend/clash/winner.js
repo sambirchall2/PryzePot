@@ -9,7 +9,7 @@ const confettiContainer = document.getElementById("confettiContainer");
 const matchResult = localStorage.getItem("matchResult");
 const entryFee = localStorage.getItem("entryFee") || "0";
 
-entryAmount.textContent = "$" + entryFee;
+entryAmount.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + entryFee;
 
 if (matchResult === "loss") {
     resultBadge.textContent = "Result Submitted";

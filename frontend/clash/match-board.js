@@ -193,7 +193,7 @@ function renderTournaments() {
             </div>
 
             <div class="match-entry">
-                $${tournament.entry_fee}
+                <img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${tournament.entry_fee}
             </div>
 
             <div class="match-mode">
@@ -205,7 +205,7 @@ function renderTournaments() {
             </div>
 
             <div class="match-timer">
-                Prize Pool: $${prizePool}
+                Prize Pool: <img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${prizePool}
             </div>
 
             <div class="match-timer">
@@ -323,7 +323,7 @@ async function renderMatches() {
             </div>
 
             <div class="match-entry">
-                $${match.entryFee}
+                <img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${match.entryFee}
             </div>
 
             <div class="match-mode">

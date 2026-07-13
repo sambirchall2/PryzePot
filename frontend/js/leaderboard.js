@@ -14,7 +14,7 @@ let selectedTime = "week";
 let selectedGame = "all";
 
 function formatMoney(amount) {
-    return "$" + Number(amount || 0).toLocaleString();
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(amount || 0).toLocaleString();
 }
 
 function normalizeLeaderboardPlayer(player) {

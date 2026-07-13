@@ -6,11 +6,20 @@
     <title>PryzePot Home</title>
     <link rel="stylesheet" href="../css/home.css">
     <link rel="stylesheet" href="../css/profile-system.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
 </head>
 
 <body>
 
 <div id="menuOverlay" class="menu-overlay"></div>
+
+<div id="dailyRewardPopup" class="daily-reward-popup hidden">
+    <div class="daily-reward-card">
+        <img src="../assets/p-coin-stack.png" alt="P-Coins" class="daily-reward-coin">
+        <div class="daily-reward-title">Day <span id="dailyRewardStreak">1</span> Streak!</div>
+        <div class="daily-reward-amount">+<span id="dailyRewardAmount">25</span> P-Coins</div>
+    </div>
+</div>
 
 <div id="sideMenu" class="side-menu">
 
@@ -142,6 +151,7 @@
 
 </div>
 <script src="../js/api.js"></script>
+<script src="../js/toast.js"></script>
 <script src="../js/profile-system.js"></script>
 <script src="../js/home.js"></script>
 

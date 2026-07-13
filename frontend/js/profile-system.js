@@ -135,7 +135,7 @@ function renderHomeProfileCard(container, profile) {
 
                         <div class="pp-home-stats">
                             <span>Level ${profile.level}</span>
-                            <span>$ ${Number(profile.balance || 0).toLocaleString()}</span>
+                            <span><img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${Number(profile.balance || 0).toLocaleString()}</span>
                         </div>
 
                     </div>

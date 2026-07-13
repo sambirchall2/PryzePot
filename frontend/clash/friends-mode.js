@@ -17,6 +17,10 @@ const sendChallengeButton = document.getElementById("sendChallengeButton");
 let selectedFriendUsername = null;
 let selectedChallengeFee = null;
 
+function challengeButtonLabel(fee) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
+}
+
 if (backButton) {
     backButton.addEventListener("click", function () {
         window.location.href = "online.html";
@@ -201,8 +205,8 @@ challengeFeeButtons.forEach(function (button) {
         selectedChallengeFee = Number(button.dataset.entryFee);
 
         sendChallengeButton.disabled = false;
-        sendChallengeButton.textContent =
-            "Send $" + selectedChallengeFee + " Challenge";
+        sendChallengeButton.innerHTML =
+            "Send " + challengeButtonLabel(selectedChallengeFee);
     });
 });
 
@@ -232,8 +236,8 @@ if (sendChallengeButton) {
                     showToast(data.message || "Could not send challenge.", "error");
 
                     sendChallengeButton.disabled = false;
-                    sendChallengeButton.textContent =
-                        "Send $" + selectedChallengeFee + " Challenge";
+                    sendChallengeButton.innerHTML =
+                        "Send " + challengeButtonLabel(selectedChallengeFee);
 
                     return;
                 }
@@ -249,8 +253,8 @@ if (sendChallengeButton) {
                 showToast("Could not send challenge.", "error");
 
                 sendChallengeButton.disabled = false;
-                sendChallengeButton.textContent =
-                    "Send $" + selectedChallengeFee + " Challenge";
+                sendChallengeButton.innerHTML =
+                    "Send " + challengeButtonLabel(selectedChallengeFee);
             });
     });
 }

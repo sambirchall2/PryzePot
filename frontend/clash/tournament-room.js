@@ -668,15 +668,15 @@ async function renderTournamentRoom(
     }
 
     if (entryFeeDisplay) {
-        entryFeeDisplay.textContent = isSeasonZero
+        entryFeeDisplay.innerHTML = isSeasonZero
             ? "FREE"
-            : "$" + entryFee;
+            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + entryFee;
     }
 
     if (prizePoolDisplay) {
-        prizePoolDisplay.textContent = isSeasonZero
+        prizePoolDisplay.innerHTML = isSeasonZero
             ? "Gift Cards & Merch"
-            : "$" + prizePool;
+            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + prizePool;
     }
 
     if (playerList) {

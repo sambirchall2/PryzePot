@@ -2,7 +2,7 @@ const backBtn = document.getElementById("backBtn");
 const entryGrid = document.getElementById("entryGrid");
 const continueBtn = document.getElementById("continueBtn");
 
-const entryFees = [1, 2, 5, 10, 50, 100];
+const entryFees = [25, 50, 100, 250, 500, 1000, 2500];
 
 let selectedEntry = null;
 
@@ -19,7 +19,7 @@ entryFees.forEach(function (amount) {
     card.className = "entry-card";
 
     card.innerHTML = `
-        <div class="entry-amount">$${amount}</div>
+        <div class="entry-amount"><img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${amount}</div>
         <div class="entry-label">ENTRY</div>
     `;
 
@@ -36,7 +36,7 @@ entryFees.forEach(function (amount) {
         localStorage.removeItem("entryXp");
 
         continueBtn.disabled = false;
-        continueBtn.textContent = "CONTINUE WITH $" + selectedEntry;
+        continueBtn.textContent = "CONTINUE WITH " + selectedEntry + " P-COINS";
     });
 
     entryGrid.appendChild(card);

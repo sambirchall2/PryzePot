@@ -97,8 +97,8 @@ function checkChallengeStatus() {
 
             challengerName.textContent = challenge.challenger_username || "You";
             receiverName.textContent = challenge.receiver_username || "Friend";
-            entryFeeText.textContent =
-                "$" + Number(challenge.entry_fee || 0).toLocaleString() + " Match";
+            entryFeeText.innerHTML =
+                '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(challenge.entry_fee || 0).toLocaleString() + " Match";
 
             expiresAt = Number(challenge.created_at || Date.now()) + 5 * 60 * 1000;
             updateCountdown();
