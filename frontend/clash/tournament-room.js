@@ -670,13 +670,13 @@ async function renderTournamentRoom(
     if (entryFeeDisplay) {
         entryFeeDisplay.innerHTML = isSeasonZero
             ? "FREE"
-            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + entryFee;
+            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + entryFee;
     }
 
     if (prizePoolDisplay) {
         prizePoolDisplay.innerHTML = isSeasonZero
             ? "Gift Cards & Merch"
-            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + prizePool;
+            : '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + prizePool;
     }
 
     if (playerList) {

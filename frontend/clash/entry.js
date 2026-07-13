@@ -19,7 +19,7 @@ entryFees.forEach(function (amount) {
     card.className = "entry-card";
 
     card.innerHTML = `
-        <div class="entry-amount"><img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${amount}</div>
+        <div class="entry-amount"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">${amount}</div>
         <div class="entry-label">ENTRY</div>
     `;
 
@@ -36,7 +36,7 @@ entryFees.forEach(function (amount) {
         localStorage.removeItem("entryXp");
 
         continueBtn.disabled = false;
-        continueBtn.textContent = "CONTINUE WITH " + selectedEntry + " P-COINS";
+        continueBtn.textContent = "CONTINUE WITH " + selectedEntry + " VAULT CREDITS";
     });
 
     entryGrid.appendChild(card);

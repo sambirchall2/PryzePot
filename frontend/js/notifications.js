@@ -222,7 +222,7 @@ function createChallengeCard(challenge) {
         </div>
 
         <div class="challenge-entry">
-            <img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">${Number(challenge.entry_fee || 0).toLocaleString()} Match
+            <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">${Number(challenge.entry_fee || 0).toLocaleString()} Match
         </div>
 
         <div class="challenge-buttons">

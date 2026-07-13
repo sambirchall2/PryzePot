@@ -983,7 +983,7 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     if (!debit.success) {
         res.json({
             success: false,
-            message: "Not enough P-Coins to post this match."
+            message: "Not enough Vault Credits to post this match."
         });
         return;
     }
@@ -1131,7 +1131,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         if (!debit.success) {
             res.json({
                 success: false,
-                message: "Not enough P-Coins to create this tournament."
+                message: "Not enough Vault Credits to create this tournament."
             });
             return;
         }
@@ -1350,7 +1350,7 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         if (!debit.success) {
             res.json({
                 success: false,
-                message: "Not enough P-Coins to join this tournament."
+                message: "Not enough Vault Credits to join this tournament."
             });
             return;
         }
@@ -1499,7 +1499,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     if (!debit.success) {
         res.json({
             success: false,
-            message: "Not enough P-Coins to join this match."
+            message: "Not enough Vault Credits to join this match."
         });
         return;
     }
@@ -3416,7 +3416,7 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
     if (!debit.success) {
         res.json({
             success: false,
-            message: "Not enough P-Coins to send this challenge."
+            message: "Not enough Vault Credits to send this challenge."
         });
         return;
     }
@@ -3685,7 +3685,7 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
 
         res.json({
             success: false,
-            message: "Not enough P-Coins to accept this challenge."
+            message: "Not enough Vault Credits to accept this challenge."
         });
         return;
     }

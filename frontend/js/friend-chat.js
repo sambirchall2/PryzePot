@@ -20,7 +20,7 @@ const challengeButton = document.getElementById("challengeButton");
 const messagesContainer = document.getElementById("messagesContainer");
 
 function challengeButtonLabel(fee) {
-    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + fee + " Challenge";
 }
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");

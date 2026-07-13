@@ -34,11 +34,11 @@ const challengeFeeButtons = document.querySelectorAll(".challenge-fee-btn");
 const backButton = document.getElementById("backButton");
 
 function formatMoney(value) {
-    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(value || 0).toLocaleString();
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(value || 0).toLocaleString();
 }
 
 function challengeButtonLabel(fee) {
-    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + fee + " Challenge";
 }
 
 function setButtonLoading(text) {

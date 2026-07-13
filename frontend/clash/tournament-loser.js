@@ -26,7 +26,7 @@ if (championKnown) {
     if (rewardAmount) {
         if (championData.prizePool && Number(championData.prizePool) > 0) {
             rewardAmount.innerHTML =
-                '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + Number(championData.prizePool).toLocaleString();
+                '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(championData.prizePool).toLocaleString();
         } else {
             rewardAmount.textContent = "Champion";
         }

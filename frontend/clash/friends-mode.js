@@ -18,7 +18,7 @@ let selectedFriendUsername = null;
 let selectedChallengeFee = null;
 
 function challengeButtonLabel(fee) {
-    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + fee + " Challenge";
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + fee + " Challenge";
 }
 
 if (backButton) {

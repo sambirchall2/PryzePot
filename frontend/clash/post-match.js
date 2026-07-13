@@ -28,7 +28,7 @@ if (!clashPlayerTag || !clashFriendLink) {
     window.location.href = "connect-clash.html";
 }
 
-entryAmountDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="P-Coins">' + entryFee;
+entryAmountDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + entryFee;
 playerTagDisplay.textContent = clashPlayerTag;
 
 if (createType === "tournament" && tournamentSize) {
