@@ -293,6 +293,12 @@ body {
     font-weight: 1000;
 }
 
+.pack-status.owned {
+    background: rgba(200,255,0,.16);
+    color: #c8ff00;
+    border: 1px solid rgba(200,255,0,.4);
+}
+
 .preview-panel {
     margin-top: 4px;
     padding: 16px;
@@ -522,6 +528,42 @@ body {
     color: #c8ff00;
     border-color: rgba(200,255,0,.65);
     box-shadow: 0 0 14px rgba(200,255,0,.24);
+}
+
+.item-buy-btn {
+    width: 100%;
+    margin-top: 8px;
+    border: 1px solid rgba(200,255,0,.5);
+    border-radius: 999px;
+    padding: 7px 6px;
+    background: linear-gradient(180deg, rgba(200,255,0,.22), rgba(200,255,0,.08));
+    color: #c8ff00;
+    font-size: 10px;
+    font-weight: 1000;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.item-buy-btn:hover {
+    background: linear-gradient(180deg, rgba(200,255,0,.32), rgba(200,255,0,.12));
+}
+
+.item-buy-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.item-owned-badge {
+    width: 100%;
+    margin-top: 8px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    padding: 7px 6px;
+    background: rgba(255,255,255,.08);
+    color: #d7d7d7;
+    font-size: 10px;
+    font-weight: 1000;
+    text-transform: uppercase;
 }
 
 .title-preview.legend {

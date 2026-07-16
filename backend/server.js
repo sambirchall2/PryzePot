@@ -82,144 +82,139 @@ function getMatchXpForResult(resultType) {
 
     return 0;
 }
-const VAULT_REWARDS = {
+const VAULT_TIERS = [
+    {
+        key: "recruit",
+        name: "Bronze Vault",
+        price: 5000,
+        image: "assets/vault/vaults/recruit-vault.png",
+        items: [
+            { id: "fireborn", type: "Avatar", name: "Fireborn", image: "assets/vault/avatars/fireborn.png" },
+            { id: "frostbite", type: "Avatar", name: "Frostbite", image: "assets/vault/avatars/frostbite.png" },
+            { id: "storm-face", type: "Avatar", name: "Storm Face", image: "assets/vault/avatars/storm-face.png" },
 
-    recruit: [
-        { id: "fireborn", type: "Avatar", name: "Fireborn", image: "assets/vault/avatars/fireborn.png" },
-        { id: "frostbite", type: "Avatar", name: "Frostbite", image: "assets/vault/avatars/frostbite.png" },
-        { id: "storm-face", type: "Avatar", name: "Storm Face", image: "assets/vault/avatars/storm-face.png" },
+            { id: "inferno", type: "Banner", name: "Inferno", image: "assets/vault/banners/inferno.png" },
+            { id: "ice-wall", type: "Banner", name: "Ice Wall", image: "assets/vault/banners/ice-wall.png" },
+            { id: "dark-matter", type: "Banner", name: "Dark Matter", image: "assets/vault/banners/dark-matter.png" },
 
-        { id: "inferno", type: "Banner", name: "Inferno", image: "assets/vault/banners/inferno.png" },
-        { id: "ice-wall", type: "Banner", name: "Ice Wall", image: "assets/vault/banners/ice-wall.png" },
-        { id: "dark-matter", type: "Banner", name: "Dark Matter", image: "assets/vault/banners/dark-matter.png" },
+            { id: "bronze-edge-frame", type: "Frame", name: "Bronze Edge", image: "assets/vault/frames/bronze-edge-frame.png" },
+            { id: "rising-player-badge", type: "Badge", name: "Rising Player", image: "assets/vault/badges/rising-player-badge.png" },
+            { id: "the-grinder", type: "Title", name: "The Grinder", image: null }
+        ]
+    },
 
-        { id: "bronze-edge-frame", type: "Frame", name: "Bronze Edge", image: "assets/vault/frames/bronze-edge-frame.png" },
-        { id: "rising-player-badge", type: "Badge", name: "Rising Player", image: "assets/vault/badges/rising-player-badge.png" },
-        { id: "the-grinder", type: "Title", name: "The Grinder", image: null }
-    ],
+    {
+        key: "contender",
+        name: "Silver Vault",
+        price: 15000,
+        image: "assets/vault/vaults/contender-vault.png",
+        items: [
+            { id: "crown-core", type: "Avatar", name: "Crown Core", image: "assets/vault/avatars/crown-core.png" },
+            { id: "dragon-pulse", type: "Avatar", name: "Dragon Pulse", image: "assets/vault/avatars/dragon-pulse.png" },
+            { id: "skull-shade", type: "Avatar", name: "Skull Shade", image: "assets/vault/avatars/skull-shade.png" },
 
-    contender: [
-        { id: "crown-core", type: "Avatar", name: "Crown Core", image: "assets/vault/avatars/crown-core.png" },
-        { id: "dragon-pulse", type: "Avatar", name: "Dragon Pulse", image: "assets/vault/avatars/dragon-pulse.png" },
-        { id: "skull-shade", type: "Avatar", name: "Skull Shade", image: "assets/vault/avatars/skull-shade.png" },
+            { id: "lightning-run", type: "Banner", name: "Lightning Run", image: "assets/vault/banners/lightning-run.png" },
+            { id: "neon-galaxy", type: "Banner", name: "Neon Galaxy", image: "assets/vault/banners/neon-galaxy.png" },
+            { id: "lime-smoke", type: "Banner", name: "Lime Smoke", image: "assets/vault/banners/lime-smoke.png" },
 
-        { id: "lightning-run", type: "Banner", name: "Lightning Run", image: "assets/vault/banners/lightning-run.png" },
-        { id: "neon-galaxy", type: "Banner", name: "Neon Galaxy", image: "assets/vault/banners/neon-galaxy.png" },
-        { id: "lime-smoke", type: "Banner", name: "Lime Smoke", image: "assets/vault/banners/lime-smoke.png" },
+            { id: "silver-edge-frame", type: "Frame", name: "Silver Edge", image: "assets/vault/frames/silver-edge-frame.png" },
+            { id: "veteran-badge", type: "Badge", name: "Veteran", image: "assets/vault/badges/veteran-badge.png" },
+            { id: "shield-mark-badge", type: "Badge", name: "Shield Mark", image: "assets/vault/badges/shield-mark-badge.png" },
+            { id: "king-slayer", type: "Title", name: "King Slayer", image: null }
+        ]
+    },
 
-        { id: "silver-edge-frame", type: "Frame", name: "Silver Edge", image: "assets/vault/frames/silver-edge-frame.png" },
-        { id: "veteran-badge", type: "Badge", name: "Veteran", image: "assets/vault/badges/veteran-badge.png" },
-        { id: "shield-mark-badge", type: "Badge", name: "Shield Mark", image: "assets/vault/badges/shield-mark-badge.png" },
-        { id: "king-slayer", type: "Title", name: "King Slayer", image: null }
-    ],
+    {
+        key: "elite",
+        name: "Gold Vault",
+        price: 35000,
+        image: "assets/vault/vaults/elite-vault.png",
+        items: [
+            { id: "neon-wizard", type: "Avatar", name: "Neon Wizard", image: "assets/vault/avatars/neon-wizard.png" },
+            { id: "cyber-knight", type: "Avatar", name: "Cyber Knight", image: "assets/vault/avatars/cyber-knight.png" },
+            { id: "dark-mask", type: "Avatar", name: "Dark Mask", image: "assets/vault/avatars/dark-mask.png" },
 
-    elite: [
-        { id: "neon-wizard", type: "Avatar", name: "Neon Wizard", image: "assets/vault/avatars/neon-wizard.png" },
-        { id: "cyber-knight", type: "Avatar", name: "Cyber Knight", image: "assets/vault/avatars/cyber-knight.png" },
-        { id: "dark-mask", type: "Avatar", name: "Dark Mask", image: "assets/vault/avatars/dark-mask.png" },
+            { id: "green-fire", type: "Banner", name: "Green Fire", image: "assets/vault/banners/green-fire.png" },
+            { id: "battlefield", type: "Banner", name: "Battlefield", image: "assets/vault/banners/battlefield.png" },
+            { id: "crystal-core", type: "Banner", name: "Crystal Core", image: "assets/vault/banners/crystal-core.png" },
 
-        { id: "green-fire", type: "Banner", name: "Green Fire", image: "assets/vault/banners/green-fire.png" },
-        { id: "battlefield", type: "Banner", name: "Battlefield", image: "assets/vault/banners/battlefield.png" },
-        { id: "crystal-core", type: "Banner", name: "Crystal Core", image: "assets/vault/banners/crystal-core.png" },
+            { id: "gold-edge-frame", type: "Frame", name: "Gold Edge", image: "assets/vault/frames/gold-edge-frame.png" },
+            { id: "winner-badge", type: "Badge", name: "Winner", image: "assets/vault/badges/winner-badge.png" },
+            { id: "elite-competitor", type: "Title", name: "Elite Competitor", image: null }
+        ]
+    },
 
-        { id: "gold-edge-frame", type: "Frame", name: "Gold Edge", image: "assets/vault/frames/gold-edge-frame.png" },
-        { id: "winner-badge", type: "Badge", name: "Winner", image: "assets/vault/badges/winner-badge.png" },
-        { id: "elite-competitor", type: "Title", name: "Elite Competitor", image: null }
-    ],
+    {
+        key: "champion",
+        name: "Platinum Vault",
+        price: 75000,
+        image: "assets/vault/vaults/champion-vault.png",
+        items: [
+            { id: "inferno-dragon", type: "Avatar", name: "Inferno Dragon", image: "assets/vault/avatars/inferno-dragon.png" },
+            { id: "royal-ghost", type: "Avatar", name: "Royal Ghost", image: "assets/vault/avatars/royal-ghost.png" },
+            { id: "void-reaper", type: "Avatar", name: "Void Reaper", image: "assets/vault/avatars/void-reaper.png" },
 
-    champion: [
-        { id: "inferno-dragon", type: "Avatar", name: "Inferno Dragon", image: "assets/vault/avatars/inferno-dragon.png" },
-        { id: "royal-ghost", type: "Avatar", name: "Royal Ghost", image: "assets/vault/avatars/royal-ghost.png" },
-        { id: "void-reaper", type: "Avatar", name: "Void Reaper", image: "assets/vault/avatars/void-reaper.png" },
+            { id: "inferno-banner", type: "Banner", name: "Inferno Banner", image: "assets/vault/banners/inferno-banner.png" },
+            { id: "thunder-vault", type: "Banner", name: "Thunder Vault", image: "assets/vault/banners/thunder-vault.png" },
+            { id: "toxic-neon", type: "Banner", name: "Toxic Neon", image: "assets/vault/banners/toxic-neon.png" },
 
-        { id: "inferno-banner", type: "Banner", name: "Inferno Banner", image: "assets/vault/banners/inferno-banner.png" },
-        { id: "thunder-vault", type: "Banner", name: "Thunder Vault", image: "assets/vault/banners/thunder-vault.png" },
-        { id: "toxic-neon", type: "Banner", name: "Toxic Neon", image: "assets/vault/banners/toxic-neon.png" },
+            { id: "diamond-edge-frame", type: "Frame", name: "Diamond Edge", image: "assets/vault/frames/diamond-edge-frame.png" },
+            { id: "champion-badge", type: "Badge", name: "Champion Badge", image: "assets/vault/badges/champion-badge.png" },
+            { id: "champion-title", type: "Title", name: "Champion", image: null }
+        ]
+    },
 
-        { id: "diamond-edge-frame", type: "Frame", name: "Diamond Edge", image: "assets/vault/frames/diamond-edge-frame.png" },
-        { id: "champion-badge", type: "Badge", name: "Champion Badge", image: "assets/vault/badges/champion-badge.png" },
-        { id: "champion-title", type: "Title", name: "Champion", image: null }
-    ],
+    {
+        key: "master",
+        name: "Diamond Vault",
+        price: 150000,
+        image: "assets/vault/vaults/master-vault.png",
+        items: [
+            { id: "neon-wolf", type: "Avatar", name: "Neon Wolf", image: "assets/vault/avatars/neon-wolf.png" },
+            { id: "vault-guardian", type: "Avatar", name: "Vault Guardian", image: "assets/vault/avatars/vault-guardian.png" },
+            { id: "crown-phantom", type: "Avatar", name: "Crown Phantom", image: "assets/vault/avatars/crown-phantom.png" },
 
-    master: [
-        { id: "neon-wolf", type: "Avatar", name: "Neon Wolf", image: "assets/vault/avatars/neon-wolf.png" },
-        { id: "vault-guardian", type: "Avatar", name: "Vault Guardian", image: "assets/vault/avatars/vault-guardian.png" },
-        { id: "crown-phantom", type: "Avatar", name: "Crown Phantom", image: "assets/vault/avatars/crown-phantom.png" },
+            { id: "master-galaxy", type: "Banner", name: "Master Galaxy", image: "assets/vault/banners/master-galaxy.png" },
+            { id: "crown-flame", type: "Banner", name: "Crown Flame", image: "assets/vault/banners/crown-flame.png" },
+            { id: "overcharge", type: "Banner", name: "Overcharge", image: "assets/vault/banners/overcharge.png" },
 
-        { id: "master-galaxy", type: "Banner", name: "Master Galaxy", image: "assets/vault/banners/master-galaxy.png" },
-        { id: "crown-flame", type: "Banner", name: "Crown Flame", image: "assets/vault/banners/crown-flame.png" },
-        { id: "overcharge", type: "Banner", name: "Overcharge", image: "assets/vault/banners/overcharge.png" },
+            { id: "master-frame", type: "Frame", name: "Master Frame", image: "assets/vault/frames/master-frame.png" },
+            { id: "master-badge", type: "Badge", name: "Master Badge", image: "assets/vault/badges/master-badge.png" },
+            { id: "master-title", type: "Title", name: "Master", image: null }
+        ]
+    },
 
-        { id: "master-frame", type: "Frame", name: "Master Frame", image: "assets/vault/frames/master-frame.png" },
-        { id: "master-badge", type: "Badge", name: "Master Badge", image: "assets/vault/badges/master-badge.png" },
-        { id: "master-title", type: "Title", name: "Master", image: null }
-    ],
+    {
+        key: "legend",
+        name: "Obsidian Vault",
+        price: 300000,
+        image: "assets/vault/vaults/legend-vault.png",
+        items: [
+            { id: "legend-crown", type: "Avatar", name: "Legend Crown", image: "assets/vault/avatars/legend-crown.png" },
+            { id: "ancient-dragon", type: "Avatar", name: "Ancient Dragon", image: "assets/vault/avatars/ancient-dragon.png" },
+            { id: "final-boss", type: "Avatar", name: "Final Boss", image: "assets/vault/avatars/final-boss.png" },
 
-    legend: [
-        { id: "legend-crown", type: "Avatar", name: "Legend Crown", image: "assets/vault/avatars/legend-crown.png" },
-        { id: "ancient-dragon", type: "Avatar", name: "Ancient Dragon", image: "assets/vault/avatars/ancient-dragon.png" },
-        { id: "final-boss", type: "Avatar", name: "Final Boss", image: "assets/vault/avatars/final-boss.png" },
+            { id: "hall-of-legends", type: "Banner", name: "Hall of Legends", image: "assets/vault/banners/hall-of-legends.png" },
+            { id: "eternal-flame", type: "Banner", name: "Eternal Flame", image: "assets/vault/banners/eternal-flame.png" },
+            { id: "god-spark", type: "Banner", name: "God Spark", image: "assets/vault/banners/god-spark.png" },
 
-        { id: "hall-of-legends", type: "Banner", name: "Hall of Legends", image: "assets/vault/banners/hall-of-legends.png" },
-        { id: "eternal-flame", type: "Banner", name: "Eternal Flame", image: "assets/vault/banners/eternal-flame.png" },
-        { id: "god-spark", type: "Banner", name: "God Spark", image: "assets/vault/banners/god-spark.png" },
-
-        { id: "legend-frame", type: "Frame", name: "Legend Frame", image: "assets/vault/frames/legend-frame.png" },
-        { id: "legend-badge", type: "Badge", name: "Legend Badge", image: "assets/vault/badges/legend-badge.png" },
-        { id: "pryze-legend", type: "Title", name: "Pryze Legend", image: null }
-    ]
-
-};
-async function unlockVaultRewards(username, level) {
-    if (!username || !level) return;
-
-    let rewardsToUnlock = [];
-
-    if (level >= 5) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.recruit);
+            { id: "legend-frame", type: "Frame", name: "Legend Frame", image: "assets/vault/frames/legend-frame.png" },
+            { id: "legend-badge", type: "Badge", name: "Legend Badge", image: "assets/vault/badges/legend-badge.png" },
+            { id: "pryze-legend", type: "Title", name: "Pryze Legend", image: null }
+        ]
     }
+];
 
-    if (level >= 10) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.contender);
-    }
-
-    if (level >= 15) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.elite);
-    }
-
-    if (level >= 20) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.champion);
-    }
-
-    if (level >= 30) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.master);
-    }
-
-    if (level >= 50) {
-        rewardsToUnlock = rewardsToUnlock.concat(VAULT_REWARDS.legend);
-    }
-
-    if (rewardsToUnlock.length === 0) return;
-
-    const rows = rewardsToUnlock.map(function (reward) {
-        return {
-            username: username,
-            cosmetic_id: reward.id,
-            cosmetic_type: reward.type,
-            cosmetic_name: reward.name,
-            cosmetic_image: reward.image
-        };
-    });
-
-    const result = await supabase
-        .from("user_cosmetics")
-        .upsert(rows, {
-            onConflict: "username,cosmetic_id"
+function findVaultCatalogItem(cosmeticId) {
+    for (const tier of VAULT_TIERS) {
+        const item = tier.items.find(function (i) {
+            return i.id === cosmeticId;
         });
 
-    if (result.error) {
-        console.log("UNLOCK VAULT REWARDS ERROR:", result.error);
+        if (item) return { tier: tier, item: item };
     }
+
+    return null;
 }
 
 function calculateLevelFromXp(xp) {
@@ -296,8 +291,6 @@ async function awardXpToUser(username, xpAmount) {
     console.log("AWARD XP ERROR:", updateResult.error);
     return null;
 }
-
-await unlockVaultRewards(username, newLevel);
 
 return updateResult.data;
 }
@@ -854,10 +847,6 @@ app.post("/api/login", async function (req, res) {
                 .eq("username", foundUser.data.username);
         }
 
-        await unlockVaultRewards(
-            foundUser.data.username,
-            foundUser.data.level || calculateLevelFromXp(foundUser.data.xp || 0)
-        );
         res.json({
             success: true,
             message: "Login successful!",
@@ -2447,6 +2436,98 @@ app.post("/api/users/equip-cosmetic", requireAuth, async function (req, res) {
         success: true,
         message: "Cosmetic equipped.",
         user: updateResult.data
+    });
+});
+app.get("/api/vault/catalog", async function (req, res) {
+    res.json({
+        success: true,
+        tiers: VAULT_TIERS.map(function (tier) {
+            return {
+                key: tier.key,
+                name: tier.name,
+                price: tier.price,
+                image: tier.image,
+                items: tier.items
+            };
+        })
+    });
+});
+app.post("/api/users/purchase-cosmetic", requireAuth, async function (req, res) {
+    const username = req.username;
+    const cosmeticId = req.body.cosmeticId;
+
+    if (!cosmeticId) {
+        res.json({
+            success: false,
+            message: "Missing cosmetic id."
+        });
+        return;
+    }
+
+    const found = findVaultCatalogItem(cosmeticId);
+
+    if (!found) {
+        res.json({
+            success: false,
+            message: "This item is not in the Vault catalog."
+        });
+        return;
+    }
+
+    const ownedResult = await supabase
+        .from("user_cosmetics")
+        .select("cosmetic_id")
+        .eq("username", username)
+        .eq("cosmetic_id", cosmeticId)
+        .maybeSingle();
+
+    if (ownedResult.data) {
+        res.json({
+            success: false,
+            message: "You already own this item."
+        });
+        return;
+    }
+
+    const price = found.tier.price;
+    const debit = await adjustBalance(username, -price);
+
+    if (!debit.success) {
+        res.json({
+            success: false,
+            message: "Not enough Vault Credits to purchase this item."
+        });
+        return;
+    }
+
+    const grantResult = await supabase
+        .from("user_cosmetics")
+        .upsert({
+            username: username,
+            cosmetic_id: found.item.id,
+            cosmetic_type: found.item.type,
+            cosmetic_name: found.item.name,
+            cosmetic_image: found.item.image
+        }, {
+            onConflict: "username,cosmetic_id"
+        });
+
+    if (grantResult.error) {
+        console.log("PURCHASE COSMETIC GRANT ERROR:", grantResult.error);
+        await adjustBalance(username, price);
+
+        res.json({
+            success: false,
+            message: "Could not complete purchase. Please try again."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Purchase complete.",
+        balance: debit.balance,
+        cosmetic: found.item
     });
 });
 app.get("/api/leaderboard", async function (req, res) {
