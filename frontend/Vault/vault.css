@@ -36,6 +36,31 @@ body {
         linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,.58) 48%, #050805 92%),
         url("../assets/vault/vaults/vault-door.png") center 34px / 130% auto no-repeat;
     opacity: .98;
+    animation: doorBreathe 6s ease-in-out infinite;
+}
+
+.hero-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(200,255,0,.16) 48%, transparent 62%);
+    background-size: 260% 260%;
+    background-position: 120% 0%;
+    mix-blend-mode: screen;
+    animation: doorSheen 7s ease-in-out infinite;
+    animation-delay: 1.2s;
+}
+
+@keyframes doorBreathe {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.06); }
+}
+
+@keyframes doorSheen {
+    0% { background-position: 130% -10%; opacity: 0; }
+    12% { opacity: .9; }
+    45% { background-position: -10% 60%; opacity: 0; }
+    100% { background-position: -10% 60%; opacity: 0; }
 }
 
 .vault-hero::after {
@@ -157,6 +182,13 @@ body {
     color: #c8ff00;
     font-size: 13px;
     line-height: 1.1;
+    display: flex;
+    align-items: center;
+}
+
+.xp-card > div:last-child strong .coin-icon {
+    height: 1.5em;
+    margin-right: 4px;
 }
 
 .xp-row {
@@ -185,6 +217,43 @@ body {
     border-radius: 999px;
     background: linear-gradient(90deg, #88ff00, #c8ff00);
     box-shadow: 0 0 18px rgba(200,255,0,.55);
+    transition: width 1s cubic-bezier(.2,.8,.2,1);
+    position: relative;
+    overflow: hidden;
+}
+
+.xp-fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+    width: 40%;
+    animation: xpShine 2.4s ease-in-out infinite;
+}
+
+@keyframes xpShine {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(340%); }
+}
+
+.xp-card > div:last-child .coin-icon {
+    animation: coinIdle 3.4s ease-in-out infinite;
+    transform-origin: 50% 60%;
+}
+
+@keyframes coinIdle {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-8deg); }
+}
+
+.credits-flash {
+    animation: creditsFlash .5s ease;
+}
+
+@keyframes creditsFlash {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.14); text-shadow: 0 0 16px rgba(200,255,0,.85); }
+    100% { transform: scale(1); }
 }
 
 .section-heading {
@@ -229,29 +298,57 @@ body {
         linear-gradient(180deg, #171717, #050505);
     text-align: center;
     cursor: pointer;
+    opacity: 0;
+    transform: translateY(14px);
+    animation: cardIn .5s ease forwards;
+    transition: transform .22s ease, border-color .22s ease;
+}
+
+@keyframes cardIn {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.vault-pack-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(200,255,0,.5);
 }
 
 .vault-pack-card.active {
     border-color: rgba(200,255,0,.95);
-    box-shadow: 0 0 24px rgba(200,255,0,.28);
+    animation: cardIn .5s ease forwards, activeGlow 2.6s ease-in-out infinite .5s;
 }
 
-.pack-level {
+.vault-pack-card.active:hover {
+    transform: translateY(-4px);
+}
+
+@keyframes activeGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(200,255,0,.24); }
+    50% { box-shadow: 0 0 32px rgba(200,255,0,.42); }
+}
+
+.pack-price {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(200,255,0,.1);
+    border: 1px solid rgba(200,255,0,.3);
     color: #c8ff00;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 1000;
-    text-transform: uppercase;
 }
 
-.pack-number {
-    margin-top: 2px;
-    font-size: 34px;
-    font-weight: 1000;
+.pack-price .coin-icon {
+    height: 1.5em;
+    margin-right: 2px;
 }
 
 .pack-art {
     height: 112px;
-    margin: 6px 0 10px;
+    margin: 10px 0 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -263,6 +360,10 @@ body {
     object-fit: contain;
     filter: drop-shadow(0 0 18px rgba(200,255,0,.28));
     transition: transform .22s ease, filter .22s ease;
+}
+
+.vault-pack-card:hover .pack-art img {
+    transform: translateY(-3px) scale(1.05);
 }
 
 .vault-pack-card.active .pack-art img {
@@ -291,12 +392,14 @@ body {
     color: #d7d7d7;
     font-size: 10px;
     font-weight: 1000;
+    transition: background .2s ease, color .2s ease;
 }
 
 .pack-status.owned {
     background: rgba(200,255,0,.16);
     color: #c8ff00;
     border: 1px solid rgba(200,255,0,.4);
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
 }
 
 .preview-panel {
@@ -307,6 +410,12 @@ body {
     background:
         radial-gradient(circle at 92% 0%, rgba(200,255,0,.12), transparent 28%),
         rgba(8,8,8,.96);
+    transition: opacity .16s ease, transform .16s ease;
+}
+
+.preview-panel.switching {
+    opacity: 0;
+    transform: translateY(4px);
 }
 
 .preview-panel h3 {
@@ -322,6 +431,35 @@ body {
     font-size: 12px;
 }
 
+.item-group {
+    margin-bottom: 16px;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: cardIn .45s ease forwards;
+}
+
+.item-group:last-child {
+    margin-bottom: 0;
+}
+
+.item-group-label {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin: 0 2px 8px;
+    color: #c8ff00;
+    font-size: 10px;
+    font-weight: 1000;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.item-group-label span {
+    color: #777;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
 .preview-items {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -329,7 +467,7 @@ body {
 }
 
 .preview-item {
-    min-height: 132px;
+    min-height: 116px;
     padding: 10px 8px;
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,.11);
@@ -337,10 +475,30 @@ body {
         radial-gradient(circle at top, rgba(200,255,0,.10), transparent 42%),
         linear-gradient(180deg, rgba(24,24,24,.98), rgba(5,5,5,.98));
     text-align: center;
+    opacity: 0;
+    transform: translateY(10px) scale(.97);
+    animation: itemIn .4s ease forwards;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
+
+@keyframes itemIn {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .preview-item:hover {
     border-color: rgba(200,255,0,.65);
     box-shadow: 0 0 18px rgba(200,255,0,.14);
+    transform: translateY(-2px);
+}
+
+.preview-item.just-bought {
+    animation: boughtFlash .6s ease;
+}
+
+@keyframes boughtFlash {
+    0% { box-shadow: 0 0 0 rgba(200,255,0,0); }
+    30% { box-shadow: 0 0 26px rgba(200,255,0,.5); border-color: rgba(200,255,0,.8); }
+    100% { box-shadow: 0 0 18px rgba(200,255,0,.14); }
 }
 
 .preview-icon {
@@ -349,20 +507,17 @@ body {
     place-items: center;
     margin-bottom: 8px;
     font-size: 28px;
+    transition: transform .18s ease;
+}
+
+.preview-item:hover .preview-icon {
+    transform: scale(1.06);
 }
 
 .preview-name {
     font-size: 11px;
     font-weight: 1000;
     color: #fff;
-}
-
-.preview-type {
-    margin-top: 4px;
-    color: #c8ff00;
-    font-size: 9px;
-    font-weight: 1000;
-    text-transform: uppercase;
 }
 
 @media (min-width: 900px) {
@@ -462,14 +617,6 @@ body {
     display: block;
     filter: drop-shadow(0 0 14px rgba(200,255,0,.24));
 }
-.preview-item:has(.preview-type) .preview-icon img {
-    border-radius: 12px;
-}
-
-.preview-type + .preview-banner {
-    display: none;
-}
-
 .preview-icon img[src*="/banners/"] {
     width: 86px;
     height: 36px;
@@ -533,6 +680,10 @@ body {
 .item-buy-btn {
     width: 100%;
     margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     border: 1px solid rgba(200,255,0,.5);
     border-radius: 999px;
     padding: 7px 6px;
@@ -542,15 +693,37 @@ body {
     font-weight: 1000;
     text-transform: uppercase;
     cursor: pointer;
+    transition: background .18s ease, transform .18s ease;
+}
+
+.item-buy-btn .coin-icon {
+    height: 1.3em;
 }
 
 .item-buy-btn:hover {
     background: linear-gradient(180deg, rgba(200,255,0,.32), rgba(200,255,0,.12));
+    transform: translateY(-1px);
 }
 
 .item-buy-btn:disabled {
     opacity: .5;
     cursor: default;
+    transform: none;
+}
+
+.item-buy-btn.shake {
+    animation: shake .4s ease;
+    background: linear-gradient(180deg, rgba(255,90,90,.28), rgba(255,90,90,.1));
+    border-color: rgba(255,120,120,.6);
+    color: #ffb3b3;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
 }
 
 .item-owned-badge {
@@ -564,6 +737,13 @@ body {
     font-size: 10px;
     font-weight: 1000;
     text-transform: uppercase;
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(.7); }
+    70% { opacity: 1; transform: scale(1.08); }
+    100% { transform: scale(1); }
 }
 
 .title-preview.legend {
@@ -575,4 +755,28 @@ body {
     box-shadow:
         0 0 18px rgba(255,215,90,.24),
         0 0 28px rgba(200,255,0,.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-bg,
+    .hero-bg::after,
+    .xp-fill::after,
+    .xp-card > div:last-child .coin-icon,
+    .vault-pack-card,
+    .vault-pack-card.active,
+    .pack-status.owned,
+    .item-group,
+    .preview-item,
+    .item-owned-badge,
+    .credits-flash,
+    .item-buy-btn.shake {
+        animation: none !important;
+    }
+
+    .vault-pack-card,
+    .preview-item,
+    .item-group {
+        opacity: 1;
+        transform: none;
+    }
 }

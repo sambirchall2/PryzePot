@@ -18,10 +18,20 @@ const TIER_RARITY = {
     legend: "legend"
 };
 
+const GROUP_ORDER = ["Avatar", "Banner", "Frame", "Badge", "Title"];
+const GROUP_LABEL = {
+    Avatar: "Avatars",
+    Banner: "Banners",
+    Frame: "Frames",
+    Badge: "Badges",
+    Title: "Titles"
+};
+
 let vaultTiers = [];
 let ownedCosmeticIds = new Set();
 let currentBalance = 0;
 let activeTierKey = null;
+let firstCreditsRender = true;
 
 function normalizeVaultImagePath(image) {
     if (!image) return "";
@@ -41,8 +51,20 @@ if (backButton) {
     });
 }
 
+function formatMoney(value) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(value || 0).toLocaleString();
+}
+
 function updateCreditsDisplay() {
-    creditsAmount.textContent = currentBalance.toLocaleString() + " Credits";
+    creditsAmount.innerHTML = formatMoney(currentBalance);
+
+    if (!firstCreditsRender) {
+        creditsAmount.classList.remove("credits-flash");
+        void creditsAmount.offsetWidth;
+        creditsAmount.classList.add("credits-flash");
+    }
+
+    firstCreditsRender = false;
 }
 
 function getItemIcon(type) {
@@ -69,7 +91,7 @@ function renderVaultTiers() {
             return tier.key === activeTierKey;
         }) || vaultTiers[0];
 
-    vaultTrack.innerHTML = vaultTiers.map(function (tier) {
+    vaultTrack.innerHTML = vaultTiers.map(function (tier, index) {
         const ownedCount = tier.items.filter(function (item) {
             return ownedCosmeticIds.has(item.id);
         }).length;
@@ -77,9 +99,8 @@ function renderVaultTiers() {
         const active = targetTier && tier.key === targetTier.key;
 
         return `
-            <article class="vault-pack-card ${active ? "active" : ""}" data-key="${tier.key}">
-                <div class="pack-level">Price</div>
-                <div class="pack-number">${tier.price.toLocaleString()}</div>
+            <article class="vault-pack-card ${active ? "active" : ""}" data-key="${tier.key}" style="animation-delay:${index * 55}ms">
+                <div class="pack-price">${formatMoney(tier.price)}</div>
 
                 <div class="pack-art">
                     <img src="${normalizeVaultImagePath(tier.image)}" alt="${tier.name}">
@@ -106,35 +127,57 @@ function renderPreview(tier) {
     activeTierKey = tier.key;
     const rarity = TIER_RARITY[tier.key];
 
+    const groups = {};
+    tier.items.forEach(function (item) {
+        groups[item.type] = groups[item.type] || [];
+        groups[item.type].push(item);
+    });
+
+    let itemIndex = 0;
+
+    const groupsHtml = GROUP_ORDER.filter(function (type) {
+        return groups[type];
+    }).map(function (type) {
+        const items = groups[type];
+
+        const itemsHtml = items.map(function (item) {
+            const owned = ownedCosmeticIds.has(item.id);
+            const delay = itemIndex * 45;
+            itemIndex += 1;
+
+            return `
+                <div class="preview-item" data-cosmetic-id="${item.id}" style="animation-delay:${delay}ms">
+                    <div class="preview-icon">
+                        ${item.image
+                            ? `<img src="${normalizeVaultImagePath(item.image)}" alt="${item.name}">`
+                            : renderTitlePreview(item, item.type, item.name, rarity)
+                        }
+                    </div>
+
+                    <div class="preview-name">${item.name}</div>
+
+                    ${owned
+                        ? `<div class="item-owned-badge">Owned</div>`
+                        : `<button class="item-buy-btn" data-item-id="${item.id}">${formatMoney(tier.price)}</button>`
+                    }
+                </div>
+            `;
+        }).join("");
+
+        return `
+            <div class="item-group">
+                <div class="item-group-label">${GROUP_LABEL[type]} <span>${items.length}</span></div>
+                <div class="preview-items">${itemsHtml}</div>
+            </div>
+        `;
+    }).join("");
+
     previewPanel.innerHTML = `
         <h3>${tier.name}</h3>
 
         <p>Every item in this Vault costs ${tier.price.toLocaleString()} Vault Credits.</p>
 
-        <div class="preview-items">
-            ${tier.items.map(function (item) {
-                const owned = ownedCosmeticIds.has(item.id);
-
-                return `
-                    <div class="preview-item">
-                        <div class="preview-icon">
-                            ${item.image
-                                ? `<img src="${normalizeVaultImagePath(item.image)}" alt="${item.name}">`
-                                : renderTitlePreview(item, item.type, item.name, rarity)
-                            }
-                        </div>
-
-                        <div class="preview-name">${item.name}</div>
-                        <div class="preview-type">${item.type}</div>
-
-                        ${owned
-                            ? `<div class="item-owned-badge">Owned</div>`
-                            : `<button class="item-buy-btn" data-item-id="${item.id}">Buy · ${tier.price.toLocaleString()}</button>`
-                        }
-                    </div>
-                `;
-            }).join("")}
-        </div>
+        ${groupsHtml}
     `;
 
     previewPanel.querySelectorAll(".item-buy-btn").forEach(function (button) {
@@ -142,6 +185,15 @@ function renderPreview(tier) {
             purchaseCosmetic(button.dataset.itemId, tier, button);
         });
     });
+}
+
+function swapPreview(tier) {
+    previewPanel.classList.add("switching");
+
+    setTimeout(function () {
+        renderPreview(tier);
+        previewPanel.classList.remove("switching");
+    }, 140);
 }
 
 function addVaultCardClicks() {
@@ -159,10 +211,23 @@ function addVaultCardClicks() {
             card.classList.add("active");
 
             if (selectedTier) {
-                renderPreview(selectedTier);
+                swapPreview(selectedTier);
             }
         });
     });
+}
+
+function flashButtonError(button, message) {
+    const original = button.innerHTML;
+    button.textContent = message;
+    button.classList.add("shake");
+    button.disabled = true;
+
+    setTimeout(function () {
+        button.classList.remove("shake");
+        button.innerHTML = original;
+        button.disabled = false;
+    }, 1100);
 }
 
 function purchaseCosmetic(cosmeticId, tier, button) {
@@ -175,9 +240,8 @@ function purchaseCosmetic(cosmeticId, tier, button) {
         body: JSON.stringify({ cosmeticId: cosmeticId })
     }).then(function (data) {
         if (!data.success) {
-            alert(data.message || "Could not complete purchase.");
             if (button) {
-                button.disabled = false;
+                flashButtonError(button, data.message || "Purchase failed");
             }
             return;
         }
@@ -186,12 +250,17 @@ function purchaseCosmetic(cosmeticId, tier, button) {
         currentBalance = data.balance;
         localStorage.setItem("balance", data.balance);
         updateCreditsDisplay();
+
+        const card = previewPanel.querySelector('.preview-item[data-cosmetic-id="' + cosmeticId + '"]');
+        if (card) {
+            card.classList.add("just-bought");
+        }
+
         renderVaultTiers();
     }).catch(function (error) {
         console.log("PURCHASE COSMETIC ERROR:", error);
-        alert("Something went wrong purchasing this item.");
         if (button) {
-            button.disabled = false;
+            flashButtonError(button, "Try again");
         }
     });
 }
