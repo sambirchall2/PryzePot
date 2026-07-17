@@ -53,6 +53,66 @@ function saveClashToLocalStorage(user) {
     }
 }
 
+function completeLogin(token, username, balance) {
+    localStorage.setItem("authToken", token);
+    localStorage.setItem("username", username);
+    localStorage.setItem("balance", balance);
+
+    apiFetch("/api/users/" + username + "/profile")
+    .then(function (profileData) {
+        if (!profileData.success || !profileData.user) {
+            window.location.href = "../html/profile-setup.html";
+            return;
+        }
+
+        saveClashToLocalStorage(profileData.user);
+        saveProfileToLocalStorage(profileData.user);
+
+        if (profileData.user.profile_completed) {
+            window.location.href = "../html/home.html";
+        } else {
+            window.location.href = "../html/profile-setup.html";
+        }
+    })
+    .catch(function (error) {
+        console.log("PROFILE LOAD ERROR:", error);
+        window.location.href = "../html/profile-setup.html";
+    });
+}
+
+(function checkOAuthRedirect() {
+    if (window.location.hash.indexOf("token=") === -1) {
+        return;
+    }
+
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const token = params.get("token");
+    const username = params.get("username");
+    const balance = params.get("balance");
+
+    if (!token || !username) {
+        return;
+    }
+
+    history.replaceState(null, "", window.location.pathname);
+    completeLogin(token, username, balance);
+})();
+
+const googleSignInBtn = document.getElementById("googleSignInBtn");
+const discordSignInBtn = document.getElementById("discordSignInBtn");
+
+if (googleSignInBtn) {
+    googleSignInBtn.addEventListener("click", function () {
+        window.location.href = API_BASE_URL + "/api/auth/google";
+    });
+}
+
+if (discordSignInBtn) {
+    discordSignInBtn.addEventListener("click", function () {
+        window.location.href = API_BASE_URL + "/api/auth/discord";
+    });
+}
+
 signInButton.addEventListener("click", function () {
     const username = usernameInput.value.trim();
     const email = document.getElementById("emailInput").value.trim();
@@ -94,30 +154,7 @@ signInButton.addEventListener("click", function () {
             return;
         }
 
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("username", data.user.username);
-        localStorage.setItem("balance", data.user.balance);
-
-        apiFetch("/api/users/" + data.user.username + "/profile")
-        .then(function (profileData) {
-            if (!profileData.success || !profileData.user) {
-                window.location.href = "../html/profile-setup.html";
-                return;
-            }
-
-            saveClashToLocalStorage(profileData.user);
-            saveProfileToLocalStorage(profileData.user);
-
-            if (profileData.user.profile_completed) {
-                window.location.href = "../html/home.html";
-            } else {
-                window.location.href = "../html/profile-setup.html";
-            }
-        })
-        .catch(function (error) {
-            console.log("PROFILE LOAD ERROR:", error);
-            window.location.href = "../html/profile-setup.html";
-        });
+        completeLogin(data.token, data.user.username, data.user.balance);
     })
     .catch(function (error) {
         console.log("LOGIN ERROR:", error);

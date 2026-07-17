@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Username | PryzePot</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+    <div class="login-page">
+
+        <div class="overlay">
+
+            <div class="login-container">
+
+                <img
+                    class="logo"
+                    src="../assets/logo.png"
+                    alt="PryzePot Logo"
+                >
+
+                <p class="signup-text" id="introText">
+                    Almost done! Choose a username to finish creating your PryzePot account.
+                </p>
+
+                <input
+                    id="usernameInput"
+                    type="text"
+                    placeholder="Username"
+                >
+
+                <button
+                    id="continueBtn"
+                    class="sign-in-btn"
+                >
+                    CONTINUE
+                </button>
+
+                <p class="signup-text" id="errorText" style="display: none; color: #ff8080;"></p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/oauth-username.js"></script>
+
+</body>
+</html>

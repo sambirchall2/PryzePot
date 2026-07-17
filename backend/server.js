@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const supabase = require("./supabase");
 
 const app = express();
@@ -25,6 +26,41 @@ function signToken(username) {
     return jwt.sign({ username: username }, process.env.JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN
     });
+}
+
+function signOAuthState(provider) {
+    return jwt.sign({ provider: provider, purpose: "oauth_state" }, process.env.JWT_SECRET, {
+        expiresIn: "10m"
+    });
+}
+
+function verifyOAuthState(state, expectedProvider) {
+    const payload = jwt.verify(state, process.env.JWT_SECRET);
+
+    if (payload.purpose !== "oauth_state" || payload.provider !== expectedProvider) {
+        throw new Error("Invalid OAuth state.");
+    }
+
+    return payload;
+}
+
+function signPendingSignup(identity) {
+    return jwt.sign({
+        provider: identity.provider,
+        oauthId: identity.oauthId,
+        email: identity.email || "",
+        purpose: "oauth_pending_signup"
+    }, process.env.JWT_SECRET, { expiresIn: "15m" });
+}
+
+function verifyPendingSignup(token) {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (payload.purpose !== "oauth_pending_signup") {
+        throw new Error("Invalid pending signup token.");
+    }
+
+    return payload;
 }
 
 function requireAuth(req, res, next) {
@@ -862,6 +898,276 @@ app.post("/api/login", async function (req, res) {
             message: "Invalid email or password."
         });
     }
+});
+
+function redirectWithToken(res, user) {
+    const token = signToken(user.username);
+    const params = new URLSearchParams({
+        token: token,
+        username: user.username,
+        balance: String(user.balance)
+    });
+
+    res.redirect(process.env.FRONTEND_URL + "/html/index.html#" + params.toString());
+}
+
+async function handleOAuthProfile(res, identity) {
+    const existingByProvider = await supabase
+        .from("users")
+        .select("username, balance")
+        .eq("oauth_provider", identity.provider)
+        .eq("oauth_id", identity.oauthId)
+        .maybeSingle();
+
+    if (existingByProvider.data) {
+        redirectWithToken(res, existingByProvider.data);
+        return;
+    }
+
+    if (identity.email && identity.emailVerified) {
+        const existingByEmail = await supabase
+            .from("users")
+            .select("username, balance")
+            .eq("email", identity.email)
+            .maybeSingle();
+
+        if (existingByEmail.data) {
+            const linkResult = await supabase
+                .from("users")
+                .update({
+                    oauth_provider: identity.provider,
+                    oauth_id: identity.oauthId
+                })
+                .eq("username", existingByEmail.data.username);
+
+            if (linkResult.error) {
+                console.log("OAUTH LINK ERROR:", linkResult.error);
+            }
+
+            redirectWithToken(res, existingByEmail.data);
+            return;
+        }
+    }
+
+    const pendingToken = signPendingSignup({
+        provider: identity.provider,
+        oauthId: identity.oauthId,
+        email: identity.email
+    });
+
+    res.redirect(process.env.FRONTEND_URL + "/html/oauth-username.html#pending=" + encodeURIComponent(pendingToken));
+}
+
+app.get("/api/auth/google", function (req, res) {
+    const state = signOAuthState("google");
+    const params = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        response_type: "code",
+        scope: "openid email profile",
+        access_type: "online",
+        prompt: "select_account",
+        state: state
+    });
+
+    res.redirect("https://accounts.google.com/o/oauth2/v2/auth?" + params.toString());
+});
+
+app.get("/api/auth/google/callback", async function (req, res) {
+    const code = req.query.code;
+    const state = req.query.state;
+
+    try {
+        verifyOAuthState(state, "google");
+    } catch (error) {
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=state");
+        return;
+    }
+
+    if (!code) {
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=missing_code");
+        return;
+    }
+
+    try {
+        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                code: code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+                grant_type: "authorization_code"
+            })
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenData.access_token) {
+            console.log("GOOGLE TOKEN ERROR:", tokenData);
+            res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=token");
+            return;
+        }
+
+        const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: "Bearer " + tokenData.access_token }
+        });
+
+        const profile = await profileResponse.json();
+
+        await handleOAuthProfile(res, {
+            provider: "google",
+            oauthId: profile.sub,
+            email: profile.email,
+            emailVerified: profile.email_verified === true
+        });
+    } catch (error) {
+        console.log("GOOGLE OAUTH ERROR:", error);
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=server");
+    }
+});
+
+app.get("/api/auth/discord", function (req, res) {
+    const state = signOAuthState("discord");
+    const params = new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        redirect_uri: process.env.DISCORD_REDIRECT_URI,
+        response_type: "code",
+        scope: "identify email",
+        prompt: "consent",
+        state: state
+    });
+
+    res.redirect("https://discord.com/api/oauth2/authorize?" + params.toString());
+});
+
+app.get("/api/auth/discord/callback", async function (req, res) {
+    const code = req.query.code;
+    const state = req.query.state;
+
+    try {
+        verifyOAuthState(state, "discord");
+    } catch (error) {
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=state");
+        return;
+    }
+
+    if (!code) {
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=missing_code");
+        return;
+    }
+
+    try {
+        const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                code: code,
+                client_id: process.env.DISCORD_CLIENT_ID,
+                client_secret: process.env.DISCORD_CLIENT_SECRET,
+                redirect_uri: process.env.DISCORD_REDIRECT_URI,
+                grant_type: "authorization_code"
+            })
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenData.access_token) {
+            console.log("DISCORD TOKEN ERROR:", tokenData);
+            res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=token");
+            return;
+        }
+
+        const profileResponse = await fetch("https://discord.com/api/users/@me", {
+            headers: { Authorization: "Bearer " + tokenData.access_token }
+        });
+
+        const profile = await profileResponse.json();
+
+        await handleOAuthProfile(res, {
+            provider: "discord",
+            oauthId: profile.id,
+            email: profile.email,
+            emailVerified: profile.verified === true
+        });
+    } catch (error) {
+        console.log("DISCORD OAUTH ERROR:", error);
+        res.redirect(process.env.FRONTEND_URL + "/html/index.html?oauthError=server");
+    }
+});
+
+app.post("/api/auth/oauth-signup/complete", async function (req, res) {
+    const pendingToken = req.body.pendingToken;
+    const username = req.body.username;
+
+    if (!pendingToken || !username) {
+        res.json({
+            success: false,
+            message: "Please choose a username."
+        });
+        return;
+    }
+
+    let identity;
+    try {
+        identity = verifyPendingSignup(pendingToken);
+    } catch (error) {
+        res.json({
+            success: false,
+            message: "This sign-up link has expired. Please sign in again."
+        });
+        return;
+    }
+
+    const existingUsername = await supabase
+        .from("users")
+        .select("username")
+        .eq("username", username)
+        .maybeSingle();
+
+    if (existingUsername.data) {
+        res.json({
+            success: false,
+            message: "That username is already taken."
+        });
+        return;
+    }
+
+    const placeholderPassword = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+
+    const newUser = await supabase
+        .from("users")
+        .insert({
+            username: username,
+            email: identity.email || null,
+            password: placeholderPassword,
+            balance: 0,
+            oauth_provider: identity.provider,
+            oauth_id: identity.oauthId
+        })
+        .select()
+        .single();
+
+    if (newUser.error) {
+        console.log("OAUTH SIGNUP ERROR:", newUser.error);
+
+        res.json({
+            success: false,
+            message: "Could not create account."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Account created!",
+        token: signToken(newUser.data.username),
+        user: {
+            username: newUser.data.username,
+            balance: newUser.data.balance
+        }
+    });
 });
 
 app.post("/api/clash/verify-player", async function (req, res) {
