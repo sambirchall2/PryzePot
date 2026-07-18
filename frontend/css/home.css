@@ -297,16 +297,16 @@ body {
 }
 
 .action-card {
-    background: var(--surface-raised);
+    background: linear-gradient(160deg, var(--surface-raised), var(--surface) 80%);
     border: 1px solid var(--surface-line);
-    border-radius: var(--r-sm);
+    border-radius: var(--r-md);
     text-align: center;
-    padding: 14px 6px;
+    padding: 18px 6px 14px;
     cursor: pointer;
     opacity: 0;
     transform: translateY(12px);
     animation: fadeUp .5s var(--ease) forwards;
-    transition: transform .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+    transition: transform .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
 }
 
 .action-card:nth-child(1) { animation-delay: .15s; }
@@ -315,21 +315,43 @@ body {
 
 .action-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(200,255,0,.35);
-    background: rgba(200,255,0,.04);
+    border-color: rgba(200,255,0,.4);
+    box-shadow: 0 10px 24px -10px rgba(200,255,0,.35);
+}
+
+.action-card:active {
+    transform: translateY(-1px) scale(.98);
 }
 
 .action-icon {
-    font-size: 24px;
-    margin-bottom: 8px;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(160deg, rgba(200,255,0,.22), rgba(200,255,0,.05));
+    border: 1px solid rgba(200,255,0,.3);
+    color: var(--accent);
+    transition: transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+
+.action-card:hover .action-icon {
+    transform: scale(1.06);
+    box-shadow: 0 0 16px rgba(200,255,0,.3);
+}
+
+.action-icon svg {
+    width: 21px;
+    height: 21px;
 }
 
 .action-card p {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 700;
-    letter-spacing: .2px;
+    letter-spacing: .3px;
     text-transform: uppercase;
 }
 
@@ -337,7 +359,34 @@ body {
     display: block;
     margin-top: 4px;
     color: var(--accent);
-    font-size: 9px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .2px;
+}
+
+.action-card.disabled {
+    cursor: default;
+}
+
+.action-card.disabled:hover {
+    transform: none;
+    border-color: var(--surface-line);
+    box-shadow: none;
+}
+
+.action-card.disabled .action-icon {
+    background: rgba(255,255,255,.04);
+    border-color: var(--surface-line);
+    color: var(--ink-faint);
+}
+
+.action-card.disabled:hover .action-icon {
+    transform: none;
+    box-shadow: none;
+}
+
+.action-card.disabled span {
+    color: var(--ink-faint);
 }
 
 .tournament-card {

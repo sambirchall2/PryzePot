@@ -222,6 +222,15 @@ if (leaderboardCard) {
     });
 }
 
+const playGamesCard = document.getElementById("playGamesCard");
+const gamesContainer = document.querySelector(".games-container");
+
+if (playGamesCard && gamesContainer) {
+    playGamesCard.addEventListener("click", function () {
+        gamesContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+}
+
 const vaultHomeBanner = document.getElementById("vaultHomeBanner");
 
 if (vaultHomeBanner) {
