@@ -8,9 +8,11 @@
     --ink-faint: #5f6b5c;
 
     --accent: #c8ff00;
+    --accent-rgb: 200, 255, 0;
     --accent-ink: #0a1200;
     --accent-glow: rgba(200, 255, 0, 0.35);
     --danger: #ff5c5c;
+    --danger-rgb: 255, 92, 92;
 
     --font-display: "Rajdhani", Arial, sans-serif;
     --font-body: "Manrope", system-ui, Arial, sans-serif;

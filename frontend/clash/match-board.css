@@ -5,12 +5,12 @@
 body {
     margin: 0;
     min-height: 100vh;
-    color: white;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--ink);
+    font-family: var(--font-body);
 
     background:
-        radial-gradient(circle at top center, rgba(182,255,0,0.18), transparent 42%),
-        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+        radial-gradient(circle at top center, rgba(200, 255, 0, 0.18), transparent 42%),
+        linear-gradient(180deg, var(--surface-raised) 0%, var(--surface) 45%, var(--void) 100%);
 }
 
 .board-page {
@@ -28,119 +28,159 @@ body {
     height: 44px;
 
     border: none;
-    border-radius: 12px;
+    border-radius: var(--r-sm);
 
-    background: rgba(255,255,255,0.12);
-    color: white;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--ink);
 
     font-size: 40px;
     line-height: 34px;
 
     cursor: pointer;
+    transition: background .18s var(--ease), transform .18s var(--ease);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.back-btn:active {
+    transform: translateY(0) scale(.94);
 }
 
 .page-header {
     text-align: center;
     margin-bottom: 28px;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: tokenCardIn .5s var(--ease) forwards;
 }
 
 .eyebrow {
-    color: #b6ff00;
+    color: var(--accent);
+    font-family: var(--font-display);
     font-size: 13px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 2px;
     margin: 0 0 8px;
 }
 
 h1 {
     margin: 0 0 8px;
+    font-family: var(--font-display);
     font-size: 42px;
-    font-weight: 950;
+    font-weight: 700;
 }
 
 .subtitle {
-    color: rgba(255,255,255,0.7);
+    color: var(--ink-dim);
     margin: 0;
 }
 
 .section-label {
     margin: 26px 0 12px;
 
-    color: #b6ff00;
+    color: var(--accent);
+    font-family: var(--font-display);
 
     font-size: 13px;
-    font-weight: 950;
+    font-weight: 700;
     letter-spacing: 1.8px;
 
     text-align: center;
 }
 
 .season-card {
-    background: rgba(0,0,0,0.62);
+    background: rgba(0, 0, 0, 0.62);
 
-    border: 2px solid #b6ff00;
-    border-radius: 22px;
+    border: 2px solid var(--accent);
+    border-radius: var(--r-lg);
 
     padding: 20px;
 
     display: flex;
     flex-direction: column;
 
-    box-shadow: 0 0 28px rgba(182,255,0,0.12);
+    box-shadow: 0 0 28px rgba(200, 255, 0, 0.12);
+
+    opacity: 0;
+    transform: translateY(14px);
+    animation: tokenCardIn .5s var(--ease) forwards, seasonCardGlow 2.6s ease-in-out infinite;
+    animation-delay: .1s, .6s;
+}
+
+@keyframes seasonCardGlow {
+    0%, 100% { box-shadow: 0 0 22px rgba(200, 255, 0, 0.12); }
+    50% { box-shadow: 0 0 36px rgba(200, 255, 0, 0.28); }
 }
 
 .season-card h2 {
     margin: 0 0 8px;
+    font-family: var(--font-display);
     font-size: 22px;
+    font-weight: 700;
 }
 
 .season-card p {
     margin: 0;
-    color: rgba(255,255,255,0.72);
+    color: var(--ink-dim);
 }
 
 .season-card span {
     display: block;
     margin-top: 8px;
 
-    color: #b6ff00;
-    font-weight: 800;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 700;
     font-size: 13px;
 }
 
 .season-join-btn {
     border: none;
-    border-radius: 12px;
+    border-radius: var(--r-sm);
 
-    background: #b6ff00;
-    color: black;
+    background: var(--accent);
+    color: var(--accent-ink);
 
-    font-weight: 950;
+    font-family: var(--font-display);
+    font-weight: 700;
 
     width: 100%;
     height: 48px;
     margin-top: 16px;
 
     cursor: pointer;
+    transition: transform .16s var(--ease), filter .16s var(--ease);
+}
+
+.season-join-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.season-join-btn:not(:disabled):active {
+    transform: translateY(0) scale(.98);
 }
 
 .season-join-btn:disabled {
-    background: rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.5);
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--ink-faint);
     cursor: not-allowed;
 }
 
 .empty-tournament-state {
-    background: rgba(8,12,8,0.72);
+    background: rgba(8, 12, 8, 0.72);
 
-    border: 1px dashed rgba(182,255,0,0.25);
-    border-radius: 18px;
+    border: 1px dashed rgba(200, 255, 0, 0.25);
+    border-radius: var(--r-md);
 
     padding: 18px;
 
     text-align: center;
 
-    color: rgba(255,255,255,0.55);
+    color: var(--ink-faint);
     font-weight: 700;
 }
 
@@ -149,20 +189,32 @@ h1 {
 }
 
 .match-card {
-    background: rgba(8,12,8,0.92);
+    background: rgba(8, 12, 8, 0.92);
 
-    border: 1px solid rgba(182,255,0,0.35);
-    border-radius: 20px;
+    border: 1px solid rgba(200, 255, 0, 0.35);
+    border-radius: var(--r-md);
 
     padding: 20px;
     margin-bottom: 18px;
+
+    opacity: 0;
+    transform: translateY(14px);
+    animation: tokenCardIn .4s var(--ease) forwards;
+    transition: transform .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+
+.match-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(200, 255, 0, 0.6);
+    box-shadow: 0 10px 26px -8px rgba(200, 255, 0, 0.25);
 }
 
 .match-game {
-    color: #b6ff00;
+    color: var(--accent);
+    font-family: var(--font-display);
 
     font-size: 14px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 1px;
 
     text-transform: uppercase;
@@ -171,26 +223,35 @@ h1 {
 .match-entry {
     margin-top: 8px;
 
+    font-family: var(--font-display);
     font-size: 34px;
-    font-weight: 950;
+    font-weight: 700;
 }
 
 .match-mode {
     margin-top: 8px;
-    color: rgba(255,255,255,0.7);
+    color: var(--ink-dim);
 }
 
 .match-status {
     margin-top: 14px;
 
-    color: #b6ff00;
-    font-weight: 800;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 700;
+    animation: statusPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 0 rgba(200, 255, 0, 0); }
+    50% { opacity: .78; text-shadow: 0 0 10px rgba(200, 255, 0, .55); }
 }
 
 .match-timer {
     margin-top: 12px;
 
-    color: #b6ff00;
+    color: var(--accent);
+    font-family: var(--font-display);
 
     font-size: 14px;
     font-weight: 800;
@@ -203,15 +264,26 @@ h1 {
     margin-top: 18px;
 
     border: none;
-    border-radius: 14px;
+    border-radius: var(--r-md);
 
-    background: #b6ff00;
-    color: black;
+    background: var(--accent);
+    color: var(--accent-ink);
 
+    font-family: var(--font-display);
     font-size: 15px;
-    font-weight: 950;
+    font-weight: 700;
 
     cursor: pointer;
+    transition: transform .16s var(--ease), filter .16s var(--ease);
+}
+
+.join-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.join-btn:active {
+    transform: translateY(0) scale(.98);
 }
 
 .cancel-btn {
@@ -221,20 +293,31 @@ h1 {
     margin-top: 18px;
 
     border: none;
-    border-radius: 14px;
+    border-radius: var(--r-md);
 
-    background: #ff4444;
-    color: white;
+    background: var(--danger);
+    color: var(--ink);
 
+    font-family: var(--font-display);
     font-size: 15px;
-    font-weight: 950;
+    font-weight: 700;
 
     cursor: pointer;
+    transition: transform .16s var(--ease), filter .16s var(--ease);
+}
+
+.cancel-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.cancel-btn:active {
+    transform: translateY(0) scale(.98);
 }
 
 .empty-state {
     text-align: center;
-    color: rgba(255,255,255,0.6);
+    color: var(--ink-dim);
     margin-top: 24px;
 }
 .join-tournament-btn {
@@ -244,16 +327,28 @@ h1 {
     margin-top: 18px;
 
     border: none;
-    border-radius: 14px;
+    border-radius: var(--r-md);
 
-    background: #b6ff00;
-    color: black;
+    background: var(--accent);
+    color: var(--accent-ink);
 
+    font-family: var(--font-display);
     font-size: 15px;
-    font-weight: 950;
+    font-weight: 700;
 
     cursor: pointer;
+    transition: transform .16s var(--ease), filter .16s var(--ease);
 }
+
+.join-tournament-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.join-tournament-btn:active {
+    transform: translateY(0) scale(.98);
+}
+
 .match-player-row {
     display: flex;
     align-items: center;
@@ -266,8 +361,8 @@ h1 {
     height: 54px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #b6ff00;
-    box-shadow: 0 0 14px rgba(182,255,0,.35);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 14px rgba(200, 255, 0, .35);
 }
 
 .match-player-info {
@@ -275,13 +370,15 @@ h1 {
 }
 
 .match-player-name {
+    font-family: var(--font-display);
     font-size: 18px;
-    font-weight: 950;
+    font-weight: 700;
 }
 
 .match-player-level {
     margin-top: 4px;
-    color: #b6ff00;
+    color: var(--accent);
+    font-family: var(--font-display);
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
 }

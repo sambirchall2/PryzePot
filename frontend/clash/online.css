@@ -5,11 +5,11 @@
 body {
     margin: 0;
     min-height: 100vh;
-    color: white;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--ink);
+    font-family: var(--font-body);
     background:
-        radial-gradient(circle at top center, rgba(182, 255, 0, 0.14), transparent 35%),
-        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+        radial-gradient(circle at top center, rgba(200, 255, 0, 0.14), transparent 35%),
+        linear-gradient(180deg, var(--surface-raised) 0%, var(--surface) 45%, var(--void) 100%);
 }
 
 .online-page {
@@ -27,56 +27,86 @@ body {
     width: 44px;
     height: 44px;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--r-sm);
     background: rgba(255, 255, 255, 0.12);
-    color: white;
+    color: var(--ink);
     font-size: 40px;
     line-height: 34px;
     cursor: pointer;
+    transition: background .18s var(--ease), transform .18s var(--ease);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.back-btn:active {
+    transform: translateY(0) scale(.94);
 }
 
 h1 {
     margin: 0;
+    font-family: var(--font-display);
     font-size: 38px;
-    font-weight: 950;
+    font-weight: 700;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: tokenCardIn .5s var(--ease) forwards;
 }
 
 .subtitle {
     margin: 10px 0 34px;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--ink-dim);
     font-size: 16px;
     font-weight: 600;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: tokenCardIn .5s var(--ease) forwards;
+    animation-delay: .05s;
 }
 
 .online-option {
     width: 100%;
     min-height: 120px;
     margin-bottom: 22px;
-    border-radius: 20px;
-    border: 1px solid rgba(182, 255, 0, 0.35);
+    border-radius: var(--r-md);
+    border: 1px solid rgba(200, 255, 0, 0.35);
     background: rgba(8, 12, 8, 0.9);
-    color: white;
+    color: var(--ink);
     cursor: pointer;
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
-    transition: transform 0.18s ease, border-color 0.18s ease;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: tokenCardIn .5s var(--ease) forwards;
+    transition: transform 0.18s var(--ease), border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
+
+.online-option:nth-of-type(1) { animation-delay: .1s; }
+.online-option:nth-of-type(2) { animation-delay: .16s; }
 
 .online-option:hover {
     transform: translateY(-3px);
-    border-color: rgba(182, 255, 0, 0.85);
+    border-color: rgba(200, 255, 0, 0.85);
+    box-shadow: 0 0 24px rgba(200, 255, 0, 0.2), 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+.online-option:active {
+    transform: translateY(-1px) scale(.99);
 }
 
 .online-option span {
     display: block;
+    font-family: var(--font-display);
     font-size: 30px;
-    font-weight: 950;
+    font-weight: 700;
     text-transform: uppercase;
 }
 
 .online-option small {
     display: block;
     margin-top: 8px;
-    color: #b6ff00;
+    color: var(--accent);
     font-size: 14px;
     font-weight: 800;
 }

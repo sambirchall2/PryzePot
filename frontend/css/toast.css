@@ -9,16 +9,17 @@
 
     padding:15px 18px;
 
-    border-radius:16px;
+    border-radius:var(--r-md);
 
-    background:#101010;
-    color:white;
+    background:var(--surface);
+    color:var(--ink);
+    font-family:var(--font-body);
 
-    border:1px solid rgba(182,255,0,.35);
-    box-shadow:0 0 24px rgba(182,255,0,.18);
+    border:1px solid rgba(var(--accent-rgb),.35);
+    box-shadow:0 0 24px rgba(var(--accent-rgb),.18);
 
     font-size:14px;
-    font-weight:900;
+    font-weight:700;
     text-align:center;
 
     z-index:9999;
@@ -26,7 +27,7 @@
     opacity:0;
     pointer-events:none;
 
-    transition:.28s ease;
+    transition:transform .3s var(--ease), opacity .3s var(--ease);
 }
 
 .pryzepot-toast.show{
@@ -35,9 +36,11 @@
 }
 
 .pryzepot-toast.success{
-    color:#b6ff00;
+    color:var(--accent);
 }
 
 .pryzepot-toast.error{
-    color:#ff5c5c;
+    color:var(--danger);
+    border-color:rgba(var(--danger-rgb),.4);
+    box-shadow:0 0 24px rgba(var(--danger-rgb),.18);
 }

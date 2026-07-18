@@ -5,11 +5,11 @@
 body {
     margin: 0;
     min-height: 100vh;
-    color: white;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--ink);
+    font-family: var(--font-body);
     background:
-        radial-gradient(circle at top center, rgba(182, 255, 0, 0.14), transparent 35%),
-        linear-gradient(180deg, #102016 0%, #07100c 45%, #020202 100%);
+        radial-gradient(circle at top center, rgba(200, 255, 0, 0.14), transparent 35%),
+        linear-gradient(180deg, var(--surface-raised) 0%, var(--surface) 45%, var(--void) 100%);
     overflow-x: hidden;
 }
 
@@ -35,14 +35,24 @@ body {
     height: 38px;
 
     border: none;
-    border-radius: 10px;
+    border-radius: var(--r-sm);
 
     background: rgba(255, 255, 255, 0.12);
-    color: white;
+    color: var(--ink);
 
     font-size: 34px;
     line-height: 28px;
     cursor: pointer;
+    transition: background .18s var(--ease), transform .18s var(--ease);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.back-btn:active {
+    transform: translateY(0) scale(.94);
 }
 
 .clash-logo {
@@ -60,6 +70,9 @@ body {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+
+    opacity: 0;
+    animation: tokenCardIn .5s var(--ease) forwards;
 }
 
 .mode-card {
@@ -73,18 +86,31 @@ body {
     cursor: pointer;
     overflow: hidden;
 
-    border-radius: 18px;
-    border: 1px solid rgba(182, 255, 0, 0.22);
+    border-radius: var(--r-md);
+    border: 1px solid rgba(200, 255, 0, 0.22);
 
     background: rgba(0, 0, 0, 0.35);
 
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
 
-    transition: transform 0.2s ease;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: tokenCardIn .5s var(--ease) forwards;
+    transition: transform 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 
+.mode-card:nth-of-type(1) { animation-delay: .05s; }
+.mode-card:nth-of-type(2) { animation-delay: .1s; }
+.mode-card:nth-of-type(3) { animation-delay: .15s; }
+
 .mode-card:hover {
-    transform: scale(1.015);
+    transform: translateY(-3px) scale(1.015);
+    border-color: rgba(200, 255, 0, 0.55);
+    box-shadow: 0 0 24px rgba(200, 255, 0, 0.18), 0 16px 36px rgba(0, 0, 0, 0.38);
+}
+
+.mode-card:active {
+    transform: translateY(-1px) scale(1.005);
 }
 
 .mode-card img {
@@ -112,16 +138,23 @@ body {
 
     border-radius: 999px;
 
-    background: #b6ff00;
-    color: black;
+    background: var(--accent);
+    color: var(--accent-ink);
 
+    font-family: var(--font-display);
     font-size: 10px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.8px;
+    text-transform: uppercase;
 }
 
 .season-overlay {
     display: none;
+}
+
+.season-overlay h2 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
 }
 
 @media (max-width: 430px) {
