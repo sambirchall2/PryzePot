@@ -5,6 +5,7 @@ const waitingTitle = document.getElementById("waitingTitle");
 const waitingText = document.getElementById("waitingText");
 const countdownText = document.getElementById("countdownText");
 const cancelWaitingBtn = document.getElementById("cancelWaitingBtn");
+const statusIcon = document.getElementById("statusIcon");
 
 const challengerName = document.getElementById("challengerName");
 const receiverName = document.getElementById("receiverName");
