@@ -1,0 +1,52 @@
+:root {
+    --void: #050805;
+    --surface: #0c120c;
+    --surface-raised: #131b13;
+    --surface-line: rgba(238, 255, 230, 0.10);
+    --ink: #f3fbee;
+    --ink-dim: #9aa896;
+    --ink-faint: #5f6b5c;
+
+    --accent: #c8ff00;
+    --accent-ink: #0a1200;
+    --accent-glow: rgba(200, 255, 0, 0.35);
+    --danger: #ff5c5c;
+
+    --font-display: "Rajdhani", Arial, sans-serif;
+    --font-body: "Manrope", system-ui, Arial, sans-serif;
+
+    --r-sm: 10px;
+    --r-md: 16px;
+    --r-lg: 26px;
+
+    --shadow-depth: 0 24px 60px rgba(0, 0, 0, .55);
+    --shadow-glow: 0 0 30px var(--accent-glow);
+    --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+@keyframes tokenCardIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tokenPop {
+    0% { opacity: 0; transform: scale(.7); }
+    70% { opacity: 1; transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+@keyframes tokenShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}
