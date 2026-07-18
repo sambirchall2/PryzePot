@@ -21,16 +21,18 @@ if (savedTag) {
 
     if (savedFriendLink) {
         friendLinkInput.value = savedFriendLink;
-    }
 
-    if (savedName) {
-        statusText.textContent = "Connected: " + savedName + " (" + savedTag + ")";
+        statusText.textContent = savedName
+            ? "Connected: " + savedName + " (" + savedTag + ")"
+            : "Connected: " + savedTag;
+
+        statusText.classList.add("connected");
+        verifyBtn.textContent = "CONTINUE";
     } else {
-        statusText.textContent = "Connected: " + savedTag;
+        statusText.textContent = "Your friend link expired after 24 hours — paste a fresh invite link to continue.";
+        statusText.classList.remove("connected");
+        verifyBtn.textContent = "VERIFY ACCOUNT";
     }
-
-    statusText.classList.add("connected");
-    verifyBtn.textContent = "CONTINUE";
 }
 
 function finishConnectRedirect() {

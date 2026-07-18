@@ -591,6 +591,25 @@ async function expireStaleTournaments() {
     }
 }
 
+const CLASH_FRIEND_LINK_EXPIRATION_MS = 24 * 60 * 60 * 1000;
+
+async function expireStaleClashLinks() {
+    const cutoff = Date.now() - CLASH_FRIEND_LINK_EXPIRATION_MS;
+
+    const stale = await supabase
+        .from("users")
+        .update({
+            clash_friend_link: null,
+            clash_friend_link_updated_at: null
+        })
+        .not("clash_friend_link", "is", null)
+        .lt("clash_friend_link_updated_at", cutoff);
+
+    if (stale.error) {
+        console.log("EXPIRE CLASH LINKS ERROR:", stale.error);
+    }
+}
+
 async function launchOrCancelSeasonZero() {
     const tournamentResult = await supabase
         .from("tournaments")
@@ -2532,7 +2551,8 @@ app.post("/api/users/save-clash", requireAuth, async function (req, res) {
             clash_friend_link: clashFriendLink,
             clash_trophies: clashTrophies,
             clash_exp_level: clashExpLevel,
-            clash_verified: true
+            clash_verified: true,
+            clash_friend_link_updated_at: Date.now()
         })
         .eq("username", username)
         .select()
@@ -3053,7 +3073,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     const result = await supabase
         .from("users")
         .select(
-            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title"
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, clash_tag, clash_name, clash_friend_link, clash_trophies, clash_exp_level, clash_verified, clash_friend_link_updated_at"
         )
         .eq("username", username)
         .maybeSingle();
@@ -3166,6 +3186,14 @@ app.get("/api/users/:username/profile", async function (req, res) {
     equipped_frame: user.equipped_frame || null,
     equipped_badge: user.equipped_badge || null,
     equipped_title: user.equipped_title || null,
+
+    clash_tag: user.clash_tag || null,
+    clash_name: user.clash_name || null,
+    clash_friend_link: user.clash_friend_link || null,
+    clash_trophies: user.clash_trophies || null,
+    clash_exp_level: user.clash_exp_level || null,
+    clash_verified: user.clash_verified || false,
+    clash_friend_link_updated_at: user.clash_friend_link_updated_at || null,
 
     profile_completed: user.profile_completed || false,
 
@@ -4401,3 +4429,4 @@ expireStaleTournaments();
 ensureSeasonZeroTournament();
 setInterval(expireOldMatches, 60 * 1000);
 setInterval(expireStaleTournaments, 60 * 1000);
+setInterval(expireStaleClashLinks, 60 * 1000);

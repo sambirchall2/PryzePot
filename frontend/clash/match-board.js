@@ -260,7 +260,7 @@ async function renderMatches() {
         const timeLeft = getMatchTimeLeft(match);
         const creatorProfile = await getUserProfile(match.creatorUsername);
 
-        const avatar = creatorProfile.profile_picture || "avatar1";
+        const avatar = creatorProfile.equipped_avatar || creatorProfile.profile_picture || "avatar1";
         const level = creatorProfile.level || 1;
 
         const matchCard = document.createElement("div");
@@ -307,7 +307,7 @@ async function renderMatches() {
             <div class="match-player-row">
                 <img
                     class="match-avatar"
-                    src="../assets/profile/${avatar}.png"
+                    src="${getCosmeticImagePath(avatar, "Avatar")}"
                     alt="${match.creatorUsername}"
                 >
 
