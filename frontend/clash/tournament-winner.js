@@ -1,5 +1,17 @@
 const backHomeBtn = document.getElementById("backHomeBtn");
+const disputeButton = document.getElementById("disputeButton");
 const championProfileCard = document.getElementById("championProfileCard");
+const disputeMatchId = localStorage.getItem("currentTournamentMatchId");
+
+if (disputeButton) {
+    if (disputeMatchId) {
+        disputeButton.addEventListener("click", function () {
+            window.location.href = "../html/dispute.html?type=tournament_match&id=" + disputeMatchId;
+        });
+    } else {
+        disputeButton.style.display = "none";
+    }
+}
 
 const winnerName = document.getElementById("winnerName");
 const winnerTag = document.getElementById("winnerTag");

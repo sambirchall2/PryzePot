@@ -25,3 +25,27 @@ function apiFetch(path, options) {
             return response.json();
         });
 }
+
+function apiFetchForm(path, formData) {
+    const headers = {};
+
+    const token = localStorage.getItem("authToken");
+
+    if (token) {
+        headers.Authorization = "Bearer " + token;
+    }
+
+    return fetch(API_BASE_URL + path, {
+        method: "POST",
+        headers: headers,
+        body: formData
+    }).then(function (response) {
+        if (response.status === 401) {
+            localStorage.clear();
+            window.location.href = "/html/index.html";
+            throw new Error("Not authenticated");
+        }
+
+        return response.json();
+    });
+}

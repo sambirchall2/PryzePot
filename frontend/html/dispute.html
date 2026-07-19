@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispute a Match | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="../css/dispute.css">
+</head>
+<body>
+
+<div class="dispute-page">
+
+    <div class="dispute-card">
+
+        <button id="backButton" class="back-button">‹ Back</button>
+
+        <p class="eyebrow">DISPUTE A MATCH</p>
+        <h1>Something wrong with this result?</h1>
+        <p class="subtitle">
+            Explain what happened and attach photo or video evidence. Our team will review it and follow up.
+        </p>
+
+        <label class="field-label" for="reasonInput">What happened?</label>
+        <textarea
+            id="reasonInput"
+            class="reason-input"
+            placeholder="Explain why you're disputing this match result..."
+            rows="6"
+        ></textarea>
+
+        <label class="field-label" for="evidenceInput">Evidence (photo or video, up to 3 files)</label>
+        <input
+            id="evidenceInput"
+            class="evidence-input"
+            type="file"
+            accept="image/*,video/*"
+            multiple
+        >
+        <p id="fileList" class="file-list"></p>
+
+        <p id="errorText" class="error-text hidden"></p>
+
+        <button id="submitBtn" class="submit-btn">SUBMIT DISPUTE</button>
+
+    </div>
+
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/dispute.js"></script>
+
+</body>
+</html>

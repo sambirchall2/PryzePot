@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div id="gate" class="gate">Checking admin access...</div>
+
+<div id="adminShell" class="admin-shell hidden">
+
+    <div class="admin-top-bar">
+        <h1>PryzePot Admin</h1>
+        <button id="backButton" class="back-button">‹ Back to app</button>
+    </div>
+
+    <div class="tab-row">
+        <button class="tab-btn active" data-tab="disputes">Disputes</button>
+        <button class="tab-btn" data-tab="currency">Send Currency</button>
+        <button class="tab-btn" data-tab="xp">Send XP</button>
+    </div>
+
+    <section id="disputesTab" class="tab-panel">
+        <div class="disputes-layout">
+            <div id="disputeList" class="dispute-list"></div>
+            <div id="disputeDetail" class="dispute-detail">
+                <p class="empty-hint">Select a dispute to review it.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="currencyTab" class="tab-panel hidden">
+        <div class="tool-card">
+            <h2>Send Vault Credits</h2>
+            <label class="field-label">Username</label>
+            <input id="currencyUsernameInput" class="tool-input" type="text" placeholder="Search username...">
+            <div id="currencyResults" class="search-results"></div>
+
+            <label class="field-label">Amount</label>
+            <input id="currencyAmountInput" class="tool-input" type="number" placeholder="e.g. 500">
+
+            <label class="field-label">Notes (optional)</label>
+            <input id="currencyNotesInput" class="tool-input" type="text" placeholder="Reason for this grant">
+
+            <button id="sendCurrencyBtn" class="submit-btn">SEND CREDITS</button>
+            <p id="currencyResultText" class="result-text"></p>
+        </div>
+    </section>
+
+    <section id="xpTab" class="tab-panel hidden">
+        <div class="tool-card">
+            <h2>Send XP</h2>
+            <label class="field-label">Username</label>
+            <input id="xpUsernameInput" class="tool-input" type="text" placeholder="Search username...">
+            <div id="xpResults" class="search-results"></div>
+
+            <label class="field-label">XP Amount</label>
+            <input id="xpAmountInput" class="tool-input" type="number" placeholder="e.g. 100">
+
+            <label class="field-label">Notes (optional)</label>
+            <input id="xpNotesInput" class="tool-input" type="text" placeholder="Reason for this grant">
+
+            <button id="sendXpBtn" class="submit-btn">SEND XP</button>
+            <p id="xpResultText" class="result-text"></p>
+        </div>
+    </section>
+
+</div>
+
+<script src="../js/api.js"></script>
+<script src="admin.js"></script>
+
+</body>
+</html>

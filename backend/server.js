@@ -5,7 +5,23 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const multer = require("multer");
 const supabase = require("./supabase");
+
+const evidenceUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 25 * 1024 * 1024,
+        files: 3
+    },
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only image or video files are allowed."));
+        }
+    }
+});
 
 const app = express();
 
@@ -85,6 +101,24 @@ function requireAuth(req, res, next) {
             message: "Session expired or invalid. Please log in again."
         });
     }
+}
+
+async function requireAdmin(req, res, next) {
+    const userResult = await supabase
+        .from("users")
+        .select("is_admin")
+        .eq("username", req.username)
+        .maybeSingle();
+
+    if (!userResult.data || !userResult.data.is_admin) {
+        res.status(403).json({
+            success: false,
+            message: "Admin access required."
+        });
+        return;
+    }
+
+    next();
 }
 
 const OPEN_MATCH_EXPIRATION_MINUTES = 10;
@@ -4514,6 +4548,443 @@ app.get("/api/friends/unread/:username", requireAuth, async function (req, res) 
     });
 
 });
+
+async function loadDisputeMatch(matchType, matchId) {
+    if (matchType === "match") {
+        const result = await supabase
+            .from("matches")
+            .select("*")
+            .eq("id", matchId)
+            .maybeSingle();
+
+        if (!result.data) return null;
+
+        return {
+            row: result.data,
+            entryFee: Number(result.data.entry_fee) || 0,
+            participants: [result.data.creator_username, result.data.opponent_username]
+        };
+    }
+
+    if (matchType === "tournament_match") {
+        const result = await supabase
+            .from("tournament_matches")
+            .select("*")
+            .eq("id", matchId)
+            .maybeSingle();
+
+        if (!result.data) return null;
+
+        const parentTournament = await supabase
+            .from("tournaments")
+            .select("entry_fee")
+            .eq("id", result.data.tournament_id)
+            .maybeSingle();
+
+        return {
+            row: result.data,
+            entryFee: Number((parentTournament.data && parentTournament.data.entry_fee) || 0),
+            participants: [result.data.player_one, result.data.player_two]
+        };
+    }
+
+    return null;
+}
+
+app.post("/api/disputes", requireAuth, function (req, res, next) {
+    evidenceUpload.array("evidence", 3)(req, res, function (err) {
+        if (err) {
+            res.json({
+                success: false,
+                message: err.message || "Could not upload evidence files."
+            });
+            return;
+        }
+
+        next();
+    });
+}, async function (req, res) {
+    const matchType = req.body.matchType;
+    const matchId = Number(req.body.matchId);
+    const reason = (req.body.reason || "").trim();
+
+    if (matchType !== "match" && matchType !== "tournament_match") {
+        res.json({
+            success: false,
+            message: "Invalid match type."
+        });
+        return;
+    }
+
+    if (!matchId) {
+        res.json({
+            success: false,
+            message: "Missing match id."
+        });
+        return;
+    }
+
+    if (reason.length < 10) {
+        res.json({
+            success: false,
+            message: "Please explain your dispute in a bit more detail."
+        });
+        return;
+    }
+
+    const disputeMatch = await loadDisputeMatch(matchType, matchId);
+
+    if (!disputeMatch) {
+        res.json({
+            success: false,
+            message: "Match not found."
+        });
+        return;
+    }
+
+    if (!disputeMatch.participants.includes(req.username)) {
+        res.status(403).json({
+            success: false,
+            message: "You were not a participant in this match."
+        });
+        return;
+    }
+
+    const evidencePaths = [];
+    const files = req.files || [];
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = matchType + "-" + matchId + "-" + Date.now() + "-" + i + "-" + safeName;
+
+        const uploadResult = await supabase.storage
+            .from("dispute-evidence")
+            .upload(path, file.buffer, { contentType: file.mimetype });
+
+        if (uploadResult.error) {
+            console.log("DISPUTE EVIDENCE UPLOAD ERROR:", uploadResult.error);
+            continue;
+        }
+
+        evidencePaths.push(path);
+    }
+
+    const insertResult = await supabase
+        .from("disputes")
+        .insert({
+            match_type: matchType,
+            match_id: matchId,
+            disputing_username: req.username,
+            reason: reason,
+            evidence_paths: evidencePaths,
+            status: "pending",
+            created_at: Date.now()
+        })
+        .select()
+        .single();
+
+    if (insertResult.error) {
+        console.log("DISPUTE INSERT ERROR:", insertResult.error);
+
+        res.json({
+            success: false,
+            message: "Could not submit dispute."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Dispute submitted. Our team will review it.",
+        dispute: insertResult.data
+    });
+});
+
+app.get("/api/disputes/mine", requireAuth, async function (req, res) {
+    const result = await supabase
+        .from("disputes")
+        .select("*")
+        .eq("disputing_username", req.username)
+        .order("created_at", { ascending: false });
+
+    res.json({
+        success: true,
+        disputes: result.data || []
+    });
+});
+
+app.get("/api/admin/disputes", requireAuth, requireAdmin, async function (req, res) {
+    const result = await supabase
+        .from("disputes")
+        .select("*")
+        .order("status", { ascending: true })
+        .order("created_at", { ascending: false });
+
+    res.json({
+        success: true,
+        disputes: result.data || []
+    });
+});
+
+app.get("/api/admin/disputes/:id", requireAuth, requireAdmin, async function (req, res) {
+    const disputeId = Number(req.params.id);
+
+    const disputeResult = await supabase
+        .from("disputes")
+        .select("*")
+        .eq("id", disputeId)
+        .maybeSingle();
+
+    if (!disputeResult.data) {
+        res.json({
+            success: false,
+            message: "Dispute not found."
+        });
+        return;
+    }
+
+    const dispute = disputeResult.data;
+
+    const disputeMatch = await loadDisputeMatch(dispute.match_type, dispute.match_id);
+
+    const evidenceUrls = [];
+
+    for (const path of dispute.evidence_paths || []) {
+        const signed = await supabase.storage
+            .from("dispute-evidence")
+            .createSignedUrl(path, 300);
+
+        if (!signed.error && signed.data) {
+            evidenceUrls.push(signed.data.signedUrl);
+        }
+    }
+
+    res.json({
+        success: true,
+        dispute: dispute,
+        match: disputeMatch ? disputeMatch.row : null,
+        entryFee: disputeMatch ? disputeMatch.entryFee : 0,
+        evidenceUrls: evidenceUrls
+    });
+});
+
+app.post("/api/admin/disputes/:id/resolve", requireAuth, requireAdmin, async function (req, res) {
+    const disputeId = Number(req.params.id);
+    const action = req.body.action;
+    const notes = req.body.notes || "";
+    const manualUsername = req.body.manualUsername;
+    const manualAmount = Number(req.body.manualAmount) || 0;
+
+    const validActions = ["refund_both", "award_disputer", "dismiss", "manual"];
+
+    if (!validActions.includes(action)) {
+        res.json({
+            success: false,
+            message: "Invalid resolution action."
+        });
+        return;
+    }
+
+    const disputeResult = await supabase
+        .from("disputes")
+        .select("*")
+        .eq("id", disputeId)
+        .maybeSingle();
+
+    if (!disputeResult.data) {
+        res.json({
+            success: false,
+            message: "Dispute not found."
+        });
+        return;
+    }
+
+    const dispute = disputeResult.data;
+
+    if (dispute.status === "resolved") {
+        res.json({
+            success: false,
+            message: "This dispute has already been resolved."
+        });
+        return;
+    }
+
+    const disputeMatch = await loadDisputeMatch(dispute.match_type, dispute.match_id);
+
+    if (action === "refund_both" || action === "award_disputer") {
+        if (!disputeMatch) {
+            res.json({
+                success: false,
+                message: "Could not load the underlying match to compute a refund amount."
+            });
+            return;
+        }
+    }
+
+    if (action === "refund_both") {
+        for (const participant of disputeMatch.participants) {
+            if (participant) {
+                await adjustBalance(participant, disputeMatch.entryFee);
+            }
+        }
+    }
+
+    if (action === "award_disputer") {
+        await adjustBalance(dispute.disputing_username, disputeMatch.entryFee);
+    }
+
+    if (action === "manual") {
+        if (!manualUsername || !manualAmount) {
+            res.json({
+                success: false,
+                message: "Manual resolution requires a username and a non-zero amount."
+            });
+            return;
+        }
+
+        await adjustBalance(manualUsername, manualAmount);
+    }
+
+    await supabase
+        .from("disputes")
+        .update({
+            status: "resolved",
+            resolution_action: action,
+            resolution_notes: notes,
+            resolved_by: req.username,
+            resolved_at: Date.now()
+        })
+        .eq("id", disputeId);
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "resolve_dispute",
+            target_username: action === "manual" ? manualUsername : dispute.disputing_username,
+            amount: action === "manual" ? manualAmount : (disputeMatch ? disputeMatch.entryFee : 0),
+            dispute_id: disputeId,
+            notes: notes,
+            created_at: Date.now()
+        });
+
+    res.json({
+        success: true,
+        message: "Dispute resolved."
+    });
+});
+
+app.get("/api/admin/users/search", requireAuth, requireAdmin, async function (req, res) {
+    const query = (req.query.q || "").trim();
+
+    if (query.length < 2) {
+        res.json({
+            success: true,
+            users: []
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .select("username, balance, level")
+        .ilike("username", "%" + query + "%")
+        .limit(10);
+
+    res.json({
+        success: true,
+        users: result.data || []
+    });
+});
+
+app.post("/api/admin/grant-currency", requireAuth, requireAdmin, async function (req, res) {
+    const targetUsername = req.body.username;
+    const amount = Number(req.body.amount);
+
+    if (!targetUsername || !amount) {
+        res.json({
+            success: false,
+            message: "Username and a non-zero amount are required."
+        });
+        return;
+    }
+
+    const result = await adjustBalance(targetUsername, amount);
+
+    if (!result.success) {
+        res.json({
+            success: false,
+            message: result.message || "Could not adjust balance."
+        });
+        return;
+    }
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "grant_currency",
+            target_username: targetUsername,
+            amount: amount,
+            notes: req.body.notes || "",
+            created_at: Date.now()
+        });
+
+    res.json({
+        success: true,
+        message: "Vault Credits sent.",
+        balance: result.balance
+    });
+});
+
+app.post("/api/admin/grant-xp", requireAuth, requireAdmin, async function (req, res) {
+    const targetUsername = req.body.username;
+    const amount = Number(req.body.amount);
+
+    if (!targetUsername || !amount) {
+        res.json({
+            success: false,
+            message: "Username and a non-zero XP amount are required."
+        });
+        return;
+    }
+
+    const updatedUser = await awardXpToUser(targetUsername, amount);
+
+    if (!updatedUser) {
+        res.json({
+            success: false,
+            message: "Could not award XP."
+        });
+        return;
+    }
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "grant_xp",
+            target_username: targetUsername,
+            amount: amount,
+            notes: req.body.notes || "",
+            created_at: Date.now()
+        });
+
+    res.json({
+        success: true,
+        message: "XP awarded.",
+        user: updatedUser
+    });
+});
+
+app.get("/api/admin/me", requireAuth, requireAdmin, async function (req, res) {
+    res.json({
+        success: true,
+        username: req.username
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, function () {

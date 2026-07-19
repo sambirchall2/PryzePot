@@ -25,6 +25,7 @@ const levelUpContinueBtn = document.getElementById("levelUpContinueBtn");
 
 const playAgainButton = document.getElementById("playAgainButton");
 const backHomeButton = document.getElementById("backHomeButton");
+const disputeButton = document.getElementById("disputeButton");
 
 const savedMatch = localStorage.getItem("lastVerifiedMatch");
 const currentUsername = localStorage.getItem("username");
@@ -159,8 +160,18 @@ if (!savedMatch) {
     loserName.textContent = "-";
 
     if (xpBurst) xpBurst.textContent = "+0 XP";
+
+    if (disputeButton) disputeButton.style.display = "none";
 } else {
     const match = JSON.parse(savedMatch);
+
+    if (disputeButton && match.id) {
+        disputeButton.addEventListener("click", function () {
+            window.location.href = "../html/dispute.html?type=match&id=" + match.id;
+        });
+    } else if (disputeButton) {
+        disputeButton.style.display = "none";
+    }
 
     const winnerProfile =
         match.winnerUsername === match.creatorUsername
