@@ -12,7 +12,22 @@
 </head>
 <body>
 
-<div id="gate" class="gate">Checking admin access...</div>
+<div id="loginGate" class="login-gate">
+    <div class="login-card">
+        <p class="eyebrow">ADMIN ACCESS</p>
+        <h1>Sign in to continue</h1>
+        <p class="subtitle">This is separate from your regular PryzePot session and expires after 2 hours.</p>
+
+        <label class="field-label">Email</label>
+        <input id="adminEmailInput" class="tool-input" type="email" placeholder="you@example.com">
+
+        <label class="field-label">Password</label>
+        <input id="adminPasswordInput" class="tool-input" type="password" placeholder="••••••••">
+
+        <button id="adminLoginBtn" class="submit-btn">SIGN IN</button>
+        <p id="loginErrorText" class="result-text"></p>
+    </div>
+</div>
 
 <div id="adminShell" class="admin-shell hidden">
 

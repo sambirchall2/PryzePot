@@ -1,6 +1,11 @@
-const gate = document.getElementById("gate");
+const loginGate = document.getElementById("loginGate");
 const adminShell = document.getElementById("adminShell");
 const backButton = document.getElementById("backButton");
+
+const adminEmailInput = document.getElementById("adminEmailInput");
+const adminPasswordInput = document.getElementById("adminPasswordInput");
+const adminLoginBtn = document.getElementById("adminLoginBtn");
+const loginErrorText = document.getElementById("loginErrorText");
 
 const disputeList = document.getElementById("disputeList");
 const disputeDetail = document.getElementById("disputeDetail");
@@ -13,6 +18,89 @@ if (backButton) {
         window.location.href = "../html/home.html";
     });
 }
+
+/* ---------- admin session fetch helper ---------- */
+
+function adminFetch(path, options) {
+    options = options || {};
+
+    const headers = Object.assign(
+        { "Content-Type": "application/json" },
+        options.headers || {}
+    );
+
+    const token = localStorage.getItem("adminToken");
+
+    if (token) {
+        headers.Authorization = "Bearer " + token;
+    }
+
+    return fetch(API_BASE_URL + path, Object.assign({}, options, { headers: headers }))
+        .then(function (response) {
+            if (response.status === 401) {
+                localStorage.removeItem("adminToken");
+                showLoginGate();
+                throw new Error("Admin session expired");
+            }
+
+            return response.json();
+        });
+}
+
+function showLoginGate() {
+    adminShell.classList.add("hidden");
+    loginGate.classList.remove("hidden");
+}
+
+function showAdminShell() {
+    loginGate.classList.add("hidden");
+    adminShell.classList.remove("hidden");
+    loadDisputes();
+}
+
+/* ---------- admin login ---------- */
+
+adminLoginBtn.addEventListener("click", function () {
+    const email = adminEmailInput.value.trim();
+    const password = adminPasswordInput.value;
+
+    if (!email || !password) {
+        loginErrorText.textContent = "Enter your email and password.";
+        return;
+    }
+
+    loginErrorText.textContent = "";
+    adminLoginBtn.textContent = "SIGNING IN...";
+    adminLoginBtn.disabled = true;
+
+    fetch(API_BASE_URL + "/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, password: password })
+    })
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
+            adminLoginBtn.textContent = "SIGN IN";
+            adminLoginBtn.disabled = false;
+
+            if (!data.success) {
+                loginErrorText.textContent = data.message || "Could not sign in.";
+                return;
+            }
+
+            localStorage.setItem("adminToken", data.token);
+            adminPasswordInput.value = "";
+            showAdminShell();
+        })
+        .catch(function (error) {
+            console.log("ADMIN LOGIN ERROR:", error);
+            adminLoginBtn.textContent = "SIGN IN";
+            adminLoginBtn.disabled = false;
+            loginErrorText.textContent = "Something went wrong. Please try again.";
+        });
+});
 
 /* ---------- tabs ---------- */
 
@@ -38,7 +126,7 @@ function formatDate(timestamp) {
 }
 
 function loadDisputes() {
-    apiFetch("/api/admin/disputes")
+    adminFetch("/api/admin/disputes")
         .then(function (data) {
             if (!data.success) return;
 
@@ -80,7 +168,7 @@ function renderDisputeList() {
 function loadDisputeDetail(disputeId) {
     disputeDetail.innerHTML = '<p class="empty-hint">Loading...</p>';
 
-    apiFetch("/api/admin/disputes/" + disputeId)
+    adminFetch("/api/admin/disputes/" + disputeId)
         .then(function (data) {
             if (!data.success) {
                 disputeDetail.innerHTML = '<p class="empty-hint">Could not load this dispute.</p>';
@@ -201,7 +289,7 @@ function resolveDispute(disputeId, action) {
         return;
     }
 
-    apiFetch("/api/admin/disputes/" + disputeId + "/resolve", {
+    adminFetch("/api/admin/disputes/" + disputeId + "/resolve", {
         method: "POST",
         body: JSON.stringify(body)
     })
@@ -237,7 +325,7 @@ function setupSearchTool(inputId, resultsId, onSelect) {
         }
 
         debounceTimer = setTimeout(function () {
-            apiFetch("/api/admin/users/search?q=" + encodeURIComponent(query))
+            adminFetch("/api/admin/users/search?q=" + encodeURIComponent(query))
                 .then(function (data) {
                     if (!data.success) return;
 
@@ -278,7 +366,7 @@ document.getElementById("sendCurrencyBtn").addEventListener("click", function ()
         return;
     }
 
-    apiFetch("/api/admin/grant-currency", {
+    adminFetch("/api/admin/grant-currency", {
         method: "POST",
         body: JSON.stringify({ username: username, amount: amount, notes: notes })
     })
@@ -308,7 +396,7 @@ document.getElementById("sendXpBtn").addEventListener("click", function () {
         return;
     }
 
-    apiFetch("/api/admin/grant-xp", {
+    adminFetch("/api/admin/grant-xp", {
         method: "POST",
         body: JSON.stringify({ username: username, amount: amount, notes: notes })
     })
@@ -323,20 +411,23 @@ document.getElementById("sendXpBtn").addEventListener("click", function () {
         });
 });
 
-/* ---------- admin gate ---------- */
+/* ---------- initial admin session check ---------- */
 
-apiFetch("/api/admin/me")
-    .then(function (data) {
-        if (!data.success) {
-            window.location.href = "../html/home.html";
-            return;
-        }
+if (localStorage.getItem("adminToken")) {
+    adminFetch("/api/admin/me")
+        .then(function (data) {
+            if (!data.success) {
+                localStorage.removeItem("adminToken");
+                showLoginGate();
+                return;
+            }
 
-        gate.classList.add("hidden");
-        adminShell.classList.remove("hidden");
-        loadDisputes();
-    })
-    .catch(function (error) {
-        console.log("ADMIN GATE ERROR:", error);
-        window.location.href = "../html/home.html";
-    });
+            showAdminShell();
+        })
+        .catch(function (error) {
+            console.log("ADMIN SESSION CHECK ERROR:", error);
+            showLoginGate();
+        });
+} else {
+    showLoginGate();
+}

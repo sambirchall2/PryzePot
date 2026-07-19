@@ -103,11 +103,49 @@ function requireAuth(req, res, next) {
     }
 }
 
-async function requireAdmin(req, res, next) {
+const ADMIN_SESSION_EXPIRES_IN = "2h";
+
+function signAdminSession(username) {
+    return jwt.sign({ username: username, purpose: "admin_session" }, process.env.JWT_SECRET, {
+        expiresIn: ADMIN_SESSION_EXPIRES_IN
+    });
+}
+
+async function requireAdminSession(req, res, next) {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+    if (!token) {
+        res.status(401).json({
+            success: false,
+            message: "Admin sign-in required."
+        });
+        return;
+    }
+
+    let payload;
+    try {
+        payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+        res.status(401).json({
+            success: false,
+            message: "Admin session expired. Please sign in again."
+        });
+        return;
+    }
+
+    if (payload.purpose !== "admin_session") {
+        res.status(401).json({
+            success: false,
+            message: "Admin sign-in required."
+        });
+        return;
+    }
+
     const userResult = await supabase
         .from("users")
         .select("is_admin")
-        .eq("username", req.username)
+        .eq("username", payload.username)
         .maybeSingle();
 
     if (!userResult.data || !userResult.data.is_admin) {
@@ -118,6 +156,7 @@ async function requireAdmin(req, res, next) {
         return;
     }
 
+    req.username = payload.username;
     next();
 }
 
@@ -4714,7 +4753,51 @@ app.get("/api/disputes/mine", requireAuth, async function (req, res) {
     });
 });
 
-app.get("/api/admin/disputes", requireAuth, requireAdmin, async function (req, res) {
+app.post("/api/admin/login", async function (req, res) {
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const foundUser = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+    if (foundUser.error) {
+        console.log("ADMIN LOGIN ERROR:", foundUser.error);
+    }
+
+    const storedPassword = foundUser.data ? foundUser.data.password : null;
+    const isBcryptHash = typeof storedPassword === "string" && storedPassword.startsWith("$2");
+
+    const passwordMatches = isBcryptHash
+        ? storedPassword && (await bcrypt.compare(password, storedPassword))
+        : storedPassword === password;
+
+    if (!foundUser.data || !passwordMatches) {
+        res.json({
+            success: false,
+            message: "Invalid email or password."
+        });
+        return;
+    }
+
+    if (!foundUser.data.is_admin) {
+        res.status(403).json({
+            success: false,
+            message: "This account does not have admin access."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Admin sign-in successful.",
+        token: signAdminSession(foundUser.data.username)
+    });
+});
+
+app.get("/api/admin/disputes", requireAdminSession, async function (req, res) {
     const result = await supabase
         .from("disputes")
         .select("*")
@@ -4727,7 +4810,7 @@ app.get("/api/admin/disputes", requireAuth, requireAdmin, async function (req, r
     });
 });
 
-app.get("/api/admin/disputes/:id", requireAuth, requireAdmin, async function (req, res) {
+app.get("/api/admin/disputes/:id", requireAdminSession, async function (req, res) {
     const disputeId = Number(req.params.id);
 
     const disputeResult = await supabase
@@ -4769,7 +4852,7 @@ app.get("/api/admin/disputes/:id", requireAuth, requireAdmin, async function (re
     });
 });
 
-app.post("/api/admin/disputes/:id/resolve", requireAuth, requireAdmin, async function (req, res) {
+app.post("/api/admin/disputes/:id/resolve", requireAdminSession, async function (req, res) {
     const disputeId = Number(req.params.id);
     const action = req.body.action;
     const notes = req.body.notes || "";
@@ -4875,7 +4958,7 @@ app.post("/api/admin/disputes/:id/resolve", requireAuth, requireAdmin, async fun
     });
 });
 
-app.get("/api/admin/users/search", requireAuth, requireAdmin, async function (req, res) {
+app.get("/api/admin/users/search", requireAdminSession, async function (req, res) {
     const query = (req.query.q || "").trim();
 
     if (query.length < 2) {
@@ -4898,7 +4981,7 @@ app.get("/api/admin/users/search", requireAuth, requireAdmin, async function (re
     });
 });
 
-app.post("/api/admin/grant-currency", requireAuth, requireAdmin, async function (req, res) {
+app.post("/api/admin/grant-currency", requireAdminSession, async function (req, res) {
     const targetUsername = req.body.username;
     const amount = Number(req.body.amount);
 
@@ -4938,7 +5021,7 @@ app.post("/api/admin/grant-currency", requireAuth, requireAdmin, async function 
     });
 });
 
-app.post("/api/admin/grant-xp", requireAuth, requireAdmin, async function (req, res) {
+app.post("/api/admin/grant-xp", requireAdminSession, async function (req, res) {
     const targetUsername = req.body.username;
     const amount = Number(req.body.amount);
 
@@ -4978,7 +5061,7 @@ app.post("/api/admin/grant-xp", requireAuth, requireAdmin, async function (req, 
     });
 });
 
-app.get("/api/admin/me", requireAuth, requireAdmin, async function (req, res) {
+app.get("/api/admin/me", requireAdminSession, async function (req, res) {
     res.json({
         success: true,
         username: req.username
