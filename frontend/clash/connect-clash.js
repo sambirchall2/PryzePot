@@ -59,10 +59,8 @@ verifyBtn.addEventListener("click", function () {
     const rawFriendLink = friendLinkInput.value.trim();
 
     const linkMatch = rawFriendLink.match(
-        /https:\/\/link\.clashroyale\.com\/invite\/friend\/[^\s]+/
+        /https:\/\/link\.clashroyale\.com\/invite\/friend\/\S+/
     );
-
-    const friendLink = linkMatch ? linkMatch[0] : rawFriendLink;
 
     if (!username) {
         alert("Please log in first.");
@@ -80,15 +78,17 @@ verifyBtn.addEventListener("click", function () {
         return;
     }
 
-    if (friendLink === "") {
+    if (rawFriendLink === "") {
         alert("Please paste your Clash Royale friend invite link.");
         return;
     }
 
-    if (!friendLink.includes("link.clashroyale.com")) {
+    if (!linkMatch) {
         alert("Please enter a valid Clash Royale friend invite link.");
         return;
     }
+
+    const friendLink = linkMatch[0];
 
     verifyBtn.textContent = "VERIFYING...";
     verifyBtn.disabled = true;

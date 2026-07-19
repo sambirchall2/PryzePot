@@ -420,6 +420,8 @@ function findMatchingBattle(battles, match) {
         match.verification_started_at || match.created_at
     );
 
+    const candidates = [];
+
     for (const battle of battles) {
         if (!battle.team || !battle.opponent) continue;
         if (!battle.team[0] || !battle.opponent[0]) continue;
@@ -440,6 +442,11 @@ function findMatchingBattle(battles, match) {
 
         if (battleTimeMs < cutoffTime) continue;
 
+        if (battle.type && battle.type !== "friendly") {
+            console.log("SKIPPED NON-FRIENDLY BATTLE FOR MATCH:", teamTag, enemyTag, battle.type, battle.battleTime);
+            continue;
+        }
+
         const battleId = [
             battle.battleTime,
             cleanTag(teamTag),
@@ -450,32 +457,62 @@ function findMatchingBattle(battles, match) {
         const enemyCrowns = enemyPlayer.crowns || 0;
 
         if (teamCrowns === enemyCrowns) {
-            return {
-                found: true,
+            candidates.push({
                 draw: true,
                 battle: battle,
                 battleId: battleId,
                 battleTime: battle.battleTime
-            };
+            });
+            continue;
         }
 
         const winnerTag = teamCrowns > enemyCrowns ? teamTag : enemyTag;
         const loserTag = teamCrowns > enemyCrowns ? enemyTag : teamTag;
 
-        return {
-            found: true,
+        candidates.push({
             draw: false,
             winnerTag: winnerTag,
             loserTag: loserTag,
             battle: battle,
             battleId: battleId,
             battleTime: battle.battleTime
+        });
+    }
+
+    if (candidates.length === 0) {
+        return {
+            found: false
         };
     }
 
     return {
-        found: false
+        found: true,
+        candidates: candidates
     };
+}
+
+async function findUnusedBattleCandidate(candidates) {
+    for (const candidate of candidates) {
+        const usedInMatch = await supabase
+            .from("match_results")
+            .select("id")
+            .eq("clash_battle_id", candidate.battleId)
+            .maybeSingle();
+
+        if (usedInMatch.data) continue;
+
+        const usedInTournament = await supabase
+            .from("tournament_matches")
+            .select("id")
+            .eq("clash_battle_id", candidate.battleId)
+            .maybeSingle();
+
+        if (usedInTournament.data) continue;
+
+        return candidate;
+    }
+
+    return null;
 }
 
 async function expireOldMatches() {
@@ -573,22 +610,6 @@ async function expireStaleTournaments() {
     if (Date.now() > SEASON_ZERO_DEADLINE.getTime()) {
         await launchOrCancelSeasonZero();
     }
-
-    const staleMatches = await supabase
-        .from("tournament_matches")
-        .select("tournament_id")
-        .eq("status", "Ready")
-        .lt("created_at", staleCutoff);
-
-    const staleTournamentIds = [...new Set(
-        (staleMatches.data || []).map(function (match) {
-            return match.tournament_id;
-        })
-    )];
-
-    for (const tournamentId of staleTournamentIds) {
-        await cancelAndRefundTournament(tournamentId, "Full");
-    }
 }
 
 const CLASH_FRIEND_LINK_EXPIRATION_MS = 24 * 60 * 60 * 1000;
@@ -607,6 +628,48 @@ async function expireStaleClashLinks() {
 
     if (stale.error) {
         console.log("EXPIRE CLASH LINKS ERROR:", stale.error);
+    }
+}
+
+async function expireStaleTournamentMatches() {
+    const now = Date.now();
+
+    const stale = await supabase
+        .from("tournament_matches")
+        .select("id, tournament_id, round_number, player_one, player_two")
+        .eq("status", "Ready")
+        .lt("verify_expires_at", now);
+
+    for (const match of stale.data || []) {
+        const parentTournament = await supabase
+            .from("tournaments")
+            .select("entry_fee")
+            .eq("id", match.tournament_id)
+            .maybeSingle();
+
+        const updated = await supabase
+            .from("tournament_matches")
+            .update({ status: "Cancelled" })
+            .eq("id", match.id)
+            .eq("status", "Ready")
+            .select()
+            .single();
+
+        if (updated.error || !updated.data) {
+            continue;
+        }
+
+        const fee = Number((parentTournament.data && parentTournament.data.entry_fee) || 0);
+
+        if (match.player_one) {
+            await adjustBalance(match.player_one, fee);
+        }
+
+        if (match.player_two) {
+            await adjustBalance(match.player_two, fee);
+        }
+
+        await advanceTournamentRoundIfReady(match.tournament_id, match.round_number);
     }
 }
 
@@ -757,12 +820,127 @@ function buildRoundMatches(entries, tournamentId, roundNumber) {
 
             verified_at: null,
             clash_battle_id: null,
+            verify_expires_at: Date.now() + ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000,
 
             status: "Ready"
         });
     }
 
     return matches;
+}
+
+async function advanceTournamentRoundIfReady(tournamentId, roundNumber) {
+    const roundMatchesResult = await supabase
+        .from("tournament_matches")
+        .select("*")
+        .eq("tournament_id", tournamentId)
+        .eq("round_number", roundNumber)
+        .order("id", { ascending: true });
+
+    const roundMatches = roundMatchesResult.data || [];
+
+    const allRoundResolved =
+        roundMatches.length > 0 &&
+        roundMatches.every(function (match) {
+            return match.status === "Completed" || match.status === "Cancelled";
+        });
+
+    if (!allRoundResolved) {
+        return { advanced: false };
+    }
+
+    const winners = roundMatches
+        .map(function (match) {
+            return {
+                username: match.winner_username,
+                tag: match.winner_tag,
+                friendLink: match.winner_username === match.player_one
+                    ? match.player_one_friend_link
+                    : match.player_two_friend_link
+            };
+        })
+        .filter(function (winner) {
+            return winner.username && winner.tag;
+        });
+
+    if (winners.length === 0) {
+        await supabase
+            .from("tournaments")
+            .update({ status: "Cancelled" })
+            .eq("id", tournamentId)
+            .eq("status", "Full");
+
+        return { advanced: true, roundWipedOut: true };
+    }
+
+    if (winners.length === 1) {
+        const parentTournament = await supabase
+            .from("tournaments")
+            .select("entry_fee, max_players")
+            .eq("id", tournamentId)
+            .maybeSingle();
+
+        const tournamentCompletion = await supabase
+            .from("tournaments")
+            .update({
+                winner_username: winners[0].username,
+                status: "Completed"
+            })
+            .eq("id", tournamentId)
+            .eq("status", "Full")
+            .select()
+            .single();
+
+        if (!tournamentCompletion.error && tournamentCompletion.data) {
+            const prizePool =
+                Number((parentTournament.data && parentTournament.data.entry_fee) || 0) *
+                Number((parentTournament.data && parentTournament.data.max_players) || 0);
+
+            if (prizePool > 0) {
+                const payout = await adjustBalance(winners[0].username, prizePool);
+
+                if (!payout.success) {
+                    console.log("TOURNAMENT PAYOUT ERROR:", winners[0].username, payout.message);
+                }
+            }
+        }
+
+        return { advanced: true, champion: winners[0] };
+    }
+
+    const nextRoundNumber = roundNumber + 1;
+
+    const existingNextRound = await supabase
+        .from("tournament_matches")
+        .select("id")
+        .eq("tournament_id", tournamentId)
+        .eq("round_number", nextRoundNumber);
+
+    if (existingNextRound.data && existingNextRound.data.length > 0) {
+        return { advanced: true, nextRoundAlreadyExists: true };
+    }
+
+    const nextRoundMatches = buildRoundMatches(winners, tournamentId, nextRoundNumber);
+
+    if (nextRoundMatches.length > 0) {
+        const nextRoundInsert = await supabase
+            .from("tournament_matches")
+            .insert(nextRoundMatches);
+
+        const isDuplicatePairing =
+            nextRoundInsert.error &&
+            nextRoundInsert.error.code === "23505";
+
+        if (nextRoundInsert.error && !isDuplicatePairing) {
+            console.log("CREATE NEXT ROUND ERROR:", nextRoundInsert.error);
+        }
+    }
+
+    return {
+        advanced: true,
+        nextRoundNumber: nextRoundNumber,
+        winnersCount: winners.length
+    };
 }
 
 async function createTournamentBracket(tournamentId) {
@@ -1941,45 +2119,24 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
         };
 
         const playerOneBattles = await getBattleLog(foundMatch.player_one_tag);
-        const result = findMatchingBattle(playerOneBattles, fakeMatchForBattleCheck);
+        const searchResult = findMatchingBattle(playerOneBattles, fakeMatchForBattleCheck);
 
-        if (result.found && result.battleId) {
-            const usedInNormalMatch = await supabase
-                .from("match_results")
-                .select("*")
-                .eq("clash_battle_id", result.battleId)
-                .maybeSingle();
-
-            if (usedInNormalMatch.data) {
-                res.json({
-                    success: false,
-                    pending: true,
-                    message: "This Clash battle was already used. Play a new match before verifying."
-                });
-                return;
-            }
-
-            const usedInTournamentMatch = await supabase
-                .from("tournament_matches")
-                .select("*")
-                .eq("clash_battle_id", result.battleId)
-                .maybeSingle();
-
-            if (usedInTournamentMatch.data) {
-                res.json({
-                    success: false,
-                    pending: true,
-                    message: "This Clash battle was already used in a tournament."
-                });
-                return;
-            }
-        }
-
-        if (!result.found) {
+        if (!searchResult.found) {
             res.json({
                 success: false,
                 pending: true,
                 message: "No matching Clash battle found yet. Try again in a minute."
+            });
+            return;
+        }
+
+        const result = await findUnusedBattleCandidate(searchResult.candidates);
+
+        if (!result) {
+            res.json({
+                success: false,
+                pending: true,
+                message: "This Clash battle was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2037,6 +2194,15 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
             .select()
             .single();
 
+        if (completed.error && completed.error.code === "23505") {
+            res.json({
+                success: false,
+                pending: true,
+                message: "This Clash battle was already used. Play a new match before verifying."
+            });
+            return;
+        }
+
         if (completed.error || !completed.data) {
             const alreadyCompleted = await supabase
                 .from("tournament_matches")
@@ -2052,141 +2218,64 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
             return;
         }
 
-        const roundMatchesResult = await supabase
-    .from("tournament_matches")
-    .select("*")
-    .eq("tournament_id", foundMatch.tournament_id)
-    .eq("round_number", foundMatch.round_number)
-    .order("id", { ascending: true });
+        const advanceResult = await advanceTournamentRoundIfReady(
+            foundMatch.tournament_id,
+            foundMatch.round_number
+        );
 
-const roundMatches = roundMatchesResult.data || [];
-
-const allRoundCompleted =
-    roundMatches.length > 0 &&
-    roundMatches.every(function (match) {
-        return match.status === "Completed";
-    });
-
-if (!allRoundCompleted) {
-    res.json({
-        success: true,
-        message: winnerUsername + " won. Waiting for other tournament match.",
-        match: completed.data
-    });
-    return;
-}
-
-const winners = roundMatches
-    .map(function (match) {
-        return {
-            username: match.winner_username,
-            tag: match.winner_tag,
-            friendLink: match.winner_username === match.player_one
-                ? match.player_one_friend_link
-                : match.player_two_friend_link
-        };
-    })
-    .filter(function (winner) {
-        return winner.username && winner.tag;
-    });
-
-if (winners.length === 1) {
-    const tournamentCompletion = await supabase
-        .from("tournaments")
-        .update({
-            winner_username: winners[0].username,
-            status: "Completed"
-        })
-        .eq("id", foundMatch.tournament_id)
-        .eq("status", "Full")
-        .select()
-        .single();
-
-    if (!tournamentCompletion.error && tournamentCompletion.data) {
-        const prizePool =
-            Number(parentTournament.data.entry_fee || 0) *
-            Number(parentTournament.data.max_players || 0);
-
-        if (prizePool > 0) {
-            const payout = await adjustBalance(winners[0].username, prizePool);
-
-            if (!payout.success) {
-                console.log("TOURNAMENT PAYOUT ERROR:", winners[0].username, payout.message);
-            }
+        if (!advanceResult.advanced) {
+            res.json({
+                success: true,
+                message: winnerUsername + " won. Waiting for other tournament match.",
+                match: completed.data
+            });
+            return;
         }
-    }
 
-    const playerState =
-    requestingUsername === winners[0].username
-        ? "champion"
-        : "eliminated";
+        if (advanceResult.champion) {
+            const playerState =
+                requestingUsername === advanceResult.champion.username
+                    ? "champion"
+                    : "eliminated";
 
-res.json({
-    success: true,
-    champion: requestingUsername === winners[0].username,
-    playerState: playerState,
+            res.json({
+                success: true,
+                champion: requestingUsername === advanceResult.champion.username,
+                playerState: playerState,
 
-    message: winners[0].username + " is the tournament champion!",
+                message: advanceResult.champion.username + " is the tournament champion!",
 
-    winnerUsername: winners[0].username,
-    winnerTag: winners[0].tag,
+                winnerUsername: advanceResult.champion.username,
+                winnerTag: advanceResult.champion.tag,
 
-    loserUsername: loserUsername,
-    loserTag: loserTag,
+                loserUsername: loserUsername,
+                loserTag: loserTag,
 
-    match: completed.data
-});
-    return;
-}
+                match: completed.data
+            });
+            return;
+        }
 
-const nextRoundNumber = Number(foundMatch.round_number) + 1;
+        if (advanceResult.roundWipedOut) {
+            res.json({
+                success: true,
+                message: winnerUsername + " won, but the rest of this round couldn't be completed. Tournament cancelled.",
+                match: completed.data
+            });
+            return;
+        }
 
-const existingNextRound = await supabase
-    .from("tournament_matches")
-    .select("*")
-    .eq("tournament_id", foundMatch.tournament_id)
-    .eq("round_number", nextRoundNumber);
+        const nextRoundLabel =
+            advanceResult.winnersCount === 2
+                ? "Final is ready."
+                : "Next round is ready.";
 
-if (existingNextRound.data && existingNextRound.data.length > 0) {
-    res.json({
-        success: true,
-        message: winnerUsername + " won. Next round is already ready.",
-        match: completed.data
-    });
-    return;
-}
-
-const nextRoundMatches = buildRoundMatches(
-    winners,
-    foundMatch.tournament_id,
-    nextRoundNumber
-);
-
-if (nextRoundMatches.length > 0) {
-    const nextRoundInsert = await supabase
-        .from("tournament_matches")
-        .insert(nextRoundMatches);
-
-    const isDuplicatePairing =
-        nextRoundInsert.error &&
-        nextRoundInsert.error.code === "23505";
-
-    if (nextRoundInsert.error && !isDuplicatePairing) {
-        console.log("CREATE NEXT ROUND ERROR:", nextRoundInsert.error);
-    }
-}
-
-const nextRoundLabel =
-    winners.length === 2
-        ? "Final is ready."
-        : "Next round is ready.";
-
-res.json({
-    success: true,
-    message: winnerUsername + " won. " + nextRoundLabel,
-    match: completed.data
-});
-return;
+        res.json({
+            success: true,
+            message: winnerUsername + " won. " + nextRoundLabel,
+            match: completed.data
+        });
+        return;
 
     } catch (error) {
         console.log("TOURNAMENT VERIFY ERROR:", error);
@@ -2254,30 +2343,24 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
 
     try {
         const creatorBattles = await getBattleLog(foundMatch.creator_tag);
-        const result = findMatchingBattle(creatorBattles, foundMatch);
+        const searchResult = findMatchingBattle(creatorBattles, foundMatch);
 
-        if (result.found && result.battleId) {
-            const usedBattle = await supabase
-                .from("match_results")
-                .select("*")
-                .eq("clash_battle_id", result.battleId)
-                .maybeSingle();
-
-            if (usedBattle.data) {
-                res.json({
-                    success: false,
-                    pending: true,
-                    message: "This Clash battle was already used. Play a new match before verifying."
-                });
-                return;
-            }
-        }
-
-        if (!result.found) {
+        if (!searchResult.found) {
             res.json({
                 success: false,
                 pending: true,
                 message: "No matching battle found yet. Try again in a minute."
+            });
+            return;
+        }
+
+        const result = await findUnusedBattleCandidate(searchResult.candidates);
+
+        if (!result) {
+            res.json({
+                success: false,
+                pending: true,
+                message: "This Clash battle was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2384,7 +2467,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             return;
         }
 
-        await supabase
+        const resultInsert = await supabase
             .from("match_results")
             .insert({
                 match_id: matchId,
@@ -2394,6 +2477,31 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                 loser_username: loserUsername,
                 loser_tag: loserTag
             });
+
+        if (resultInsert.error && resultInsert.error.code === "23505") {
+            await supabase
+                .from("matches")
+                .update({
+                    status: "Match ready",
+                    winner_username: null,
+                    winner_tag: null,
+                    loser_username: null,
+                    loser_tag: null,
+                    verified_at: null
+                })
+                .eq("id", matchId);
+
+            res.json({
+                success: false,
+                pending: true,
+                message: "This Clash battle was already used. Play a new match before verifying."
+            });
+            return;
+        }
+
+        if (resultInsert.error) {
+            console.log("MATCH RESULT INSERT ERROR:", resultInsert.error);
+        }
 
         const payout = await adjustBalance(winnerUsername, Number(completed.data.entry_fee) * 2);
 
@@ -4430,3 +4538,4 @@ ensureSeasonZeroTournament();
 setInterval(expireOldMatches, 60 * 1000);
 setInterval(expireStaleTournaments, 60 * 1000);
 setInterval(expireStaleClashLinks, 60 * 1000);
+setInterval(expireStaleTournamentMatches, 60 * 1000);
