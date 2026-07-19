@@ -80,6 +80,7 @@ const sideMenu = document.getElementById("sideMenu");
 const menuOverlay = document.getElementById("menuOverlay");
 const profileBtn = document.getElementById("profileBtn");
 const friendsBtn = document.getElementById("friendsBtn");
+const vaultBtn = document.getElementById("vaultBtn");
 
 function openMenu() {
     if (sideMenu) sideMenu.classList.add("open");
@@ -109,6 +110,12 @@ if (profileBtn) {
 if (friendsBtn) {
     friendsBtn.addEventListener("click", function () {
         window.location.href = "friends.html";
+    });
+}
+
+if (vaultBtn) {
+    vaultBtn.addEventListener("click", function () {
+        window.location.href = "../Vault/vault.html";
     });
 }
 
