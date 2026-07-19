@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="../css/games.css">
+    <link rel="stylesheet" href="../css/toast.css">
+</head>
+
+<body>
+
+<div class="games-page">
+
+    <div class="top-bar page-animate">
+        <button id="backButton" class="back-button">←</button>
+
+        <h1 class="games-title">GAMES</h1>
+    </div>
+
+    <p class="games-subtitle page-animate delay-1">
+        Pick a title to create or join a match.
+    </p>
+
+    <div class="section-title page-animate delay-1">
+        All Games
+    </div>
+
+    <div class="game-list">
+
+        <div id="clashCard" class="game-tile page-animate delay-2">
+            <div class="game-tile-media">
+                <img src="../assets/clashroyale.jpg" alt="Clash Royale">
+            </div>
+            <div class="game-tile-info">
+                <span class="game-tile-name">Clash Royale</span>
+            </div>
+        </div>
+
+        <div class="game-tile locked page-animate delay-3">
+            <div class="game-tile-media">
+                <div class="coming-soon-banner">COMING SOON</div>
+                <img src="../assets/street-fighter-6-card.jpg" alt="Street Fighter 6">
+            </div>
+            <div class="game-tile-info">
+                <span class="game-tile-name">Street Fighter 6</span>
+            </div>
+        </div>
+
+        <div class="game-tile locked page-animate delay-4">
+            <div class="game-tile-media">
+                <div class="coming-soon-banner">COMING SOON</div>
+                <img src="../assets/rocket-league-card.jpg" alt="Rocket League">
+            </div>
+            <div class="game-tile-info">
+                <span class="game-tile-name">Rocket League</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="section-title page-animate delay-4">
+        More On The Way
+    </div>
+
+    <div class="more-games-card page-animate delay-4">
+        <div class="more-games-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="6" y1="12" x2="10" y2="12"></line>
+                <line x1="8" y1="10" x2="8" y2="14"></line>
+                <circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"></circle>
+                <circle cx="18" cy="11" r="1" fill="currentColor" stroke="none"></circle>
+                <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.152A4 4 0 0 0 17.32 5z"></path>
+            </svg>
+        </div>
+        <div class="more-games-copy">
+            <strong>New titles are in the works</strong>
+            <span>We're adding more games to PryzePot. Check back soon.</span>
+        </div>
+    </div>
+
+</div>
+
+<script src="../js/toast.js"></script>
+<script src="../js/games.js"></script>
+
+</body>
+</html>

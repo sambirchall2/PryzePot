@@ -223,11 +223,10 @@ if (leaderboardCard) {
 }
 
 const playGamesCard = document.getElementById("playGamesCard");
-const gamesContainer = document.querySelector(".games-container");
 
-if (playGamesCard && gamesContainer) {
+if (playGamesCard) {
     playGamesCard.addEventListener("click", function () {
-        gamesContainer.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.location.href = "games.html";
     });
 }
 
