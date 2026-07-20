@@ -284,13 +284,13 @@ function init() {
         apiFetch("/api/users/" + encodeURIComponent(username) + "/cosmetics")
     ]).then(function (results) {
         const catalogData = results[0];
-        const profileData = results[1];
+        const profile = results[1].user || {};
         const cosmeticsData = results[2];
 
         vaultTiers = catalogData.tiers || [];
 
-        const level = Number(profileData.level) || 1;
-        const xp = Number(profileData.xp) || 0;
+        const level = Number(profile.level) || 1;
+        const xp = Number(profile.xp) || 0;
         const xpNeededForNextLevel = level * 100;
 
         currentLevelText.textContent = "Level " + level;
@@ -298,7 +298,7 @@ function init() {
         xpText.textContent = xp + " / " + xpNeededForNextLevel + " XP";
         xpFill.style.width = Math.min((xp / xpNeededForNextLevel) * 100, 100) + "%";
 
-        currentBalance = Number(profileData.balance) || 0;
+        currentBalance = Number(profile.balance) || 0;
         localStorage.setItem("balance", currentBalance);
         updateCreditsDisplay();
 
