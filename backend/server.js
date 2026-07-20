@@ -4189,14 +4189,13 @@ app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
     const today = new Date().toISOString().slice(0, 10);
     const currentStreak = foundUser.data.login_streak || 0;
     const lastRewardDate = foundUser.data.last_reward_date;
-    const currentBalance = foundUser.data.balance || 0;
 
     if (lastRewardDate === today) {
         res.json({
             success: true,
             alreadyClaimed: true,
             streak: currentStreak,
-            balance: currentBalance
+            balance: foundUser.data.balance || 0
         });
         return;
     }
@@ -4207,12 +4206,11 @@ app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
         : 1;
 
     const reward = DAILY_REWARD_SCHEDULE[newStreak - 1];
-    const newBalance = currentBalance + reward;
+    const credit = await adjustBalance(username, reward);
 
     await supabase
         .from("users")
         .update({
-            balance: newBalance,
             login_streak: newStreak,
             last_reward_date: today
         })
@@ -4223,7 +4221,7 @@ app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
         alreadyClaimed: false,
         reward: reward,
         streak: newStreak,
-        balance: newBalance
+        balance: credit.success ? credit.balance : foundUser.data.balance || 0
     });
 });
 

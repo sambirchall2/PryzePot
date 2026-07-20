@@ -26,6 +26,11 @@ if (changeEmailBtn) {
             return;
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+            showToast("Enter a valid email address.", "error");
+            return;
+        }
+
         changeEmailBtn.disabled = true;
         changeEmailBtn.textContent = "UPDATING...";
 
