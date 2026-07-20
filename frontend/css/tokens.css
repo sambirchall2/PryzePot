@@ -25,10 +25,11 @@
     --shadow-glow: 0 0 30px var(--accent-glow);
     --ease: cubic-bezier(.2, .8, .2, 1);
 
-    /* Grows the mobile-card layout on wide/high-resolution viewports so it
-       doesn't render as a tiny fixed-width card on large monitors. Stays at
-       1 for any viewport narrower than 900px (phones/tablets, unaffected). */
-    --ui-scale: clamp(1, calc(100vw / 900px), 1.6);
+    /* Grows the mobile-card layout on viewports wider than a standard 1080p
+       desktop so it doesn't render as a tiny fixed-width card on ultrawide
+       or 4K monitors. Stays at 1 up to 1920px viewport width, so phones,
+       tablets, and standard 1080p desktops are unaffected. */
+    --ui-scale: clamp(1, calc(100vw / 1920px), 1.6);
 }
 
 .page,
