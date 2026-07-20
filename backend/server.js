@@ -79,7 +79,7 @@ function verifyPendingSignup(token) {
     return payload;
 }
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
 
@@ -93,6 +93,21 @@ function requireAuth(req, res, next) {
 
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+        const activeCheck = await supabase
+            .from("users")
+            .select("is_active")
+            .eq("username", payload.username)
+            .maybeSingle();
+
+        if (activeCheck.data && activeCheck.data.is_active === false) {
+            res.status(401).json({
+                success: false,
+                message: "This account has been deactivated."
+            });
+            return;
+        }
+
         req.username = payload.username;
         next();
     } catch (error) {
@@ -177,12 +192,14 @@ function encodeTag(tag) {
 }
 
 function parseClashTime(clashTime) {
-    return new Date(
-        clashTime.substring(0, 4) + "-" +
-        clashTime.substring(4, 6) + "-" +
-        clashTime.substring(6, 8) + "T" +
-        clashTime.substring(9)
-    ).getTime();
+    return Date.UTC(
+        Number(clashTime.substring(0, 4)),
+        Number(clashTime.substring(4, 6)) - 1,
+        Number(clashTime.substring(6, 8)),
+        Number(clashTime.substring(9, 11)),
+        Number(clashTime.substring(11, 13)),
+        Number(clashTime.substring(13, 15))
+    );
 }
 function getMatchXpForResult(resultType) {
     if (resultType === "win") return 30;
@@ -1144,6 +1161,14 @@ app.post("/api/login", async function (req, res) {
         : storedPassword === password;
 
     if (foundUser.data && passwordMatches) {
+        if (foundUser.data.is_active === false) {
+            res.json({
+                success: false,
+                message: "This account has been deactivated."
+            });
+            return;
+        }
+
         if (!isBcryptHash) {
             const upgradedHash = await bcrypt.hash(password, 10);
 
@@ -2797,6 +2822,184 @@ app.post("/api/users/save-profile", requireAuth, async function (req, res) {
         user: result.data
     });
 });
+
+async function verifyCurrentPassword(username, currentPassword) {
+    const foundUser = await supabase
+        .from("users")
+        .select("password")
+        .eq("username", username)
+        .maybeSingle();
+
+    const storedPassword = foundUser.data ? foundUser.data.password : null;
+    const isBcryptHash = typeof storedPassword === "string" && storedPassword.startsWith("$2");
+
+    return isBcryptHash
+        ? storedPassword && (await bcrypt.compare(currentPassword, storedPassword))
+        : storedPassword === currentPassword;
+}
+
+app.post("/api/users/change-email", requireAuth, async function (req, res) {
+    const username = req.username;
+    const newEmail = req.body.newEmail;
+    const currentPassword = req.body.currentPassword;
+
+    if (!newEmail || !currentPassword) {
+        res.json({
+            success: false,
+            message: "Please enter your new email and current password."
+        });
+        return;
+    }
+
+    const passwordMatches = await verifyCurrentPassword(username, currentPassword);
+
+    if (!passwordMatches) {
+        res.json({
+            success: false,
+            message: "Current password is incorrect."
+        });
+        return;
+    }
+
+    const existingEmail = await supabase
+        .from("users")
+        .select("username")
+        .eq("email", newEmail)
+        .neq("username", username)
+        .maybeSingle();
+
+    if (existingEmail.data) {
+        res.json({
+            success: false,
+            message: "An account with this email already exists."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({ email: newEmail })
+        .eq("username", username)
+        .select("username, email")
+        .single();
+
+    if (result.error) {
+        console.log("CHANGE EMAIL ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not update email."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Email updated.",
+        user: result.data
+    });
+});
+
+app.post("/api/users/change-password", requireAuth, async function (req, res) {
+    const username = req.username;
+    const currentPassword = req.body.currentPassword;
+    const newPassword = req.body.newPassword;
+
+    if (!currentPassword || !newPassword) {
+        res.json({
+            success: false,
+            message: "Please enter your current and new password."
+        });
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        res.json({
+            success: false,
+            message: "New password must be at least 6 characters."
+        });
+        return;
+    }
+
+    const passwordMatches = await verifyCurrentPassword(username, currentPassword);
+
+    if (!passwordMatches) {
+        res.json({
+            success: false,
+            message: "Current password is incorrect."
+        });
+        return;
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    const result = await supabase
+        .from("users")
+        .update({ password: newPasswordHash })
+        .eq("username", username);
+
+    if (result.error) {
+        console.log("CHANGE PASSWORD ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not update password."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Password updated."
+    });
+});
+
+app.post("/api/users/deactivate", requireAuth, async function (req, res) {
+    const username = req.username;
+    const currentPassword = req.body.currentPassword;
+
+    if (!currentPassword) {
+        res.json({
+            success: false,
+            message: "Please enter your password to deactivate your account."
+        });
+        return;
+    }
+
+    const passwordMatches = await verifyCurrentPassword(username, currentPassword);
+
+    if (!passwordMatches) {
+        res.json({
+            success: false,
+            message: "Current password is incorrect."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({
+            is_active: false,
+            deactivated_at: new Date().toISOString()
+        })
+        .eq("username", username);
+
+    if (result.error) {
+        console.log("DEACTIVATE ACCOUNT ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not deactivate account."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Account deactivated."
+    });
+});
+
 app.get("/api/users/:username/cosmetics", async function (req, res) {
     const username = req.params.username;
 
