@@ -6,7 +6,7 @@ const seasonZeroJoinBtn = document.getElementById("seasonZeroJoinBtn");
 
 const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
-const clashFriendLink = localStorage.getItem("clashFriendLink");
+const clashFriendLink = getClashFriendLink();
 
 const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
 

@@ -26,6 +26,38 @@ function apiFetch(path, options) {
         });
 }
 
+function sendHeartbeat() {
+    if (!localStorage.getItem("authToken")) return;
+
+    apiFetch("/api/users/heartbeat", {
+        method: "POST",
+        body: JSON.stringify({})
+    })
+    .catch(function (error) {
+        console.log("HEARTBEAT ERROR:", error);
+    });
+}
+
+sendHeartbeat();
+setInterval(sendHeartbeat, 30000);
+
+const CLASH_FRIEND_LINK_EXPIRATION_MS = 24 * 60 * 60 * 1000;
+
+function getClashFriendLink() {
+    const link = localStorage.getItem("clashFriendLink");
+    const setAt = Number(localStorage.getItem("clashFriendLinkSetAt") || 0);
+
+    if (!link) return null;
+
+    if (!setAt || (Date.now() - setAt) > CLASH_FRIEND_LINK_EXPIRATION_MS) {
+        localStorage.removeItem("clashFriendLink");
+        localStorage.removeItem("clashFriendLinkSetAt");
+        return null;
+    }
+
+    return link;
+}
+
 function apiFetchForm(path, formData) {
     const headers = {};
 

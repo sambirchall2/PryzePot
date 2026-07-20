@@ -6,7 +6,7 @@ if (!username) {
 
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
 const clashPlayerName = localStorage.getItem("clashPlayerName");
-const clashFriendLink = localStorage.getItem("clashFriendLink");
+const clashFriendLink = getClashFriendLink();
 const clashTrophies = localStorage.getItem("clashTrophies");
 
 const pendingJoinType = localStorage.getItem("pendingJoinType");

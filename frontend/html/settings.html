@@ -24,10 +24,10 @@
             <div class="settings-box-title">Change Email</div>
 
             <label for="newEmailInput">New Email</label>
-            <input id="newEmailInput" type="email" placeholder="you@example.com">
+            <input id="newEmailInput" type="email" placeholder="you@example.com" autocomplete="off">
 
             <label for="emailPasswordInput">Current Password</label>
-            <input id="emailPasswordInput" type="password" placeholder="Current password">
+            <input id="emailPasswordInput" type="password" placeholder="Current password" autocomplete="off">
 
             <button id="changeEmailBtn" class="settings-btn">
                 UPDATE EMAIL
@@ -38,10 +38,13 @@
             <div class="settings-box-title">Change Password</div>
 
             <label for="currentPasswordInput">Current Password</label>
-            <input id="currentPasswordInput" type="password" placeholder="Current password">
+            <input id="currentPasswordInput" type="password" placeholder="Current password" autocomplete="off">
 
             <label for="newPasswordInput">New Password</label>
-            <input id="newPasswordInput" type="password" placeholder="New password">
+            <input id="newPasswordInput" type="password" placeholder="New password" autocomplete="off">
+
+            <label for="confirmNewPasswordInput">Confirm New Password</label>
+            <input id="confirmNewPasswordInput" type="password" placeholder="Confirm new password" autocomplete="off">
 
             <button id="changePasswordBtn" class="settings-btn">
                 UPDATE PASSWORD
@@ -52,14 +55,31 @@
             <div class="settings-box-title danger-title">Deactivate Account</div>
 
             <p class="danger-copy">
-                This immediately signs you out and blocks you from logging back in. This cannot be undone by you.
+                This immediately signs you out and blocks you from logging back in. You can reactivate by
+                signing in again with your email and password.
             </p>
 
             <label for="deactivatePasswordInput">Current Password</label>
-            <input id="deactivatePasswordInput" type="password" placeholder="Current password">
+            <input id="deactivatePasswordInput" type="password" placeholder="Current password" autocomplete="off">
 
             <button id="deactivateBtn" class="settings-btn danger-btn">
                 DEACTIVATE ACCOUNT
+            </button>
+        </div>
+
+        <div class="settings-box danger-box">
+            <div class="settings-box-title danger-title">Delete Account</div>
+
+            <p class="danger-copy">
+                This permanently deletes your account and cannot be undone. Deactivating above is reversible;
+                this is not.
+            </p>
+
+            <label for="deletePasswordInput">Current Password</label>
+            <input id="deletePasswordInput" type="password" placeholder="Current password" autocomplete="off">
+
+            <button id="deleteAccountBtn" class="settings-btn danger-btn">
+                PERMANENTLY DELETE ACCOUNT
             </button>
         </div>
 

@@ -93,22 +93,22 @@ async function getUserProfile(usernameValue) {
 }
 
 function setPlayerCard(side, usernameValue, profile) {
-    const avatar = profile.profile_picture || "avatar1";
-    const banner = profile.profile_banner || "banner1";
+    const avatar = getCosmeticImagePath(profile.equipped_avatar || profile.profile_picture || "avatar1", "Avatar");
+    const banner = getCosmeticImagePath(profile.equipped_banner || profile.profile_banner || "banner1", "Banner");
     const level = profile.level || 1;
 
     if (side === "one") {
         playerOneName.textContent = usernameValue || "Player One";
         playerOneLevel.textContent = "Level " + level;
-        playerOneAvatar.src = "../assets/profile/" + avatar + ".png";
-        playerOneBanner.src = "../assets/profile/" + banner + ".png";
+        playerOneAvatar.src = avatar;
+        playerOneBanner.src = banner;
     }
 
     if (side === "two") {
         playerTwoName.textContent = usernameValue || "Player Two";
         playerTwoLevel.textContent = "Level " + level;
-        playerTwoAvatar.src = "../assets/profile/" + avatar + ".png";
-        playerTwoBanner.src = "../assets/profile/" + banner + ".png";
+        playerTwoAvatar.src = avatar;
+        playerTwoBanner.src = banner;
     }
 }
 

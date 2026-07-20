@@ -79,15 +79,15 @@ function loadChampionProfile() {
             winnerLevel.textContent =
                 "Level " + (user.level || 1);
 
-            winnerAvatar.src =
-                "../assets/profile/" +
-                (user.profile_picture || "avatar1") +
-                ".png";
+            winnerAvatar.src = getCosmeticImagePath(
+                user.equipped_avatar || user.profile_picture || "avatar1",
+                "Avatar"
+            );
 
-            winnerBanner.src =
-                "../assets/profile/" +
-                (user.profile_banner || "banner1") +
-                ".png";
+            winnerBanner.src = getCosmeticImagePath(
+                user.equipped_banner || user.profile_banner || "banner1",
+                "Banner"
+            );
         })
         .catch(function (error) {
             console.log("CHAMPION PROFILE LOAD ERROR:", error);

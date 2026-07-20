@@ -182,6 +182,18 @@ function renderPreview(tier) {
 
     previewPanel.querySelectorAll(".item-buy-btn").forEach(function (button) {
         button.addEventListener("click", function () {
+            const item = tier.items.find(function (candidate) {
+                return candidate.id === button.dataset.itemId;
+            });
+
+            const itemName = item ? item.name : "this item";
+
+            const confirmed = window.confirm(
+                "Buy " + itemName + " for " + tier.price.toLocaleString() + " Vault Credits?"
+            );
+
+            if (!confirmed) return;
+
             purchaseCosmetic(button.dataset.itemId, tier, button);
         });
     });

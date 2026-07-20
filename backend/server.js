@@ -3063,6 +3063,49 @@ app.post("/api/users/reactivate", async function (req, res) {
     });
 });
 
+app.post("/api/users/delete-account", requireAuth, async function (req, res) {
+    const username = req.username;
+    const currentPassword = req.body.currentPassword;
+
+    if (!currentPassword) {
+        res.json({
+            success: false,
+            message: "Please enter your password to delete your account."
+        });
+        return;
+    }
+
+    const passwordMatches = await verifyCurrentPassword(username, currentPassword);
+
+    if (!passwordMatches) {
+        res.json({
+            success: false,
+            message: "Current password is incorrect."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .delete()
+        .eq("username", username);
+
+    if (result.error) {
+        console.log("DELETE ACCOUNT ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not delete account."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Account permanently deleted."
+    });
+});
+
 app.get("/api/users/:username/cosmetics", async function (req, res) {
     const username = req.params.username;
 
@@ -3493,7 +3536,7 @@ app.get("/api/users/search/:query", async function (req, res) {
 
     const result = await supabase
         .from("users")
-        .select("username, profile_picture, level")
+        .select("username, profile_picture, equipped_avatar, level")
         .ilike("username", query + "%")
         .limit(15);
 

@@ -59,20 +59,27 @@ if (changeEmailBtn) {
 
 const currentPasswordInput = document.getElementById("currentPasswordInput");
 const newPasswordInput = document.getElementById("newPasswordInput");
+const confirmNewPasswordInput = document.getElementById("confirmNewPasswordInput");
 const changePasswordBtn = document.getElementById("changePasswordBtn");
 
 if (changePasswordBtn) {
     changePasswordBtn.addEventListener("click", function () {
         const currentPassword = currentPasswordInput.value;
         const newPassword = newPasswordInput.value;
+        const confirmNewPassword = confirmNewPasswordInput.value;
 
-        if (!currentPassword || !newPassword) {
-            showToast("Enter your current and new password.", "error");
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            showToast("Enter your current password and new password twice.", "error");
             return;
         }
 
         if (newPassword.length < 6) {
             showToast("New password must be at least 6 characters.", "error");
+            return;
+        }
+
+        if (newPassword !== confirmNewPassword) {
+            showToast("New passwords don't match.", "error");
             return;
         }
 
@@ -97,6 +104,7 @@ if (changePasswordBtn) {
 
                 currentPasswordInput.value = "";
                 newPasswordInput.value = "";
+                confirmNewPasswordInput.value = "";
                 showToast("Password updated.", "success");
             })
             .catch(function (error) {
@@ -151,6 +159,53 @@ if (deactivateBtn) {
                 deactivateBtn.disabled = false;
                 deactivateBtn.textContent = "DEACTIVATE ACCOUNT";
                 showToast("Could not deactivate account.", "error");
+            });
+    });
+}
+
+const deletePasswordInput = document.getElementById("deletePasswordInput");
+const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+
+if (deleteAccountBtn) {
+    deleteAccountBtn.addEventListener("click", function () {
+        const currentPassword = deletePasswordInput.value;
+
+        if (!currentPassword) {
+            showToast("Enter your current password.", "error");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "Are you sure you want to PERMANENTLY delete your account? This cannot be undone, even by reactivating."
+        );
+
+        if (!confirmed) return;
+
+        deleteAccountBtn.disabled = true;
+        deleteAccountBtn.textContent = "DELETING...";
+
+        apiFetch("/api/users/delete-account", {
+            method: "POST",
+            body: JSON.stringify({
+                currentPassword: currentPassword
+            })
+        })
+            .then(function (data) {
+                if (!data.success) {
+                    deleteAccountBtn.disabled = false;
+                    deleteAccountBtn.textContent = "PERMANENTLY DELETE ACCOUNT";
+                    showToast(data.message || "Could not delete account.", "error");
+                    return;
+                }
+
+                localStorage.clear();
+                window.location.href = "index.html";
+            })
+            .catch(function (error) {
+                console.log("DELETE ACCOUNT ERROR:", error);
+                deleteAccountBtn.disabled = false;
+                deleteAccountBtn.textContent = "PERMANENTLY DELETE ACCOUNT";
+                showToast("Could not delete account.", "error");
             });
     });
 }

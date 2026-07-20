@@ -85,7 +85,7 @@ function createFriendCard(user, online) {
     card.innerHTML = `
         <img
             class="friend-avatar"
-            src="../assets/profile/${user.profile_picture || "avatar1"}.png"
+            src="${getCosmeticImagePath(user.equipped_avatar || user.profile_picture || "avatar1", "Avatar")}"
             alt="${user.username}"
         >
 

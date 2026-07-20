@@ -68,8 +68,10 @@ function loadFriendProfile() {
 
             friendUsernameDisplay.textContent = user.username;
 
-            friendAvatar.src =
-                "../assets/profile/" + (user.profile_picture || "avatar1") + ".png";
+            friendAvatar.src = getCosmeticImagePath(
+                user.equipped_avatar || user.profile_picture || "avatar1",
+                "Avatar"
+            );
 
             if (isOnline(user.last_seen)) {
                 friendStatus.textContent = "● Online";
@@ -86,36 +88,58 @@ function loadFriendProfile() {
         });
 }
 
-function renderMessages(messages) {
-    messagesContainer.innerHTML = "";
+let renderedMessageCount = 0;
 
-    if (!messages || messages.length === 0) {
+function appendMessageRow(message) {
+    const row = document.createElement("div");
+
+    const isMe = message.sender_username === username;
+
+    row.className = isMe ? "message-row me" : "message-row friend";
+
+    row.innerHTML = `
+        <div class="message-bubble">
+            <div>${message.message}</div>
+            <div class="message-time">${formatTime(message.created_at)}</div>
+        </div>
+    `;
+
+    messagesContainer.appendChild(row);
+}
+
+function renderMessages(messages) {
+    messages = messages || [];
+
+    if (messages.length === 0) {
         messagesContainer.innerHTML = `
             <div class="loading-message">
                 No messages yet. Say what’s up.
             </div>
         `;
+        renderedMessageCount = 0;
         return;
     }
 
-    messages.forEach(function (message) {
-        const row = document.createElement("div");
+    if (messages.length < renderedMessageCount) {
+        renderedMessageCount = 0;
+    }
 
-        const isMe = message.sender_username === username;
+    const isFirstRender = renderedMessageCount === 0;
 
-        row.className = isMe ? "message-row me" : "message-row friend";
+    if (isFirstRender) {
+        messagesContainer.innerHTML = "";
+    }
 
-        row.innerHTML = `
-            <div class="message-bubble">
-                <div>${message.message}</div>
-                <div class="message-time">${formatTime(message.created_at)}</div>
-            </div>
-        `;
+    const wasNearBottom = isFirstRender ||
+        (messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < 80);
 
-        messagesContainer.appendChild(row);
-    });
+    messages.slice(renderedMessageCount).forEach(appendMessageRow);
 
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    renderedMessageCount = messages.length;
+
+    if (wasNearBottom) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 }
 
 function loadMessages() {

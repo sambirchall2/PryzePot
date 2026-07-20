@@ -41,7 +41,7 @@ function normalizePlayerProfile(user) {
 
     return {
         username: user.username || localStorage.getItem("username") || "Player",
-        balance: user.balance || localStorage.getItem("balance") || 0,
+        balance: user.balance != null ? Number(user.balance) : Number(localStorage.getItem("balance")) || 0,
 
         avatar: user.equipped_avatar || user.profile_picture || "avatar1",
         banner: user.equipped_banner || user.profile_banner || "banner1",

@@ -117,6 +117,7 @@ verifyBtn.addEventListener("click", function () {
             localStorage.setItem("clashTrophies", data.player.trophies);
             localStorage.setItem("clashExpLevel", data.player.expLevel);
             localStorage.setItem("clashFriendLink", friendLink);
+            localStorage.setItem("clashFriendLinkSetAt", Date.now().toString());
 
             return apiFetch("/api/users/save-clash", {
                 method: "POST",

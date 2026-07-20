@@ -88,10 +88,10 @@ function getProfileImage(profile, type) {
     }
 
     if (type === "banner") {
-        return profile.profile_banner || "banner1";
+        return profile.equipped_banner || profile.profile_banner || "banner1";
     }
 
-    return profile.profile_picture || "avatar1";
+    return profile.equipped_avatar || profile.profile_picture || "avatar1";
 }
 
 function getProfileLevel(profile) {
@@ -190,16 +190,16 @@ if (!savedMatch) {
     loserLevel.textContent = "Level " + getProfileLevel(loserProfile);
 
     winnerAvatar.src =
-        "../assets/profile/" + getProfileImage(winnerProfile, "avatar") + ".png";
+        getCosmeticImagePath(getProfileImage(winnerProfile, "avatar"), "Avatar");
 
     winnerBanner.src =
-        "../assets/profile/" + getProfileImage(winnerProfile, "banner") + ".png";
+        getCosmeticImagePath(getProfileImage(winnerProfile, "banner"), "Banner");
 
     loserAvatar.src =
-        "../assets/profile/" + getProfileImage(loserProfile, "avatar") + ".png";
+        getCosmeticImagePath(getProfileImage(loserProfile, "avatar"), "Avatar");
 
     loserBanner.src =
-        "../assets/profile/" + getProfileImage(loserProfile, "banner") + ".png";
+        getCosmeticImagePath(getProfileImage(loserProfile, "banner"), "Banner");
 
     if (winnerCard) {
         winnerCard.style.cursor = "pointer";

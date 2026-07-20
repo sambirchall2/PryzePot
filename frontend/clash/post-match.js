@@ -6,7 +6,7 @@ const postMatchBtn = document.getElementById("postMatchBtn");
 const username = localStorage.getItem("username");
 const entryFee = localStorage.getItem("entryFee");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
-const clashFriendLink = localStorage.getItem("clashFriendLink");
+const clashFriendLink = getClashFriendLink();
 const createType = localStorage.getItem("createType");
 const tournamentSize = localStorage.getItem("tournamentSize");
 

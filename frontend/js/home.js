@@ -7,6 +7,15 @@ if (!username) {
 const notificationBell = document.getElementById("notificationBell");
 const notificationCount = document.getElementById("notificationCount");
 const homeProfileCard = document.getElementById("homeProfileCard");
+const friendsShortcut = document.getElementById("friendsShortcut");
+const onlineFriendsCount = document.getElementById("onlineFriendsCount");
+const friendRequestBadge = document.getElementById("friendRequestBadge");
+
+function isFriendOnline(lastSeen) {
+    if (!lastSeen) return false;
+
+    return (Date.now() - Number(lastSeen)) < 90000;
+}
 
 const dailyRewardPopup = document.getElementById("dailyRewardPopup");
 const dailyRewardStreak = document.getElementById("dailyRewardStreak");
@@ -140,6 +149,7 @@ function logout() {
     localStorage.removeItem("clashTrophies");
     localStorage.removeItem("clashExpLevel");
     localStorage.removeItem("clashFriendLink");
+    localStorage.removeItem("clashFriendLinkSetAt");
     localStorage.removeItem("entryFee");
     localStorage.removeItem("currentMatchId");
     localStorage.removeItem("matchResult");
@@ -183,6 +193,15 @@ function loadNotificationCount() {
             } else {
                 notificationCount.classList.add("hidden");
             }
+
+            if (friendRequestBadge) {
+                if (requestCount > 0) {
+                    friendRequestBadge.textContent = requestCount;
+                    friendRequestBadge.classList.remove("hidden");
+                } else {
+                    friendRequestBadge.classList.add("hidden");
+                }
+            }
         })
         .catch(function (error) {
             console.log("NOTIFICATION COUNT ERROR:", error);
@@ -195,15 +214,43 @@ if (notificationBell) {
     });
 }
 
-function sendHeartbeat() {
-    if (!username) return;
+function loadOnlineFriendsCount() {
+    if (!username || !onlineFriendsCount) return;
 
-    apiFetch("/api/users/heartbeat", {
-        method: "POST",
-        body: JSON.stringify({})
-    })
-    .catch(function (error) {
-        console.log("HEARTBEAT ERROR:", error);
+    apiFetch("/api/friends/" + encodeURIComponent(username))
+        .then(function (data) {
+            if (!data.success || !data.friends || data.friends.length === 0) {
+                onlineFriendsCount.classList.add("hidden");
+                return;
+            }
+
+            return apiFetch("/api/users/profiles-batch", {
+                method: "POST",
+                body: JSON.stringify({ usernames: data.friends })
+            }).then(function (batchResult) {
+                const profiles = batchResult.profiles || {};
+
+                const onlineCount = data.friends.filter(function (friendUsername) {
+                    const profile = profiles[friendUsername];
+                    return profile && isFriendOnline(profile.last_seen);
+                }).length;
+
+                if (onlineCount > 0) {
+                    onlineFriendsCount.textContent = onlineCount;
+                    onlineFriendsCount.classList.remove("hidden");
+                } else {
+                    onlineFriendsCount.classList.add("hidden");
+                }
+            });
+        })
+        .catch(function (error) {
+            console.log("ONLINE FRIENDS COUNT ERROR:", error);
+        });
+}
+
+if (friendsShortcut) {
+    friendsShortcut.addEventListener("click", function () {
+        window.location.href = "friends.html";
     });
 }
 
@@ -323,9 +370,9 @@ if (returnTournamentBtn) {
 }
 loadHomeProfile();
 loadNotificationCount();
-sendHeartbeat();
+loadOnlineFriendsCount();
 loadActiveTournament();
 claimDailyReward();
 
 setInterval(loadNotificationCount, 15000);
-setInterval(sendHeartbeat, 30000);
+setInterval(loadOnlineFriendsCount, 15000);

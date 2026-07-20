@@ -19,7 +19,7 @@ if (joinMatchBtn) {
         localStorage.setItem("afterConnectRedirect", "match-board.html");
 
         const clashPlayerTag = localStorage.getItem("clashPlayerTag");
-        const clashFriendLink = localStorage.getItem("clashFriendLink");
+        const clashFriendLink = getClashFriendLink();
 
         if (!clashPlayerTag || !clashFriendLink) {
             window.location.href = "connect-clash.html";

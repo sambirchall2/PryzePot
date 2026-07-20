@@ -72,13 +72,13 @@ function createRequestCard(request, profile) {
     const card = document.createElement("div");
     card.className = "request-card";
 
-    const avatar = profile.profile_picture || "avatar1";
+    const avatar = profile.equipped_avatar || profile.profile_picture || "avatar1";
     const level = profile.level || 1;
 
     card.innerHTML = `
         <img
             class="request-avatar"
-            src="../assets/profile/${avatar}.png"
+            src="${getCosmeticImagePath(avatar, "Avatar")}"
             alt="${request.sender_username}"
         >
 

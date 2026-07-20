@@ -55,7 +55,9 @@ body {
     border: 1px solid rgba(var(--accent-rgb),.30);
     box-shadow: 0 0 30px rgba(var(--accent-rgb),.10);
 
-    position: relative;
+    position: sticky;
+    top: 12px;
+    z-index: 10;
     overflow: hidden;
 
     background: var(--void);
@@ -327,7 +329,6 @@ body {
         width: 430px;
         min-height: 900px;
         border-radius: var(--r-lg);
-        overflow: hidden;
         border: 1px solid rgba(var(--accent-rgb), 0.22);
         box-shadow:
             0 0 40px rgba(var(--accent-rgb), 0.12),

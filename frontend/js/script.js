@@ -29,6 +29,7 @@ function clearClashStorage() {
     localStorage.removeItem("clashPlayerTag");
     localStorage.removeItem("clashPlayerName");
     localStorage.removeItem("clashFriendLink");
+    localStorage.removeItem("clashFriendLinkSetAt");
     localStorage.removeItem("clashTrophies");
     localStorage.removeItem("clashExpLevel");
 }

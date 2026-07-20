@@ -25,19 +25,27 @@
     --shadow-glow: 0 0 30px var(--accent-glow);
     --ease: cubic-bezier(.2, .8, .2, 1);
 
-    /* Grows the mobile-card layout on viewports wider than a standard 1080p
-       desktop so it doesn't render as a tiny fixed-width card on ultrawide
-       or 4K monitors. Stays at 1 up to 1920px viewport width, so phones,
-       tablets, and standard 1080p desktops are unaffected. */
-    --ui-scale: clamp(1, calc(100vw / 1920px), 1.6);
 }
 
-.page,
-.app-shell,
-.login-container,
-[class$="-page"] {
-    transform: scale(var(--ui-scale));
-    transform-origin: top center;
+/* Grows the mobile-card layout on viewports wider than a standard 1080p
+   desktop so it doesn't render as a tiny fixed-width card on ultrawide or
+   4K monitors. Scoped to a media query (rather than a variable that's just
+   1 below this width) so phones/tablets/standard desktops never get a
+   `transform` on these elements at all - some mobile WebKit builds have
+   rendering bugs where any transform, even scale(1), can make a
+   position:fixed sibling (like a back button) stop receiving touch input. */
+@media (min-width: 1920px) {
+    :root {
+        --ui-scale: clamp(1, calc(100vw / 1920px), 1.6);
+    }
+
+    .page,
+    .app-shell,
+    .login-container,
+    [class$="-page"] {
+        transform: scale(var(--ui-scale));
+        transform-origin: top center;
+    }
 }
 
 @keyframes tokenCardIn {

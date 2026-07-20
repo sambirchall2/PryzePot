@@ -1,8 +1,10 @@
 const backBtn = document.getElementById("backBtn");
 const entryGrid = document.getElementById("entryGrid");
 const continueBtn = document.getElementById("continueBtn");
+const entryBalance = document.getElementById("entryBalance");
 
 const entryFees = [25, 50, 100, 250, 500, 1000, 2500];
+const username = localStorage.getItem("username");
 
 let selectedEntry = null;
 
@@ -11,6 +13,32 @@ if (backBtn) {
         window.location.href = "connect-clash.html";
     });
 }
+
+function renderBalance(balance) {
+    if (!entryBalance) return;
+
+    entryBalance.innerHTML =
+        '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' +
+        Number(balance || 0).toLocaleString();
+}
+
+function loadBalance() {
+    if (!username) return;
+
+    apiFetch("/api/users/" + encodeURIComponent(username) + "/profile")
+        .then(function (data) {
+            if (!data.success || !data.user) return;
+
+            localStorage.setItem("balance", data.user.balance);
+            renderBalance(data.user.balance);
+        })
+        .catch(function (error) {
+            console.log("ENTRY BALANCE ERROR:", error);
+        });
+}
+
+renderBalance(localStorage.getItem("balance"));
+loadBalance();
 
 entryFees.forEach(function (amount) {
     const card = document.createElement("button");
