@@ -186,6 +186,11 @@
     white-space: nowrap;
 }
 
+.pp-home-stats .coin-icon {
+    height: 1.6em;
+    vertical-align: -0.3em;
+}
+
 .pp-xp-bottom {
     margin-top: 5px;
     display: grid;
