@@ -81,6 +81,7 @@ const menuOverlay = document.getElementById("menuOverlay");
 const profileBtn = document.getElementById("profileBtn");
 const friendsBtn = document.getElementById("friendsBtn");
 const vaultBtn = document.getElementById("vaultBtn");
+const settingsBtn = document.getElementById("settingsBtn");
 
 function openMenu() {
     if (sideMenu) sideMenu.classList.add("open");
@@ -116,6 +117,12 @@ if (friendsBtn) {
 if (vaultBtn) {
     vaultBtn.addEventListener("click", function () {
         window.location.href = "../Vault/vault.html";
+    });
+}
+
+if (settingsBtn) {
+    settingsBtn.addEventListener("click", function () {
+        window.location.href = "settings.html";
     });
 }
 

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="../css/settings.css">
+    <link rel="stylesheet" href="../css/toast.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="settings-page">
+
+        <h1>Settings</h1>
+        <p class="subtitle">Manage your account.</p>
+
+        <div class="settings-box">
+            <div class="settings-box-title">Change Email</div>
+
+            <label for="newEmailInput">New Email</label>
+            <input id="newEmailInput" type="email" placeholder="you@example.com">
+
+            <label for="emailPasswordInput">Current Password</label>
+            <input id="emailPasswordInput" type="password" placeholder="Current password">
+
+            <button id="changeEmailBtn" class="settings-btn">
+                UPDATE EMAIL
+            </button>
+        </div>
+
+        <div class="settings-box">
+            <div class="settings-box-title">Change Password</div>
+
+            <label for="currentPasswordInput">Current Password</label>
+            <input id="currentPasswordInput" type="password" placeholder="Current password">
+
+            <label for="newPasswordInput">New Password</label>
+            <input id="newPasswordInput" type="password" placeholder="New password">
+
+            <button id="changePasswordBtn" class="settings-btn">
+                UPDATE PASSWORD
+            </button>
+        </div>
+
+        <div class="settings-box danger-box">
+            <div class="settings-box-title danger-title">Deactivate Account</div>
+
+            <p class="danger-copy">
+                This immediately signs you out and blocks you from logging back in. This cannot be undone by you.
+            </p>
+
+            <label for="deactivatePasswordInput">Current Password</label>
+            <input id="deactivatePasswordInput" type="password" placeholder="Current password">
+
+            <button id="deactivateBtn" class="settings-btn danger-btn">
+                DEACTIVATE ACCOUNT
+            </button>
+        </div>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/toast.js"></script>
+    <script src="../js/settings.js"></script>
+
+</body>
+</html>
