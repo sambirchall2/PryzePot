@@ -3,4 +3,6 @@
     width: auto;
     vertical-align: -0.65em;
     margin-right: 6px;
+    border-radius: 50%;
+    clip-path: circle(36% at 50% 49%);
 }
