@@ -20,6 +20,12 @@ const skipProfileBtn = document.getElementById("skipProfileBtn");
 const framePreview = document.getElementById("framePreview");
 const badgePreview = document.getElementById("badgePreview");
 
+const isFirstTimeSetup = localStorage.getItem("profileCompleted") !== "true";
+
+if (!isFirstTimeSetup && skipProfileBtn) {
+    skipProfileBtn.classList.add("hidden");
+}
+
 let unlockedCosmetics = [];
 
 let selectedAvatar = null;
@@ -390,6 +396,8 @@ saveProfileBtn.addEventListener("click", function () {
 });
 
 skipProfileBtn.addEventListener("click", function () {
+    if (!isFirstTimeSetup) return;
+
     window.location.href = "home.html";
 });
 
