@@ -1,3 +1,4 @@
+const backBtn = document.getElementById("backBtn");
 const tournamentSizeDisplay = document.getElementById("tournamentSize");
 const entryFeeDisplay = document.getElementById("entryFee");
 const prizePoolDisplay = document.getElementById("prizePool");
@@ -12,6 +13,12 @@ const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const username = localStorage.getItem("username");
+
+if (backBtn) {
+    backBtn.addEventListener("click", function () {
+        window.location.href = "online.html";
+    });
+}
 
 const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
 const SEASON_ZERO_SIZE = 128;

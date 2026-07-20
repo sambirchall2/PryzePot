@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Clash Account | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="verify-clash-join.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="verify-join-page">
+
+        <h1>Confirm Your Account</h1>
+        <p class="subtitle" id="subtitleText">
+            Double check this is the Clash Royale account you want to play with.
+        </p>
+
+        <div class="clash-account-card">
+            <div class="clash-account-row">
+                <span>Player</span>
+                <strong id="clashNameText">-</strong>
+            </div>
+
+            <div class="clash-account-row">
+                <span>Tag</span>
+                <strong id="clashTagText">-</strong>
+            </div>
+
+            <div class="clash-account-row">
+                <span>Trophies</span>
+                <strong id="clashTrophiesText">-</strong>
+            </div>
+        </div>
+
+        <button id="confirmJoinBtn" class="confirm-btn">
+            CONFIRM &amp; JOIN
+        </button>
+
+        <button id="cancelJoinBtn" class="cancel-link-btn">
+            Cancel
+        </button>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="verify-clash-join.js"></script>
+
+</body>
+</html>

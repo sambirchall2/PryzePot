@@ -65,6 +65,7 @@ if (seasonZeroJoinBtn) {
         if (!tournamentId) return;
 
         localStorage.setItem("pendingTournamentId", tournamentId);
+        localStorage.setItem("pendingTournamentSetAt", Date.now().toString());
         localStorage.setItem("afterConnectRedirect", "match-board.html");
 
         window.location.href = "connect-clash.html";

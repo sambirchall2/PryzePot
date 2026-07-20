@@ -8,6 +8,10 @@ const username = localStorage.getItem("username");
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
+        localStorage.removeItem("pendingTournamentId");
+        localStorage.removeItem("pendingTournamentSetAt");
+        localStorage.removeItem("afterConnectRedirect");
+
         window.location.href = "online.html";
     });
 }
