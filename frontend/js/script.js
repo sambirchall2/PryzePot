@@ -149,6 +149,11 @@ signInButton.addEventListener("click", function () {
     })
     .then(function (data) {
         if (!data.success) {
+            if (data.deactivated && window.confirm(data.message + " Reactivate it now?")) {
+                reactivateAccount(email, password);
+                return;
+            }
+
             alert(data.message);
             resetButton();
             return;
@@ -162,3 +167,24 @@ signInButton.addEventListener("click", function () {
         resetButton();
     });
 });
+
+function reactivateAccount(email, password) {
+    apiFetch("/api/users/reactivate", {
+        method: "POST",
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(function (data) {
+        if (!data.success) {
+            alert(data.message);
+            resetButton();
+            return;
+        }
+
+        completeLogin(data.token, data.user.username, data.user.balance);
+    })
+    .catch(function (error) {
+        console.log("REACTIVATE ERROR:", error);
+        alert("Something went wrong reactivating your account.");
+        resetButton();
+    });
+}

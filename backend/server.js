@@ -1164,6 +1164,7 @@ app.post("/api/login", async function (req, res) {
         if (foundUser.data.is_active === false) {
             res.json({
                 success: false,
+                deactivated: true,
                 message: "This account has been deactivated."
             });
             return;
@@ -2997,6 +2998,68 @@ app.post("/api/users/deactivate", requireAuth, async function (req, res) {
     res.json({
         success: true,
         message: "Account deactivated."
+    });
+});
+
+app.post("/api/users/reactivate", async function (req, res) {
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const foundUser = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+    const storedPassword = foundUser.data ? foundUser.data.password : null;
+    const isBcryptHash = typeof storedPassword === "string" && storedPassword.startsWith("$2");
+
+    const passwordMatches = isBcryptHash
+        ? storedPassword && (await bcrypt.compare(password, storedPassword))
+        : storedPassword === password;
+
+    if (!foundUser.data || !passwordMatches) {
+        res.json({
+            success: false,
+            message: "Invalid email or password."
+        });
+        return;
+    }
+
+    if (foundUser.data.is_active !== false) {
+        res.json({
+            success: false,
+            message: "This account is already active."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({
+            is_active: true,
+            deactivated_at: null
+        })
+        .eq("username", foundUser.data.username);
+
+    if (result.error) {
+        console.log("REACTIVATE ACCOUNT ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not reactivate account."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Account reactivated.",
+        token: signToken(foundUser.data.username),
+        user: {
+            username: foundUser.data.username,
+            balance: foundUser.data.balance
+        }
     });
 });
 
