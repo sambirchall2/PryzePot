@@ -191,6 +191,31 @@
     vertical-align: -0.3em;
 }
 
+.pp-level-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 4px 10px;
+    border-radius: var(--r-sm);
+}
+
+.pp-level-pill small {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+}
+
+.pp-level-pill strong {
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--accent);
+}
+
 .pp-xp-bottom {
     margin-top: 5px;
     display: grid;

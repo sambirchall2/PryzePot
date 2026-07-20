@@ -282,6 +282,12 @@ body{
     margin-bottom:10px;
 }
 
+.stat-value .coin-icon{
+    height: 0.85em;
+    vertical-align: -0.05em;
+    margin-right: 4px;
+}
+
 .stat-title{
     color: var(--ink-dim);
     font-size:12px;
@@ -458,6 +464,12 @@ body{
     transform:translateY(-2px);
     border-color:rgba(var(--accent-rgb),.4);
     box-shadow:0 0 14px rgba(var(--accent-rgb),.25);
+}
+
+.challenge-fee-btn .coin-icon{
+    height: 0.9em;
+    vertical-align: -0.05em;
+    margin-right: 3px;
 }
 
 .challenge-fee-btn:active{
