@@ -32,7 +32,8 @@ winnerName.textContent = championUsername;
 winnerTag.textContent = championData.winnerTag || "";
 if (rewardAmount) {
     if (championData.prizePool && Number(championData.prizePool) > 0) {
-        rewardAmount.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(championData.prizePool).toLocaleString();
+        rewardAmount.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">+' + Number(championData.prizePool).toLocaleString();
+        rewardAmount.closest(".reward-box").classList.add("has-prize");
     } else {
         rewardAmount.textContent = "Glory";
     }

@@ -210,15 +210,42 @@ h3 {
     color: var(--ink);
 }
 
-.winnings-reward {
+.winnings-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 8px;
+    gap: 5px;
+    padding: 7px 14px 7px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fff6c9, var(--accent));
+    color: var(--accent-ink);
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 900;
-    color: var(--accent);
+    transform: scale(0) rotate(-16deg);
+    animation:
+        winningsPop .55s var(--ease) forwards,
+        winningsGlow 2.2s ease-in-out infinite;
+    animation-delay: .5s, .5s;
+}
+
+.winnings-badge .coin-icon {
+    height: 1.5em;
+    margin-right: 0;
+}
+
+@keyframes winningsPop {
+    0% { transform: scale(0) rotate(-16deg); }
+    60% { transform: scale(1.18) rotate(6deg); }
+    100% { transform: scale(1) rotate(-6deg); }
+}
+
+@keyframes winningsGlow {
+    0%, 100% { box-shadow: 0 0 14px rgba(var(--accent-rgb), .45); }
+    50% { box-shadow: 0 0 30px rgba(var(--accent-rgb), .85); }
 }
 
 .loser-card {

@@ -220,6 +220,28 @@ h1 {
     font-weight: 700;
 }
 
+#rewardAmount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+#rewardAmount .coin-icon {
+    height: 1.4em;
+    margin-right: 0;
+}
+
+.reward-box.has-prize {
+    border-color: rgba(var(--accent-rgb), .55);
+    animation: prizeGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes prizeGlow {
+    0%, 100% { box-shadow: 0 0 10px rgba(var(--accent-rgb), .25); }
+    50% { box-shadow: 0 0 26px rgba(var(--accent-rgb), .6); }
+}
+
 .back-home-btn {
     width: 100%;
     height: 56px;
