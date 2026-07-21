@@ -8,6 +8,7 @@ const winnerName = document.getElementById("winnerName");
 const winnerLevel = document.getElementById("winnerLevel");
 const winnerAvatar = document.getElementById("winnerAvatar");
 const winnerBanner = document.getElementById("winnerBanner");
+const winnerWinnings = document.getElementById("winnerWinnings");
 
 const loserName = document.getElementById("loserName");
 const loserLevel = document.getElementById("loserLevel");
@@ -200,6 +201,17 @@ if (!savedMatch) {
 
     loserBanner.src =
         getCosmeticImagePath(getProfileImage(loserProfile, "banner"), "Banner");
+
+    if (winnerWinnings) {
+        const winnings = Number(match.entryFee || 0) * 2;
+
+        if (winnings > 0) {
+            winnerWinnings.innerHTML =
+                '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">+' +
+                winnings.toLocaleString();
+            winnerWinnings.classList.remove("hidden");
+        }
+    }
 
     if (winnerCard) {
         winnerCard.style.cursor = "pointer";

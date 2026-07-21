@@ -210,6 +210,17 @@ h3 {
     color: var(--ink);
 }
 
+.winnings-reward {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--accent);
+}
+
 .loser-card {
     opacity: .82;
 }

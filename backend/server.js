@@ -343,6 +343,14 @@ function findVaultCatalogItem(cosmeticId) {
     return null;
 }
 
+function getTitleDisplayName(cosmeticId) {
+    if (!cosmeticId) return null;
+
+    const found = findVaultCatalogItem(cosmeticId);
+
+    return found ? found.item.name : cosmeticId;
+}
+
 function calculateLevelFromXp(xp) {
     const totalXp = Number(xp) || 0;
 
@@ -3675,7 +3683,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     equipped_banner: user.equipped_banner || null,
     equipped_frame: user.equipped_frame || null,
     equipped_badge: user.equipped_badge || null,
-    equipped_title: user.equipped_title || null,
+    equipped_title: getTitleDisplayName(user.equipped_title),
 
     clash_tag: user.clash_tag || null,
     clash_name: user.clash_name || null,
@@ -3762,7 +3770,7 @@ app.post("/api/users/profiles-batch", async function (req, res) {
             equipped_banner: user.equipped_banner || null,
             equipped_frame: user.equipped_frame || null,
             equipped_badge: user.equipped_badge || null,
-            equipped_title: user.equipped_title || null,
+            equipped_title: getTitleDisplayName(user.equipped_title),
             xp: xp,
             level: calculateLevelFromXp(xp),
             last_seen: user.last_seen || 0
