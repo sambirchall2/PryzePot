@@ -7,6 +7,10 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const multer = require("multer");
 const supabase = require("./supabase");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "PryzePot <onboarding@resend.dev>";
 
 const evidenceUpload = multer({
     storage: multer.memoryStorage(),
@@ -77,6 +81,52 @@ function verifyPendingSignup(token) {
     }
 
     return payload;
+}
+
+function signPasswordReset(username, currentPasswordHash) {
+    return jwt.sign({
+        username: username,
+        hash: currentPasswordHash,
+        purpose: "password_reset"
+    }, process.env.JWT_SECRET, { expiresIn: "30m" });
+}
+
+function verifyPasswordReset(token) {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (payload.purpose !== "password_reset") {
+        throw new Error("Invalid password reset token.");
+    }
+
+    return payload;
+}
+
+function maskEmail(email) {
+    const atIndex = email.indexOf("@");
+
+    if (atIndex <= 1) {
+        return email;
+    }
+
+    const name = email.slice(0, atIndex);
+    const domain = email.slice(atIndex);
+    const visible = name.slice(0, 2);
+
+    return visible + "*".repeat(Math.max(name.length - 2, 3)) + domain;
+}
+
+async function sendEmail(to, subject, html) {
+    const result = await resend.emails.send({
+        from: RESEND_FROM_EMAIL,
+        to: to,
+        subject: subject,
+        html: html
+    });
+
+    if (result.error) {
+        console.log("EMAIL SEND ERROR:", result.error);
+        throw new Error("Could not send email.");
+    }
 }
 
 async function requireAuth(req, res, next) {
@@ -1202,6 +1252,166 @@ app.post("/api/login", async function (req, res) {
             message: "Invalid email or password."
         });
     }
+});
+
+app.post("/api/forgot-password", async function (req, res) {
+    const email = req.body.email;
+
+    if (!email) {
+        res.json({
+            success: false,
+            message: "Please enter your email."
+        });
+        return;
+    }
+
+    const genericResponse = {
+        success: true,
+        message: "If an account exists for that email, we've sent a password reset link."
+    };
+
+    const foundUser = await supabase
+        .from("users")
+        .select("username, email, password")
+        .eq("email", email)
+        .maybeSingle();
+
+    if (!foundUser.data) {
+        res.json(genericResponse);
+        return;
+    }
+
+    const resetToken = signPasswordReset(foundUser.data.username, foundUser.data.password);
+    const resetLink = process.env.FRONTEND_URL + "/html/reset-password.html?token=" + resetToken;
+
+    try {
+        await sendEmail(
+            foundUser.data.email,
+            "Reset your PryzePot password",
+            "<p>We received a request to reset the password for your PryzePot account.</p>" +
+            "<p><a href=\"" + resetLink + "\">Click here to reset your password</a></p>" +
+            "<p>This link expires in 30 minutes. If you didn't request this, you can ignore this email.</p>"
+        );
+    } catch (error) {
+        console.log("FORGOT PASSWORD EMAIL ERROR:", error);
+    }
+
+    res.json(genericResponse);
+});
+
+app.post("/api/reset-password", async function (req, res) {
+    const token = req.body.token;
+    const newPassword = req.body.newPassword;
+
+    if (!token || !newPassword) {
+        res.json({
+            success: false,
+            message: "Please provide a reset token and new password."
+        });
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        res.json({
+            success: false,
+            message: "New password must be at least 6 characters."
+        });
+        return;
+    }
+
+    let payload;
+
+    try {
+        payload = verifyPasswordReset(token);
+    } catch (error) {
+        res.json({
+            success: false,
+            message: "This reset link is invalid or has expired."
+        });
+        return;
+    }
+
+    const foundUser = await supabase
+        .from("users")
+        .select("username, password")
+        .eq("username", payload.username)
+        .maybeSingle();
+
+    if (!foundUser.data || foundUser.data.password !== payload.hash) {
+        res.json({
+            success: false,
+            message: "This reset link has already been used or expired."
+        });
+        return;
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    const result = await supabase
+        .from("users")
+        .update({ password: newPasswordHash })
+        .eq("username", payload.username);
+
+    if (result.error) {
+        console.log("RESET PASSWORD ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not reset password."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Your password has been reset. You can now sign in."
+    });
+});
+
+app.post("/api/forgot-username", async function (req, res) {
+    const username = req.body.username;
+
+    if (!username) {
+        res.json({
+            success: false,
+            message: "Please enter your username."
+        });
+        return;
+    }
+
+    const genericResponse = {
+        success: true,
+        message: "If that username exists, we've sent an email with your account details."
+    };
+
+    const foundUser = await supabase
+        .from("users")
+        .select("username, email")
+        .eq("username", username)
+        .maybeSingle();
+
+    if (!foundUser.data || !foundUser.data.email) {
+        res.json(genericResponse);
+        return;
+    }
+
+    const loginLink = process.env.FRONTEND_URL + "/html/index.html";
+
+    try {
+        await sendEmail(
+            foundUser.data.email,
+            "Your PryzePot account details",
+            "<p>Here are your PryzePot account details:</p>" +
+            "<p><strong>Username:</strong> " + foundUser.data.username + "<br>" +
+            "<strong>Email on file:</strong> " + maskEmail(foundUser.data.email) + "</p>" +
+            "<p><a href=\"" + loginLink + "\">Click here to sign in</a></p>" +
+            "<p>If you didn't request this, you can ignore this email.</p>"
+        );
+    } catch (error) {
+        console.log("FORGOT USERNAME EMAIL ERROR:", error);
+    }
+
+    res.json(genericResponse);
 });
 
 function redirectWithToken(res, user) {

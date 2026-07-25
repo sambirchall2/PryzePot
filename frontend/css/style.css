@@ -133,6 +133,83 @@ input:focus {
     border-color: var(--accent);
 }
 
+.forgot-password-text {
+    text-align: right;
+    font-size: 14px;
+    margin: -8px 0 18px;
+}
+
+.forgot-password-text a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color .15s ease, border-color .15s ease;
+}
+
+.forgot-password-text a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.forgot-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, .72);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 100px 20px 40px;
+    overflow-y: auto;
+}
+
+.forgot-container {
+    position: relative;
+    opacity: 1;
+    transform: none;
+    animation: none;
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--ink-dim);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: background .15s ease, color .15s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, .08);
+    color: var(--ink);
+}
+
+.forgot-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 4px 0 10px;
+    text-align: center;
+}
+
+.forgot-subtitle {
+    font-size: 14px;
+    color: var(--ink-dim);
+    text-align: center;
+    margin: 0 0 22px;
+}
+
 .oauth-divider {
     display: flex;
     align-items: center;
@@ -192,7 +269,8 @@ input:focus {
 }
 
 @media (max-width: 480px) {
-    .overlay {
+    .overlay,
+    .forgot-overlay {
         padding-top: 60px;
     }
 

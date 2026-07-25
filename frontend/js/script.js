@@ -169,6 +169,137 @@ signInButton.addEventListener("click", function () {
     });
 });
 
+const showForgotPasswordLink = document.getElementById("showForgotPasswordLink");
+const forgotOverlay = document.getElementById("forgotOverlay");
+const closeForgotOverlay = document.getElementById("closeForgotOverlay");
+const backToLoginLink = document.getElementById("backToLoginLink");
+const toggleForgotModeLink = document.getElementById("toggleForgotModeLink");
+const forgotEmailInput = document.getElementById("forgotEmailInput");
+const forgotUsernameInput = document.getElementById("forgotUsernameInput");
+const forgotSubmitBtn = document.getElementById("forgotSubmitBtn");
+const forgotTitle = document.getElementById("forgotTitle");
+const forgotSubtitle = document.getElementById("forgotSubtitle");
+
+let isForgotUsernameMode = false;
+
+function setForgotMode(usernameMode) {
+    isForgotUsernameMode = usernameMode;
+
+    if (isForgotUsernameMode) {
+        forgotEmailInput.style.display = "none";
+        forgotUsernameInput.style.display = "block";
+        forgotTitle.textContent = "Recover your account";
+        forgotSubtitle.textContent = "Enter your username and we'll email your account details to the address on file.";
+        forgotSubmitBtn.textContent = "SEND ACCOUNT INFO";
+        toggleForgotModeLink.textContent = "Know your email? Reset your password instead";
+    } else {
+        forgotEmailInput.style.display = "block";
+        forgotUsernameInput.style.display = "none";
+        forgotTitle.textContent = "Reset your password";
+        forgotSubtitle.textContent = "Enter your account email and we'll send you a link to reset your password.";
+        forgotSubmitBtn.textContent = "SEND RESET LINK";
+        toggleForgotModeLink.textContent = "Forgot your username or email instead?";
+    }
+}
+
+function openForgotOverlay() {
+    setForgotMode(false);
+    forgotEmailInput.value = "";
+    forgotUsernameInput.value = "";
+    forgotOverlay.style.display = "flex";
+}
+
+function closeForgotOverlayFn() {
+    forgotOverlay.style.display = "none";
+}
+
+if (showForgotPasswordLink) {
+    showForgotPasswordLink.addEventListener("click", function (event) {
+        event.preventDefault();
+        openForgotOverlay();
+    });
+}
+
+if (closeForgotOverlay) {
+    closeForgotOverlay.addEventListener("click", closeForgotOverlayFn);
+}
+
+if (backToLoginLink) {
+    backToLoginLink.addEventListener("click", function (event) {
+        event.preventDefault();
+        closeForgotOverlayFn();
+    });
+}
+
+if (toggleForgotModeLink) {
+    toggleForgotModeLink.addEventListener("click", function (event) {
+        event.preventDefault();
+        setForgotMode(!isForgotUsernameMode);
+    });
+}
+
+if (forgotOverlay) {
+    forgotOverlay.addEventListener("click", function (event) {
+        if (event.target === forgotOverlay) {
+            closeForgotOverlayFn();
+        }
+    });
+}
+
+if (forgotSubmitBtn) {
+    forgotSubmitBtn.addEventListener("click", function () {
+        const originalText = forgotSubmitBtn.textContent;
+
+        let apiPath;
+        let requestBody;
+
+        if (isForgotUsernameMode) {
+            const username = forgotUsernameInput.value.trim();
+
+            if (username === "") {
+                alert("Please enter your username.");
+                return;
+            }
+
+            apiPath = "/api/forgot-username";
+            requestBody = { username: username };
+        } else {
+            const email = forgotEmailInput.value.trim();
+
+            if (email === "") {
+                alert("Please enter your email.");
+                return;
+            }
+
+            apiPath = "/api/forgot-password";
+            requestBody = { email: email };
+        }
+
+        forgotSubmitBtn.textContent = "SENDING...";
+        forgotSubmitBtn.disabled = true;
+
+        apiFetch(apiPath, {
+            method: "POST",
+            body: JSON.stringify(requestBody)
+        })
+        .then(function (data) {
+            alert(data.message);
+
+            if (data.success) {
+                closeForgotOverlayFn();
+            }
+        })
+        .catch(function (error) {
+            console.log("FORGOT REQUEST ERROR:", error);
+            alert("Something went wrong. Please try again.");
+        })
+        .finally(function () {
+            forgotSubmitBtn.textContent = originalText;
+            forgotSubmitBtn.disabled = false;
+        });
+    });
+}
+
 function reactivateAccount(email, password) {
     apiFetch("/api/users/reactivate", {
         method: "POST",

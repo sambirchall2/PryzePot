@@ -43,6 +43,12 @@
                     placeholder="Password"
                 >
 
+                <p class="forgot-password-text">
+                    <a href="#" id="showForgotPasswordLink">
+                        Forgot your password?
+                    </a>
+                </p>
+
                 <button
                     id="signInBtn"
                     class="sign-in-btn"
@@ -77,6 +83,58 @@
                     </svg>
                     Continue with Discord
                 </button>
+
+            </div>
+
+        </div>
+
+        <div class="forgot-overlay" id="forgotOverlay" style="display: none;">
+
+            <div class="login-container forgot-container">
+
+                <button type="button" class="modal-close" id="closeForgotOverlay" aria-label="Close">
+                    &times;
+                </button>
+
+                <h2 class="forgot-title" id="forgotTitle">
+                    Reset your password
+                </h2>
+
+                <p class="forgot-subtitle" id="forgotSubtitle">
+                    Enter your account email and we'll send you a link to reset your password.
+                </p>
+
+                <input
+                    id="forgotEmailInput"
+                    type="email"
+                    placeholder="Email"
+                >
+
+                <input
+                    id="forgotUsernameInput"
+                    type="text"
+                    placeholder="Username"
+                    style="display: none;"
+                >
+
+                <button
+                    id="forgotSubmitBtn"
+                    class="sign-in-btn"
+                >
+                    SEND RESET LINK
+                </button>
+
+                <p class="signup-text">
+                    <a href="#" id="toggleForgotModeLink">
+                        Forgot your username or email instead?
+                    </a>
+                </p>
+
+                <p class="signup-text">
+                    <a href="#" id="backToLoginLink">
+                        Back to sign in
+                    </a>
+                </p>
 
             </div>
 
