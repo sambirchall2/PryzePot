@@ -4426,6 +4426,14 @@ app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
     const reward = DAILY_REWARD_SCHEDULE[newStreak - 1];
     const credit = await adjustBalance(username, reward);
 
+    if (!credit.success) {
+        res.json({
+            success: false,
+            message: "Could not credit reward."
+        });
+        return;
+    }
+
     await supabase
         .from("users")
         .update({
@@ -4439,7 +4447,7 @@ app.post("/api/users/daily-reward", requireAuth, async function (req, res) {
         alreadyClaimed: false,
         reward: reward,
         streak: newStreak,
-        balance: credit.success ? credit.balance : foundUser.data.balance || 0
+        balance: credit.balance
     });
 });
 
