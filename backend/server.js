@@ -9,7 +9,7 @@ const multer = require("multer");
 const supabase = require("./supabase");
 const { Resend } = require("resend");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "PryzePot <onboarding@resend.dev>";
 
 const evidenceUpload = multer({
@@ -116,6 +116,10 @@ function maskEmail(email) {
 }
 
 async function sendEmail(to, subject, html) {
+    if (!resend) {
+        throw new Error("Email service is not configured.");
+    }
+
     const result = await resend.emails.send({
         from: RESEND_FROM_EMAIL,
         to: to,
