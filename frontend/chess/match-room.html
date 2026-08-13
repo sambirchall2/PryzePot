@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Ready | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="match-room.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+
+<body>
+
+<button id="backBtn" class="back-btn">‹</button>
+
+<main class="room-page">
+
+    <div id="statusBadge" class="status-badge waiting">
+        Searching For Opponent
+    </div>
+
+    <h1 id="roomTitle">Match Room</h1>
+
+    <p id="roomSubtitle" class="subtitle">
+        Waiting for another player to join.
+    </p>
+
+    <section class="hero-card">
+
+        <div class="game-label">Chess.com</div>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Entry</span>
+                <strong id="entryDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+
+            <div class="info-pill">
+                <span>Prize Pool</span>
+                <strong id="prizeDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+        </div>
+
+        <div class="timer-block">
+            <span id="timerLabel">Time Left To Join</span>
+            <strong id="timerDisplay">--:--</strong>
+        </div>
+
+        <div class="versus-area">
+
+            <div id="playerOneCard" class="profile-player-card"></div>
+
+            <div class="vs-badge">VS</div>
+
+            <div id="playerTwoCard" class="profile-player-card waiting-card"></div>
+
+        </div>
+
+    </section>
+
+    <section id="instructionsCard" class="instructions-card hidden">
+
+        <h2>Match Instructions</h2>
+
+        <div class="instruction-step">1. Tap Challenge On Chess.com</div>
+        <div class="instruction-step">2. Send your opponent a 10 min Rapid challenge</div>
+        <div class="instruction-step">3. Play the game (standard chess)</div>
+        <div class="instruction-step">4. Play Best Of 1</div>
+        <div class="instruction-step">5. Return To PryzePot and Verify Match</div>
+
+    </section>
+
+    <button id="openClashBtn" class="main-btn">
+        WAITING FOR OPPONENT
+    </button>
+
+    <button id="verifyBtn" class="secondary-btn">
+        WAITING FOR OPPONENT
+    </button>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="match-room.js"></script>
+
+</body>
+</html>

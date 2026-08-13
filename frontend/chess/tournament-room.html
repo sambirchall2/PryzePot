@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Room | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="tournament-room.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+<div class="container">
+
+    <h1>Tournament Room</h1>
+
+    <div class="tournament-card">
+
+        <div class="row">
+            <span>Tournament Size</span>
+            <span id="tournamentSize">4 Players</span>
+        </div>
+
+        <div class="row">
+            <span>Entry Fee</span>
+            <span id="entryFee"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">1</span>
+        </div>
+
+        <div class="row">
+            <span>Prize Pool</span>
+            <span id="prizePool"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">4</span>
+        </div>
+
+    </div>
+
+    <div class="players-section">
+        <h2>Players Joined</h2>
+        <div id="playerList"></div>
+    </div>
+
+    <div class="bracket-section hidden" id="bracketSection">
+        <h2>Bracket</h2>
+        <div class="round-tabs" id="roundTabs"></div>
+        <div id="bracketList"></div>
+    </div>
+
+    <div id="statusCard" class="status-card">
+        Waiting for tournament to fill...
+    </div>
+
+    <button id="cancelTournamentBtn" class="cancel-tournament-btn hidden">
+        CANCEL TOURNAMENT
+    </button>
+
+</div>
+<div id="advanceModal" class="advance-modal hidden">
+    <div class="advance-box">
+        <div class="advance-icon">🔥</div>
+        <p class="advance-small">FINAL ROUND UNLOCKED</p>
+        <h2>YOU ADVANCED</h2>
+        <p>You made it to the next round. One more win for the crown.</p>
+        <button id="advanceContinueBtn">CONTINUE</button>
+    </div>
+</div>
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="tournament-room.js"></script>
+
+</body>
+</html>

@@ -58,6 +58,20 @@ function getClashFriendLink() {
     return link;
 }
 
+// Chess.com is challenged directly by username, so there is no expiring
+// "friend link" — the profile URL (derived from the username) is stable.
+function getChessUsername() {
+    const username = localStorage.getItem("chessUsername");
+    return username && username.trim() ? username.trim() : null;
+}
+
+function getChessProfileLink() {
+    const username = getChessUsername();
+    return username
+        ? "https://www.chess.com/member/" + encodeURIComponent(username)
+        : null;
+}
+
 function apiFetchForm(path, formData) {
     const headers = {};
 

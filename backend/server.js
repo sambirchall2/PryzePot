@@ -612,7 +612,7 @@ function findMatchingBattle(battles, match) {
             candidates.push({
                 draw: true,
                 battle: battle,
-                battleId: battleId,
+                externalId: battleId,
                 battleTime: battle.battleTime
             });
             continue;
@@ -623,10 +623,12 @@ function findMatchingBattle(battles, match) {
 
         candidates.push({
             draw: false,
+            winnerHandle: winnerTag,
+            loserHandle: loserTag,
             winnerTag: winnerTag,
             loserTag: loserTag,
             battle: battle,
-            battleId: battleId,
+            externalId: battleId,
             battleTime: battle.battleTime
         });
     }
@@ -643,12 +645,12 @@ function findMatchingBattle(battles, match) {
     };
 }
 
-async function findUnusedBattleCandidate(candidates) {
+async function findUnusedExternalCandidate(candidates) {
     for (const candidate of candidates) {
         const usedInMatch = await supabase
             .from("match_results")
             .select("id")
-            .eq("clash_battle_id", candidate.battleId)
+            .eq("external_match_id", candidate.externalId)
             .maybeSingle();
 
         if (usedInMatch.data) continue;
@@ -656,7 +658,7 @@ async function findUnusedBattleCandidate(candidates) {
         const usedInTournament = await supabase
             .from("tournament_matches")
             .select("id")
-            .eq("clash_battle_id", candidate.battleId)
+            .eq("external_match_id", candidate.externalId)
             .maybeSingle();
 
         if (usedInTournament.data) continue;
@@ -665,6 +667,244 @@ async function findUnusedBattleCandidate(candidates) {
     }
 
     return null;
+}
+
+// ---------------------------------------------------------------------------
+// Chess.com verification (mirrors the Clash battle-log flow above)
+//
+// Chess.com's Published-Data API is public, free, and needs no key. It DOES
+// require a descriptive User-Agent or requests get blocked.
+// ---------------------------------------------------------------------------
+const CHESS_USER_AGENT =
+    "PryzePot/1.0 (+https://www.pryzepot.com; contact: sambirch.pryzepot@gmail.com)";
+
+// A completed chess match must be a standard-rules game in this time class.
+const CHESS_REQUIRED_TIME_CLASS = "rapid";
+
+const CHESS_DRAW_RESULTS = [
+    "agreed",
+    "repetition",
+    "stalemate",
+    "insufficient",
+    "50move",
+    "timevsinsufficient"
+];
+
+function chessResultOutcome(result) {
+    if (result === "win") return "win";
+    if (CHESS_DRAW_RESULTS.includes(result)) return "draw";
+    return "loss";
+}
+
+async function fetchChessJson(url) {
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            "User-Agent": CHESS_USER_AGENT,
+            Accept: "application/json"
+        }
+    });
+
+    return response;
+}
+
+async function getChessProfile(username) {
+    const response = await fetchChessJson(
+        "https://api.chess.com/pub/player/" +
+            encodeURIComponent(String(username).toLowerCase())
+    );
+
+    if (response.status === 404) {
+        return { found: false };
+    }
+
+    if (!response.ok) {
+        throw new Error("Chess.com profile error: " + response.status);
+    }
+
+    const data = await response.json();
+
+    let rating = null;
+
+    try {
+        const statsResponse = await fetchChessJson(
+            "https://api.chess.com/pub/player/" +
+                encodeURIComponent(String(username).toLowerCase()) +
+                "/stats"
+        );
+
+        if (statsResponse.ok) {
+            const stats = await statsResponse.json();
+            rating =
+                (stats.chess_rapid && stats.chess_rapid.last && stats.chess_rapid.last.rating) ||
+                (stats.chess_blitz && stats.chess_blitz.last && stats.chess_blitz.last.rating) ||
+                (stats.chess_bullet && stats.chess_bullet.last && stats.chess_bullet.last.rating) ||
+                null;
+        }
+    } catch (statsError) {
+        console.log("CHESS STATS ERROR:", statsError);
+    }
+
+    return {
+        found: true,
+        username: data.username,
+        name: data.name || data.username,
+        avatar: data.avatar || null,
+        rating: rating
+    };
+}
+
+// Pulls the current month's archive plus the previous month's, so a game
+// played moments after a match started at a month boundary is still seen.
+async function getChessGames(username) {
+    const cleanUsername = encodeURIComponent(String(username).toLowerCase());
+    const now = new Date();
+
+    const months = [
+        { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 }
+    ];
+
+    const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    months.push({ year: prev.getUTCFullYear(), month: prev.getUTCMonth() + 1 });
+
+    const games = [];
+
+    for (const period of months) {
+        const monthStr = String(period.month).padStart(2, "0");
+        const response = await fetchChessJson(
+            "https://api.chess.com/pub/player/" +
+                cleanUsername +
+                "/games/" +
+                period.year +
+                "/" +
+                monthStr
+        );
+
+        if (response.status === 404) continue;
+
+        if (!response.ok) {
+            throw new Error("Chess.com games error: " + response.status);
+        }
+
+        const data = await response.json();
+
+        if (data && Array.isArray(data.games)) {
+            games.push(...data.games);
+        }
+    }
+
+    return games;
+}
+
+// Mirror of findMatchingBattle: keep only games between these two players,
+// finished after the cutoff, in the required standard time class.
+function findMatchingChessGame(games, playerOneHandle, playerTwoHandle, cutoffMs) {
+    const p1 = String(playerOneHandle).toLowerCase();
+    const p2 = String(playerTwoHandle).toLowerCase();
+
+    const candidates = [];
+
+    for (const game of games) {
+        if (!game.white || !game.black) continue;
+        if (game.rules && game.rules !== "chess") continue;
+        if (game.time_class && game.time_class !== CHESS_REQUIRED_TIME_CLASS) continue;
+
+        const whiteHandle = String(game.white.username || "").toLowerCase();
+        const blackHandle = String(game.black.username || "").toLowerCase();
+
+        const isCorrectPlayers =
+            (whiteHandle === p1 && blackHandle === p2) ||
+            (whiteHandle === p2 && blackHandle === p1);
+
+        if (!isCorrectPlayers) continue;
+
+        const endMs = Number(game.end_time) * 1000;
+
+        if (!endMs || endMs < cutoffMs) continue;
+
+        const externalId = game.uuid || game.url;
+
+        const whiteOutcome = chessResultOutcome(game.white.result);
+        const blackOutcome = chessResultOutcome(game.black.result);
+
+        if (whiteOutcome === "draw" || blackOutcome === "draw") {
+            candidates.push({
+                draw: true,
+                externalId: externalId,
+                battleTime: endMs
+            });
+            continue;
+        }
+
+        const whiteWon = whiteOutcome === "win";
+
+        candidates.push({
+            draw: false,
+            winnerHandle: whiteWon ? game.white.username : game.black.username,
+            loserHandle: whiteWon ? game.black.username : game.white.username,
+            externalId: externalId,
+            battleTime: endMs
+        });
+    }
+
+    // Oldest-first, so the earliest unused game after the cutoff wins.
+    candidates.sort(function (a, b) {
+        return a.battleTime - b.battleTime;
+    });
+
+    if (candidates.length === 0) {
+        return { found: false };
+    }
+
+    return { found: true, candidates: candidates };
+}
+
+// Game-neutral entry point used by both the match and tournament verifiers.
+// Returns { found, candidates } where each candidate carries winnerHandle /
+// loserHandle / externalId (or draw:true).
+async function getMatchCandidates(game, playerOneHandle, playerTwoHandle, cutoffMs) {
+    if (game === "Chess.com") {
+        const chessGames = await getChessGames(playerOneHandle);
+        return findMatchingChessGame(chessGames, playerOneHandle, playerTwoHandle, cutoffMs);
+    }
+
+    const battles = await getBattleLog(playerOneHandle);
+
+    return findMatchingBattle(battles, {
+        creator_tag: playerOneHandle,
+        opponent_tag: playerTwoHandle,
+        verification_started_at: cutoffMs
+    });
+}
+
+// Compare two player handles for a given game (Chess = case-insensitive
+// username; Clash = normalized tag).
+function handlesMatch(game, a, b) {
+    if (game === "Chess.com") {
+        return String(a).toLowerCase() === String(b).toLowerCase();
+    }
+
+    return cleanTag(a) === cleanTag(b);
+}
+
+// Normalize a raw player handle for storage (Chess = trimmed username;
+// Clash = "#TAG").
+function formatPlayerHandle(game, raw) {
+    if (game === "Chess.com") {
+        return String(raw).trim();
+    }
+
+    return "#" + cleanTag(raw);
+}
+
+// The link shown to an opponent so they can start the game with this player.
+// Clash uses a friend-invite link; Chess uses the player's profile page.
+function buildChessProfileLink(username) {
+    return "https://www.chess.com/member/" + encodeURIComponent(String(username).trim());
+}
+
+function normalizeGame(rawGame) {
+    return rawGame === "Chess.com" ? "Chess.com" : "Clash Royale";
 }
 
 async function expireOldMatches() {
@@ -946,7 +1186,7 @@ function buildRoundMatches(entries, tournamentId, roundNumber) {
                 loser_tag: null,
 
                 verified_at: Date.now(),
-                clash_battle_id: null,
+                external_match_id: null,
 
                 status: "Completed"
             });
@@ -971,7 +1211,7 @@ function buildRoundMatches(entries, tournamentId, roundNumber) {
             loser_tag: null,
 
             verified_at: null,
-            clash_battle_id: null,
+            external_match_id: null,
             verify_expires_at: Date.now() + ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000,
 
             status: "Ready"
@@ -1753,14 +1993,95 @@ app.post("/api/clash/verify-player", async function (req, res) {
     }
 });
 
-app.get("/api/matches", async function (req, res) {
+app.post("/api/chess/verify-player", async function (req, res) {
+    const username = req.body.username;
+
+    if (!username || !String(username).trim()) {
+        res.json({
+            success: false,
+            message: "Please enter your Chess.com username."
+        });
+        return;
+    }
+
+    try {
+        const profile = await getChessProfile(username);
+
+        if (!profile.found) {
+            res.json({
+                success: false,
+                message: "That Chess.com username was not found."
+            });
+            return;
+        }
+
+        res.json({
+            success: true,
+            message: "Chess.com player verified!",
+            player: {
+                username: profile.username,
+                name: profile.name,
+                avatar: profile.avatar,
+                rating: profile.rating
+            }
+        });
+    } catch (error) {
+        console.log("CHESS API ERROR:", error);
+
+        res.json({
+            success: false,
+            message: "Could not connect to Chess.com."
+        });
+    }
+});
+
+app.post("/api/users/save-chess", requireAuth, async function (req, res) {
+    const username = req.username;
+    const chessUsername = req.body.chessUsername;
+    const chessName = req.body.chessName;
+    const chessRating = req.body.chessRating;
+
     const result = await supabase
+        .from("users")
+        .update({
+            chess_username: chessUsername,
+            chess_name: chessName,
+            chess_rating: chessRating,
+            chess_verified: true
+        })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE CHESS ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not save Chess.com account."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Chess.com account saved."
+    });
+});
+
+app.get("/api/matches", async function (req, res) {
+    let query = supabase
         .from("matches")
         .select(
             "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at"
         )
-        .in("status", ["Waiting for opponent", "Match ready"])
-        .order("id", { ascending: false });
+        .in("status", ["Waiting for opponent", "Match ready"]);
+
+    if (req.query.game) {
+        query = query.eq("game", req.query.game);
+    }
+
+    const result = await query.order("id", { ascending: false });
 
     if (result.error) {
         console.log("LOAD MATCHES ERROR:", result.error);
@@ -1780,8 +2101,16 @@ app.get("/api/matches", async function (req, res) {
 app.post("/api/matches", requireAuth, async function (req, res) {
     const username = req.username;
     const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
     const entryFee = Number(req.body.entryFee);
+    const game = normalizeGame(req.body.game);
+    const isChess = game === "Chess.com";
+
+    const creatorHandle = formatPlayerHandle(game, playerTag);
+    const friendLink = isChess
+        ? buildChessProfileLink(playerTag)
+        : req.body.friendLink;
+
+    const mode = isChess ? "10 Min Rapid" : "1v1 Friendly Battle";
 
     if (!username || !playerTag || !friendLink || !(entryFee > 0)) {
         res.json({
@@ -1806,12 +2135,12 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     const result = await supabase
         .from("matches")
         .insert({
-            game: "Clash Royale",
-            mode: "1v1 Friendly Battle",
+            game: game,
+            mode: mode,
             entry_fee: entryFee,
 
             creator_username: username,
-            creator_tag: "#" + cleanTag(playerTag),
+            creator_tag: creatorHandle,
             creator_friend_link: friendLink,
 
             opponent_username: null,
@@ -1908,9 +2237,15 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
 
     const username = req.username;
     const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
     const tournamentSize = req.body.tournamentSize;
     const entryFee = req.body.entryFee;
+    const game = normalizeGame(req.body.game);
+    const isChess = game === "Chess.com";
+
+    const playerHandle = formatPlayerHandle(game, playerTag);
+    const friendLink = isChess
+        ? buildChessProfileLink(playerTag)
+        : req.body.friendLink;
 
     if (
         !username ||
@@ -1954,7 +2289,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         .from("tournaments")
         .insert({
             creator_username: username,
-            game: "Clash Royale",
+            game: game,
             tournament_size: Number(tournamentSize),
             entry_fee: tournamentEntryFee,
             current_players: 1,
@@ -1984,7 +2319,7 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
     .insert({
         tournament_id: tournamentResult.data.id,
         username: username,
-        player_tag: "#" + cleanTag(playerTag),
+        player_tag: playerHandle,
         friend_link: friendLink
     });
 
@@ -2014,12 +2349,17 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
     });
 });
 app.get("/api/tournaments", async function (req, res) {
-    const result = await supabase
+    let query = supabase
         .from("tournaments")
-        .select("id, entry_fee, max_players, current_players, tournament_size, created_at")
+        .select("id, game, entry_fee, max_players, current_players, tournament_size, created_at")
         .eq("status", "Open")
-        .neq("tournament_size", SEASON_ZERO_SIZE)
-        .order("id", { ascending: false });
+        .neq("tournament_size", SEASON_ZERO_SIZE);
+
+    if (req.query.game) {
+        query = query.eq("game", req.query.game);
+    }
+
+    const result = await query.order("id", { ascending: false });
 
     if (result.error) {
         res.json({
@@ -2097,7 +2437,6 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
     const tournamentId = Number(req.params.id);
     const username = req.username;
     const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
 
     if (!username || !playerTag) {
         res.json({
@@ -2122,6 +2461,14 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
     }
 
     const tournament = tournamentResult.data;
+
+    const game = tournament.game || "Clash Royale";
+    const isChess = game === "Chess.com";
+
+    const playerHandle = formatPlayerHandle(game, playerTag);
+    const friendLink = isChess
+        ? buildChessProfileLink(playerTag)
+        : req.body.friendLink;
 
     if (tournament.status !== "Open") {
         res.json({
@@ -2174,7 +2521,7 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         .insert({
             tournament_id: tournamentId,
             username: username,
-            player_tag: "#" + cleanTag(playerTag),
+            player_tag: playerHandle,
             friend_link: friendLink
         });
 
@@ -2265,7 +2612,6 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     const matchId = Number(req.params.id);
     const username = req.username;
     const playerTag = req.body.playerTag;
-    const friendLink = req.body.friendLink;
 
     const found = await supabase
         .from("matches")
@@ -2283,6 +2629,14 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
 
     const foundMatch = found.data;
 
+    const game = foundMatch.game || "Clash Royale";
+    const isChess = game === "Chess.com";
+
+    const opponentHandle = formatPlayerHandle(game, playerTag);
+    const friendLink = isChess
+        ? buildChessProfileLink(playerTag)
+        : req.body.friendLink;
+
     if (foundMatch.status !== "Waiting for opponent") {
         res.json({
             success: false,
@@ -2291,7 +2645,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
-    if (cleanTag(foundMatch.creator_tag) === cleanTag(playerTag)) {
+    if (handlesMatch(game, foundMatch.creator_tag, playerTag)) {
         res.json({
             success: false,
             message: "You cannot join your own match."
@@ -2302,7 +2656,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     if (!friendLink) {
         res.json({
             success: false,
-            message: "Missing Clash friend link."
+            message: "Missing account link."
         });
         return;
     }
@@ -2322,7 +2676,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         .from("matches")
         .update({
             opponent_username: username,
-            opponent_tag: "#" + cleanTag(playerTag),
+            opponent_tag: opponentHandle,
             opponent_friend_link: friendLink,
             status: "Match ready",
             verification_started_at: verificationStartedAt,
@@ -2403,7 +2757,7 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
 
     const parentTournament = await supabase
         .from("tournaments")
-        .select("status, entry_fee, max_players")
+        .select("status, entry_fee, max_players, game")
         .eq("id", foundMatch.tournament_id)
         .maybeSingle();
 
@@ -2418,12 +2772,14 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
     if (!foundMatch.player_one_tag || !foundMatch.player_two_tag) {
         res.json({
             success: false,
-            message: "Tournament match is missing Clash tags."
+            message: "Tournament match is missing player accounts."
         });
         return;
     }
 
-    if (!process.env.CLASH_API_KEY) {
+    const game = parentTournament.data.game || "Clash Royale";
+
+    if (game !== "Chess.com" && !process.env.CLASH_API_KEY) {
         res.json({
             success: false,
             message: "Server is missing Clash Royale API key."
@@ -2432,32 +2788,31 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
     }
 
     try {
-        const fakeMatchForBattleCheck = {
-            creator_tag: foundMatch.player_one_tag,
-            opponent_tag: foundMatch.player_two_tag,
-            created_at: foundMatch.created_at,
-            verification_started_at: foundMatch.created_at
-        };
+        const cutoffMs = normalizeTimeToMs(foundMatch.created_at);
 
-        const playerOneBattles = await getBattleLog(foundMatch.player_one_tag);
-        const searchResult = findMatchingBattle(playerOneBattles, fakeMatchForBattleCheck);
+        const searchResult = await getMatchCandidates(
+            game,
+            foundMatch.player_one_tag,
+            foundMatch.player_two_tag,
+            cutoffMs
+        );
 
         if (!searchResult.found) {
             res.json({
                 success: false,
                 pending: true,
-                message: "No matching Clash battle found yet. Try again in a minute."
+                message: "No matching game found yet. Try again in a minute."
             });
             return;
         }
 
-        const result = await findUnusedBattleCandidate(searchResult.candidates);
+        const result = await findUnusedExternalCandidate(searchResult.candidates);
 
         if (!result) {
             res.json({
                 success: false,
                 pending: true,
-                message: "This Clash battle was already used. Play a new match before verifying."
+                message: "That game was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2466,25 +2821,22 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
             res.json({
                 success: false,
                 pending: true,
-                message: "Battle found, but it was a draw. Play again."
+                message: "Game found, but it was a draw. Play again."
             });
             return;
         }
-
-        const playerOneClean = "#" + cleanTag(foundMatch.player_one_tag);
-        const playerTwoClean = "#" + cleanTag(foundMatch.player_two_tag);
 
         let winnerUsername = null;
         let winnerTag = null;
         let loserUsername = null;
         let loserTag = null;
 
-        if (result.winnerTag === playerOneClean) {
+        if (handlesMatch(game, result.winnerHandle, foundMatch.player_one_tag)) {
             winnerUsername = foundMatch.player_one;
             winnerTag = foundMatch.player_one_tag;
             loserUsername = foundMatch.player_two;
             loserTag = foundMatch.player_two_tag;
-        } else if (result.winnerTag === playerTwoClean) {
+        } else if (handlesMatch(game, result.winnerHandle, foundMatch.player_two_tag)) {
             winnerUsername = foundMatch.player_two;
             winnerTag = foundMatch.player_two_tag;
             loserUsername = foundMatch.player_one;
@@ -2508,7 +2860,7 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
                 loser_username: loserUsername,
                 loser_tag: loserTag,
                 verified_at: Date.now(),
-                clash_battle_id: result.battleId
+                external_match_id: result.externalId
             })
             .eq("id", tournamentMatchId)
             .eq("status", "Ready")
@@ -2519,7 +2871,7 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
             res.json({
                 success: false,
                 pending: true,
-                message: "This Clash battle was already used. Play a new match before verifying."
+                message: "That game was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2603,7 +2955,7 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
 
         res.json({
             success: false,
-            message: "Could not verify tournament match through Clash Royale API."
+            message: "Could not verify tournament match."
         });
     }
 });
@@ -2654,7 +3006,9 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
         return;
     }
 
-    if (!process.env.CLASH_API_KEY) {
+    const game = foundMatch.game || "Clash Royale";
+
+    if (game !== "Chess.com" && !process.env.CLASH_API_KEY) {
         res.json({
             success: false,
             message: "Server is missing Clash Royale API key."
@@ -2663,25 +3017,33 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
     }
 
     try {
-        const creatorBattles = await getBattleLog(foundMatch.creator_tag);
-        const searchResult = findMatchingBattle(creatorBattles, foundMatch);
+        const cutoffMs = normalizeTimeToMs(
+            foundMatch.verification_started_at || foundMatch.created_at
+        );
+
+        const searchResult = await getMatchCandidates(
+            game,
+            foundMatch.creator_tag,
+            foundMatch.opponent_tag,
+            cutoffMs
+        );
 
         if (!searchResult.found) {
             res.json({
                 success: false,
                 pending: true,
-                message: "No matching battle found yet. Try again in a minute."
+                message: "No matching game found yet. Try again in a minute."
             });
             return;
         }
 
-        const result = await findUnusedBattleCandidate(searchResult.candidates);
+        const result = await findUnusedExternalCandidate(searchResult.candidates);
 
         if (!result) {
             res.json({
                 success: false,
                 pending: true,
-                message: "This Clash battle was already used. Play a new match before verifying."
+                message: "That game was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2724,26 +3086,23 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             res.json({
                 success: true,
                 draw: true,
-                message: "Battle found, but it was a draw.",
+                message: "Game found, but it was a draw.",
                 match: dbMatchToFrontend(drawUpdate.data)
             });
             return;
         }
-
-        const creatorClean = "#" + cleanTag(foundMatch.creator_tag);
-        const opponentClean = "#" + cleanTag(foundMatch.opponent_tag);
 
         let winnerUsername = null;
         let winnerTag = null;
         let loserUsername = null;
         let loserTag = null;
 
-        if (result.winnerTag === creatorClean) {
+        if (handlesMatch(game, result.winnerHandle, foundMatch.creator_tag)) {
             winnerUsername = foundMatch.creator_username;
             winnerTag = foundMatch.creator_tag;
             loserUsername = foundMatch.opponent_username;
             loserTag = foundMatch.opponent_tag;
-        } else if (result.winnerTag === opponentClean) {
+        } else if (handlesMatch(game, result.winnerHandle, foundMatch.opponent_tag)) {
             winnerUsername = foundMatch.opponent_username;
             winnerTag = foundMatch.opponent_tag;
             loserUsername = foundMatch.creator_username;
@@ -2792,7 +3151,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             .from("match_results")
             .insert({
                 match_id: matchId,
-                clash_battle_id: result.battleId,
+                external_match_id: result.externalId,
                 winner_username: winnerUsername,
                 winner_tag: winnerTag,
                 loser_username: loserUsername,
@@ -2815,7 +3174,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             res.json({
                 success: false,
                 pending: true,
-                message: "This Clash battle was already used. Play a new match before verifying."
+                message: "That game was already used. Play a new match before verifying."
             });
             return;
         }
@@ -2853,7 +3212,7 @@ const loserXpProfile = await awardXpToUser(loserUsername, loserXpEarned);
 
         res.json({
             success: false,
-            message: "Could not verify match through Clash Royale API."
+            message: "Could not verify match."
         });
     }
 });
@@ -3572,13 +3931,20 @@ app.get("/api/leaderboard", async function (req, res) {
     const game = req.query.game || "all";
     const time = req.query.time || "all";
 
-    if (game !== "all" && game !== "clash") {
+    const LEADERBOARD_GAME_NAMES = {
+        clash: "Clash Royale",
+        chess: "Chess.com"
+    };
+
+    if (game !== "all" && !LEADERBOARD_GAME_NAMES[game]) {
         res.json({
             success: true,
             players: []
         });
         return;
     }
+
+    const dbGame = LEADERBOARD_GAME_NAMES[game] || null;
 
     let startTime = 0;
     const now = Date.now();
@@ -3623,6 +3989,22 @@ app.get("/api/leaderboard", async function (req, res) {
         .from("tournament_matches")
         .select("winner_username, loser_username, status, verified_at")
         .eq("status", "Completed");
+
+    if (dbGame) {
+        completedMatchesQuery = completedMatchesQuery.eq("game", dbGame);
+        completedTournamentsQuery = completedTournamentsQuery.eq("game", dbGame);
+
+        const gameTournaments = await supabase
+            .from("tournaments")
+            .select("id")
+            .eq("game", dbGame);
+
+        const gameTournamentIds = (gameTournaments.data || []).map(function (t) {
+            return t.id;
+        });
+
+        tournamentMatchWinsQuery = tournamentMatchWinsQuery.in("tournament_id", gameTournamentIds);
+    }
 
     if (startTime > 0) {
         completedMatchesQuery = completedMatchesQuery.gte("verified_at", startTime);

@@ -1,0 +1,163 @@
+const backHomeBtn = document.getElementById("backHomeBtn");
+const disputeButton = document.getElementById("disputeButton");
+const championProfileCard = document.getElementById("championProfileCard");
+const disputeMatchId = localStorage.getItem("currentTournamentMatchId");
+
+if (disputeButton) {
+    if (disputeMatchId) {
+        disputeButton.addEventListener("click", function () {
+            window.location.href = "../html/dispute.html?type=tournament_match&id=" + disputeMatchId;
+        });
+    } else {
+        disputeButton.style.display = "none";
+    }
+}
+
+const winnerName = document.getElementById("winnerName");
+const winnerTag = document.getElementById("winnerTag");
+const winnerLevel = document.getElementById("winnerLevel");
+const winnerAvatar = document.getElementById("winnerAvatar");
+const winnerBanner = document.getElementById("winnerBanner");
+const rewardAmount = document.getElementById("rewardAmount");
+
+const confettiCanvas = document.getElementById("confettiCanvas");
+
+const championData = JSON.parse(
+    localStorage.getItem("lastTournamentChampion") || "{}"
+);
+
+const championUsername = championData.winnerUsername || "Champion";
+
+winnerName.textContent = championUsername;
+winnerTag.textContent = championData.winnerTag || "";
+if (rewardAmount) {
+    if (championData.prizePool && Number(championData.prizePool) > 0) {
+        rewardAmount.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">+' + Number(championData.prizePool).toLocaleString();
+        rewardAmount.closest(".reward-box").classList.add("has-prize");
+    } else {
+        rewardAmount.textContent = "Glory";
+    }
+}
+
+function openChampionProfile() {
+    if (!championData.winnerUsername) return;
+
+    window.location.href =
+        "../html/profile.html?user=" + encodeURIComponent(championData.winnerUsername);
+}
+
+function loadChampionProfile() {
+    if (!championData.winnerUsername) {
+        return;
+    }
+
+    apiFetch("/api/users/" + encodeURIComponent(championData.winnerUsername) + "/profile")
+        .then(function (data) {
+            if (!data.success || !data.user) {
+                return;
+            }
+
+            const user = data.user;
+
+            winnerLevel.textContent = "Level " + (user.level || 1);
+            winnerAvatar.src = getCosmeticImagePath(
+                user.equipped_avatar || user.profile_picture || "avatar1",
+                "Avatar"
+            );
+            winnerBanner.src = getCosmeticImagePath(
+                user.equipped_banner || user.profile_banner || "banner1",
+                "Banner"
+            );
+        })
+        .catch(function (error) {
+            console.log("CHAMPION PROFILE LOAD ERROR:", error);
+        });
+}
+
+if (championProfileCard) {
+    championProfileCard.style.cursor = "pointer";
+
+    championProfileCard.addEventListener("click", function () {
+        openChampionProfile();
+    });
+}
+
+if (backHomeBtn) {
+    backHomeBtn.addEventListener("click", function () {
+        const finishedTournamentId =
+            localStorage.getItem("currentTournamentId");
+
+        if (finishedTournamentId) {
+            localStorage.removeItem(
+                "completedTournament_" + finishedTournamentId
+            );
+
+            localStorage.removeItem(
+                "advancedTournamentMatch_" + finishedTournamentId
+            );
+        }
+
+        localStorage.removeItem("currentTournamentId");
+        localStorage.removeItem("currentTournamentMatchId");
+        localStorage.removeItem("lastTournamentChampion");
+
+        window.location.href = "../html/home.html";
+    });
+}
+
+function startConfetti() {
+    if (!confettiCanvas) return;
+
+    const ctx = confettiCanvas.getContext("2d");
+
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+
+    const pieces = [];
+
+    for (let i = 0; i < 160; i++) {
+        pieces.push({
+            x: Math.random() * confettiCanvas.width,
+            y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+            size: Math.random() * 8 + 4,
+            speed: Math.random() * 4 + 2,
+            rotation: Math.random() * 360,
+            color: Math.random() > 0.5 ? "#b7ff00" : "#ffffff"
+        });
+    }
+
+    function drawConfetti() {
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+        pieces.forEach(function (piece) {
+            ctx.save();
+            ctx.translate(piece.x, piece.y);
+            ctx.rotate(piece.rotation);
+
+            ctx.fillStyle = piece.color;
+            ctx.fillRect(
+                -piece.size / 2,
+                -piece.size / 2,
+                piece.size,
+                piece.size
+            );
+
+            ctx.restore();
+
+            piece.y += piece.speed;
+            piece.rotation += 0.08;
+
+            if (piece.y > confettiCanvas.height) {
+                piece.y = -20;
+                piece.x = Math.random() * confettiCanvas.width;
+            }
+        });
+
+        requestAnimationFrame(drawConfetti);
+    }
+
+    drawConfetti();
+}
+
+loadChampionProfile();
+startConfetti();

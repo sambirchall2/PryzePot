@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Match | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="post-match.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="post-page">
+
+        <h1>Post Match</h1>
+        <p class="subtitle">Review your 1v1 challenge before posting.</p>
+
+        <div class="summary-box">
+
+            <div class="summary-row">
+                <span>Game</span>
+                <strong>Chess.com</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Mode</span>
+                <strong>10 Min Rapid</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Entry Amount</span>
+                <strong id="entryAmountDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Chess.com Username</span>
+                <strong id="playerTagDisplay">Not connected</strong>
+            </div>
+
+        </div>
+
+        <button id="postMatchBtn" class="post-btn">
+            POST MATCH
+        </button>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="post-match.js"></script>
+
+</body>
+</html>

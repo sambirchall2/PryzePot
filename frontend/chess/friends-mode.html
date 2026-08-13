@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends Mode | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="friends-mode.css">
+    <link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+
+<body>
+
+<div class="page">
+
+    <div class="top-bar">
+        <button id="backButton" class="back-button">←</button>
+        <h1>Friends Mode</h1>
+    </div>
+
+    <div class="section-title">
+        🟢 Online
+    </div>
+
+    <div id="onlineFriendsList" class="friends-list">
+        <div class="loading-card">Loading...</div>
+    </div>
+
+    <div class="section-title">
+        ⚫ Offline
+    </div>
+
+    <div id="offlineFriendsList" class="friends-list">
+        <div class="loading-card">Loading...</div>
+    </div>
+
+</div>
+
+<div id="challengeModal" class="challenge-modal hidden">
+    <div class="challenge-box">
+
+        <button id="closeChallengeModal" class="challenge-close-btn">×</button>
+
+        <p class="challenge-eyebrow">FRIEND CHALLENGE</p>
+
+        <h2 id="challengeTitle">Challenge Player</h2>
+
+        <p class="challenge-subtitle">
+            Choose an entry fee for this private Chess.com match.
+        </p>
+
+        <div class="challenge-fees">
+            <button class="challenge-fee-btn" data-entry-fee="25"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">25</button>
+            <button class="challenge-fee-btn" data-entry-fee="50"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">50</button>
+            <button class="challenge-fee-btn" data-entry-fee="100"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">100</button>
+            <button class="challenge-fee-btn" data-entry-fee="250"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">250</button>
+            <button class="challenge-fee-btn" data-entry-fee="500"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">500</button>
+            <button class="challenge-fee-btn" data-entry-fee="1000"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">1000</button>
+            <button class="challenge-fee-btn" data-entry-fee="2500"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">2500</button>
+        </div>
+
+        <button id="sendChallengeButton" class="send-challenge-button" disabled>
+            Select Entry Fee
+        </button>
+
+    </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/toast.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="friends-mode.js"></script>
+
+</body>
+</html>

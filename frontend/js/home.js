@@ -76,6 +76,14 @@ if (clashPlayBtn) {
     });
 }
 
+const chessPlayBtn = document.getElementById("chessPlayBtn");
+
+if (chessPlayBtn) {
+    chessPlayBtn.addEventListener("click", function () {
+        window.location.href = "../chess/online.html";
+    });
+}
+
 const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {
@@ -150,6 +158,9 @@ function logout() {
     localStorage.removeItem("clashExpLevel");
     localStorage.removeItem("clashFriendLink");
     localStorage.removeItem("clashFriendLinkSetAt");
+    localStorage.removeItem("chessUsername");
+    localStorage.removeItem("chessName");
+    localStorage.removeItem("chessRating");
     localStorage.removeItem("entryFee");
     localStorage.removeItem("currentMatchId");
     localStorage.removeItem("matchResult");

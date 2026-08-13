@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Champion | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="tournament-winner.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<main class="winner-page">
+
+    <div class="champion-card">
+
+        <div class="trophy">🏆</div>
+
+        <p class="eyebrow">TOURNAMENT COMPLETE</p>
+
+        <h1>CHAMPION</h1>
+
+        <div id="championProfileCard" class="champion-profile-card">
+            <img id="winnerBanner" class="winner-banner" src="../assets/profile/banner1.png" alt="Champion Banner">
+            <div class="winner-overlay"></div>
+
+            <div class="winner-content">
+                <img id="winnerAvatar" class="winner-avatar" src="../assets/profile/avatar1.png" alt="Champion Avatar">
+
+                <div>
+                    <div id="winnerName" class="winner-name">Champion</div>
+                    <div id="winnerLevel" class="winner-level">Level 1</div>
+                    <div id="winnerTag" class="winner-tag">#TAG</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="tap-profile-text">Tap champion card to view profile</p>
+
+        <div class="reward-row">
+            <div class="reward-box">
+                <span>Status</span>
+                <strong>Champion</strong>
+            </div>
+
+            <div class="reward-box">
+                <span>Reward</span>
+                <strong id="rewardAmount">Glory</strong>
+            </div>
+        </div>
+
+        <button id="backHomeBtn" class="back-home-btn">
+            BACK HOME
+        </button>
+
+        <button id="disputeButton" class="back-home-btn">
+            DISPUTE THIS MATCH
+        </button>
+
+    </div>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="tournament-winner.js"></script>
+
+</body>
+</html>

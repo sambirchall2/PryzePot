@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Match | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="tournament-match-room.css">
+</head>
+<body>
+
+<div class="container">
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <h1>Tournament Match</h1>
+
+    <div class="match-card">
+
+        <p class="round-label" id="roundLabel">Round 1</p>
+
+        <div class="players">
+
+            <div id="playerOneCard" class="tournament-player-card">
+                <img id="playerOneBanner" class="player-banner" src="../assets/profile/banner1.png" alt="Player One Banner">
+                <div class="player-overlay"></div>
+
+                <div class="player-content">
+                    <img id="playerOneAvatar" class="player-avatar" src="../assets/profile/avatar1.png" alt="Player One">
+                    <div>
+                        <p>PLAYER 1</p>
+                        <h2 id="playerOneName">Player One</h2>
+                        <span id="playerOneLevel">Level 1</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div id="playerTwoCard" class="tournament-player-card">
+                <img id="playerTwoBanner" class="player-banner" src="../assets/profile/banner1.png" alt="Player Two Banner">
+                <div class="player-overlay"></div>
+
+                <div class="player-content">
+                    <img id="playerTwoAvatar" class="player-avatar" src="../assets/profile/avatar1.png" alt="Player Two">
+                    <div>
+                        <p>PLAYER 2</p>
+                        <h2 id="playerTwoName">Player Two</h2>
+                        <span id="playerTwoLevel">Level 1</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="status-card" id="statusCard">
+            Match ready.
+        </div>
+
+        <button id="openClashBtn" class="primary-btn">
+            CHALLENGE ON CHESS.COM
+        </button>
+
+        <button id="verifyMatchBtn" class="secondary-btn">
+            VERIFY MATCH
+        </button>
+
+    </div>
+
+</div>
+
+<div id="advanceModal" class="advance-modal hidden">
+    <div class="advance-box">
+        <div class="advance-icon">🔥</div>
+        <p class="advance-small">MATCH VERIFIED</p>
+        <h2>YOU ADVANCED</h2>
+        <p>Final Round unlocked. One more win for the crown.</p>
+        <button id="advanceContinueBtn">CONTINUE TO BRACKET</button>
+    </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="tournament-match-room.js"></script>
+
+</body>
+</html>

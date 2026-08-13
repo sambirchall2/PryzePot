@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Mode | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="tournament.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="tournament-page">
+
+        <div class="page-header">
+            <p class="eyebrow">CHESS.COM</p>
+            <h1>Tournament Mode</h1>
+            <p>Choose a tournament format.</p>
+        </div>
+
+        <div class="tournament-list">
+
+            <div class="tournament-option tournament-create-card" data-size="4">
+                <div>
+                    <h2>4 Player Tournament</h2>
+                    <p>2 rounds • Winner takes prize pool</p>
+                </div>
+            </div>
+
+            <div class="tournament-option tournament-create-card" data-size="8">
+                <div>
+                    <h2>8 Player Tournament</h2>
+                    <p>3 rounds • Bigger prize pool</p>
+                </div>
+            </div>
+
+            <div class="tournament-option tournament-create-card" data-size="16">
+                <div>
+                    <h2>16 Player Tournament</h2>
+                    <p>4 rounds • High competition</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="tournament.js"></script>
+
+</body>
+</html>

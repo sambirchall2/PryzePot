@@ -5,8 +5,7 @@ const seasonZeroStatus = document.getElementById("seasonZeroStatus");
 const seasonZeroJoinBtn = document.getElementById("seasonZeroJoinBtn");
 
 const username = localStorage.getItem("username");
-const clashPlayerTag = localStorage.getItem("clashPlayerTag");
-const clashFriendLink = getClashFriendLink();
+const chessUsername = getChessUsername();
 
 const TOURNAMENT_OPEN_EXPIRATION_MINUTES = 60;
 
@@ -145,11 +144,11 @@ function autoJoinPendingTournament() {
         (Date.now() - pendingTournamentSetAt) > PENDING_TOURNAMENT_JOIN_EXPIRATION_MS;
 
     if (isStale) return;
-    if (!username || !clashPlayerTag || !clashFriendLink) return;
+    if (!username || !chessUsername) return;
 
     localStorage.setItem("pendingJoinType", "tournament");
     localStorage.setItem("pendingJoinId", pendingTournamentId);
-    window.location.href = "verify-clash-join.html";
+    window.location.href = "verify-chess-join.html";
 }
 
 function renderTournaments() {
@@ -180,7 +179,7 @@ function renderTournaments() {
 
         card.innerHTML = `
             <div class="match-game">
-                Clash Royale Tournament
+                Chess.com Tournament
             </div>
 
             <div class="match-entry">
@@ -224,7 +223,7 @@ function renderTournaments() {
             localStorage.setItem("pendingTournamentSetAt", Date.now().toString());
             localStorage.setItem("afterConnectRedirect", "match-board.html");
 
-            window.location.href = "connect-clash.html";
+            window.location.href = "connect-chess.html";
             return;
         });
     });
@@ -293,7 +292,7 @@ async function renderMatches() {
 
         matchCard.innerHTML = `
             <div class="match-game">
-                Clash Royale
+                Chess.com
             </div>
 
             <div class="match-player-row">
@@ -319,7 +318,7 @@ async function renderMatches() {
             </div>
 
             <div class="match-mode">
-                1v1 Friendly Battle
+                ${match.mode || "10 Min Rapid"}
             </div>
 
             <div class="match-status">
@@ -349,18 +348,18 @@ function attachButtonListeners() {
                 return;
             }
 
-            if (!clashPlayerTag || !clashFriendLink) {
-                alert("Connect your Clash Royale account and friend link first.");
+            if (!getChessUsername()) {
+                alert("Connect your Chess.com account first.");
                 localStorage.setItem("pendingJoinType", "match");
                 localStorage.setItem("pendingJoinId", matchId);
-                localStorage.setItem("afterConnectRedirect", "verify-clash-join.html");
-                window.location.href = "connect-clash.html";
+                localStorage.setItem("afterConnectRedirect", "verify-chess-join.html");
+                window.location.href = "connect-chess.html";
                 return;
             }
 
             localStorage.setItem("pendingJoinType", "match");
             localStorage.setItem("pendingJoinId", matchId);
-            window.location.href = "verify-clash-join.html";
+            window.location.href = "verify-chess-join.html";
         });
     });
 
@@ -390,7 +389,7 @@ function attachButtonListeners() {
 }
 
 function loadTournaments() {
-    apiFetch("/api/tournaments?game=" + encodeURIComponent("Clash Royale"))
+    apiFetch("/api/tournaments?game=Chess.com")
         .then(function (data) {
             if (!data.success) return;
 
@@ -403,7 +402,7 @@ function loadTournaments() {
 }
 
 function loadMatches() {
-    apiFetch("/api/matches?game=" + encodeURIComponent("Clash Royale"))
+    apiFetch("/api/matches?game=Chess.com")
         .then(function (data) {
             if (!data.success) {
                 matchesContainer.innerHTML = `
@@ -473,7 +472,7 @@ if (seasonZeroJoinBtn) {
         localStorage.setItem("pendingTournamentSetAt", Date.now().toString());
         localStorage.setItem("afterConnectRedirect", "match-board.html");
 
-        window.location.href = "connect-clash.html";
+        window.location.href = "connect-chess.html";
     });
 }
 
