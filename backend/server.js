@@ -526,6 +526,31 @@ function dbMatchToFrontend(match) {
     };
 }
 
+async function attachMatchProfiles(match) {
+    const creatorProfile = await supabase
+        .from("users")
+        .select("username, profile_picture, profile_banner, equipped_avatar, equipped_banner, level, xp")
+        .eq("username", match.creatorUsername)
+        .maybeSingle();
+
+    let opponentProfile = {
+        data: null
+    };
+
+    if (match.opponentUsername) {
+        opponentProfile = await supabase
+            .from("users")
+            .select("username, profile_picture, profile_banner, equipped_avatar, equipped_banner, level, xp")
+            .eq("username", match.opponentUsername)
+            .maybeSingle();
+    }
+
+    match.creatorProfile = creatorProfile.data || null;
+    match.opponentProfile = opponentProfile.data || null;
+
+    return match;
+}
+
 async function getBattleLog(playerTag) {
     const response = await fetch(
         "https://api.clashroyale.com/v1/players/" + encodeTag(playerTag) + "/battlelog",
@@ -2993,7 +3018,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
         res.json({
             success: true,
             message: "Match already verified.",
-            match: dbMatchToFrontend(foundMatch)
+            match: await attachMatchProfiles(dbMatchToFrontend(foundMatch))
         });
         return;
     }
@@ -3073,7 +3098,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                     success: true,
                     draw: currentMatch.status === "Draw",
                     message: "Match already verified.",
-                    match: dbMatchToFrontend(currentMatch)
+                    match: await attachMatchProfiles(dbMatchToFrontend(currentMatch))
                 });
                 return;
             }
@@ -3087,7 +3112,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
                 success: true,
                 draw: true,
                 message: "Game found, but it was a draw.",
-                match: dbMatchToFrontend(drawUpdate.data)
+                match: await attachMatchProfiles(dbMatchToFrontend(drawUpdate.data))
             });
             return;
         }
@@ -3142,7 +3167,7 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             res.json({
                 success: true,
                 message: "Match already verified.",
-                match: dbMatchToFrontend(alreadyCompleted.data || foundMatch)
+                match: await attachMatchProfiles(dbMatchToFrontend(alreadyCompleted.data || foundMatch))
             });
             return;
         }
@@ -3204,7 +3229,7 @@ const loserXpProfile = await awardXpToUser(loserUsername, loserXpEarned);
     loserXpEarned: loserXpEarned,
     winnerProfile: winnerXpProfile,
     loserProfile: loserXpProfile,
-    match: dbMatchToFrontend(completed.data)
+    match: await attachMatchProfiles(dbMatchToFrontend(completed.data))
 });
 
     } catch (error) {
@@ -3294,28 +3319,7 @@ app.get("/api/matches/:id", async function (req, res) {
         return;
     }
 
-    const match = dbMatchToFrontend(found.data);
-
-    const creatorProfile = await supabase
-        .from("users")
-        .select("username, profile_picture, profile_banner, level, xp")
-        .eq("username", match.creatorUsername)
-        .maybeSingle();
-
-    let opponentProfile = {
-        data: null
-    };
-
-    if (match.opponentUsername) {
-        opponentProfile = await supabase
-            .from("users")
-            .select("username, profile_picture, profile_banner, level, xp")
-            .eq("username", match.opponentUsername)
-            .maybeSingle();
-    }
-
-    match.creatorProfile = creatorProfile.data || null;
-    match.opponentProfile = opponentProfile.data || null;
+    const match = await attachMatchProfiles(dbMatchToFrontend(found.data));
 
     res.json({
         success: true,
