@@ -755,8 +755,7 @@ body {
     align-items: center;
     gap: 10px;
 
-    height: 58px;
-    padding: 0 12px;
+    padding: 10px 12px;
 
     background: linear-gradient(160deg, var(--surface-raised), var(--surface) 80%);
     border: 1px solid var(--surface-line);
@@ -792,15 +791,15 @@ body {
     flex-shrink: 0;
 }
 
-.scheduled-match-body {
+.scheduled-match-main {
     flex: 1 1 auto;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
-.scheduled-match-title-row {
+.scheduled-match-top-row {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -832,7 +831,32 @@ body {
     text-transform: uppercase;
 }
 
+.scheduled-match-countdown {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(200,255,0,.12);
+    border: 1px solid rgba(200,255,0,.3);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    white-space: nowrap;
+}
+
+.scheduled-match-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
 .scheduled-match-sub {
+    min-width: 0;
+    flex: 1 1 auto;
     font-size: 11px;
     font-weight: 600;
     color: var(--ink-dim);
@@ -846,31 +870,11 @@ body {
     font-style: italic;
 }
 
-.scheduled-match-right {
+.scheduled-match-entry-stake {
     flex-shrink: 0;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-}
-
-.scheduled-match-countdown {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(200,255,0,.12);
-    border: 1px solid rgba(200,255,0,.3);
-    color: var(--accent);
-    font-family: var(--font-display);
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: .2px;
-    white-space: nowrap;
-}
-
-.scheduled-match-entry-stake {
-    display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     color: var(--ink-dim);
     font-size: 11px;
     font-weight: 700;
@@ -885,4 +889,34 @@ body {
 
 .scheduled-match-entry-stake .stake-pct {
     color: var(--accent);
+}
+
+.scheduled-match-action-btn {
+    flex-shrink: 0;
+    align-self: center;
+
+    padding: 9px 12px;
+    border: none;
+    border-radius: var(--r-sm);
+
+    background: var(--accent);
+    color: var(--accent-ink);
+
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform .14s var(--ease), filter .14s var(--ease);
+}
+
+.scheduled-match-action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.scheduled-match-action-btn:active {
+    transform: translateY(0) scale(.96);
 }

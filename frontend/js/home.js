@@ -470,6 +470,16 @@ function getMockScheduledTournaments() {
     ];
 }
 
+function scheduledItemHasOpenSlot(item) {
+    return item.type === "tournament"
+        ? item.joinedCount < item.bracketSize
+        : !item.opponent;
+}
+
+function getScheduledItemActionLabel(item) {
+    return scheduledItemHasOpenSlot(item) ? "Join/Stake" : "View/Stake";
+}
+
 function buildScheduledMatchCard(item) {
     const gameInfo = SCHEDULED_MATCH_GAMES[item.game] || { name: item.game, icon: "" };
     const isTournament = item.type === "tournament";
@@ -497,17 +507,18 @@ function buildScheduledMatchCard(item) {
 
     card.innerHTML =
         '<img class="scheduled-match-game-icon" src="' + gameInfo.icon + '" alt="' + gameInfo.name + '">' +
-        '<div class="scheduled-match-body">' +
-            '<div class="scheduled-match-title-row">' +
+        '<div class="scheduled-match-main">' +
+            '<div class="scheduled-match-top-row">' +
                 '<span class="scheduled-match-game-name">' + gameInfo.name + '</span>' +
                 typeBadgeHtml +
+                '<span class="scheduled-match-countdown" id="countdown-' + item.id + '"></span>' +
             '</div>' +
-            '<div class="scheduled-match-sub">' + subText + '</div>' +
+            '<div class="scheduled-match-bottom-row">' +
+                '<span class="scheduled-match-sub">' + subText + '</span>' +
+                '<span class="scheduled-match-entry-stake">' + coinHtml(item.entryFee) + stakeHtml + '</span>' +
+            '</div>' +
         '</div>' +
-        '<div class="scheduled-match-right">' +
-            '<span class="scheduled-match-countdown" id="countdown-' + item.id + '"></span>' +
-            '<span class="scheduled-match-entry-stake">' + coinHtml(item.entryFee) + stakeHtml + '</span>' +
-        '</div>';
+        '<button class="scheduled-match-action-btn" type="button">' + getScheduledItemActionLabel(item) + '</button>';
 
     card.addEventListener("click", function () {
         window.location.href =
