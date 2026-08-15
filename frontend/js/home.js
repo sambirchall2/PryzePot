@@ -470,58 +470,44 @@ function getMockScheduledTournaments() {
     ];
 }
 
-function scheduledItemHasOpenSlot(item) {
-    return item.type === "tournament"
-        ? item.joinedCount < item.bracketSize
-        : !item.opponent;
-}
-
-function getScheduledItemActionLabel(item) {
-    return scheduledItemHasOpenSlot(item) ? "Join/Stake" : "View/Stake";
-}
-
 function buildScheduledMatchCard(item) {
     const gameInfo = SCHEDULED_MATCH_GAMES[item.game] || { name: item.game, icon: "" };
-    const remainingToStake = Math.max(item.entryFee - item.stakedAmount, 0);
     const isTournament = item.type === "tournament";
 
-    const stakeBadgeHtml = item.stakingEnabled
-        ? '<span class="scheduled-match-stake-badge">' +
-            coinHtml(remainingToStake) + ' of ' + coinHtml(item.entryFee) + ' open to stake' +
-          '</span>'
-        : "";
-
     const typeBadgeHtml = isTournament
-        ? '<span class="scheduled-match-type-badge">Tournament</span>'
+        ? '<span class="scheduled-match-type-badge">Tourney</span>'
         : "";
 
-    const participantsHtml = isTournament
-        ? '<span class="tournament-slots">' + item.joinedCount + '/' + item.bracketSize + ' Joined</span>'
-        : '<span class="player">' + item.creator + '</span>' +
-          '<span class="vs">vs</span>' +
-          (item.opponent
-              ? '<span class="player">' + item.opponent + '</span>'
-              : '<span class="player open-slot">Open Slot</span>');
+    const subText = isTournament
+        ? item.joinedCount + '/' + item.bracketSize + ' joined'
+        : item.creator + ' vs ' +
+          (item.opponent ? item.opponent : '<span class="open-slot">Open slot</span>');
+
+    const stakePct = item.stakingEnabled && item.entryFee > 0
+        ? Math.min(Math.round((item.stakedAmount / item.entryFee) * 100), 100)
+        : null;
+
+    const stakeHtml = stakePct !== null
+        ? '<span class="stake-pct">&middot; ' + stakePct + '% staked</span>'
+        : "";
 
     const card = document.createElement("div");
     card.className = "scheduled-match-card";
     card.dataset.matchId = item.id;
 
     card.innerHTML =
-        '<div class="scheduled-match-top">' +
-            '<div class="scheduled-match-game">' +
-                '<img class="scheduled-match-game-icon" src="' + gameInfo.icon + '" alt="' + gameInfo.name + '">' +
+        '<img class="scheduled-match-game-icon" src="' + gameInfo.icon + '" alt="' + gameInfo.name + '">' +
+        '<div class="scheduled-match-body">' +
+            '<div class="scheduled-match-title-row">' +
                 '<span class="scheduled-match-game-name">' + gameInfo.name + '</span>' +
                 typeBadgeHtml +
             '</div>' +
+            '<div class="scheduled-match-sub">' + subText + '</div>' +
+        '</div>' +
+        '<div class="scheduled-match-right">' +
             '<span class="scheduled-match-countdown" id="countdown-' + item.id + '"></span>' +
-        '</div>' +
-        '<div class="scheduled-match-players">' + participantsHtml + '</div>' +
-        '<div class="scheduled-match-meta">' +
-            '<span class="scheduled-match-entry">' + coinHtml(item.entryFee) + ' Entry</span>' +
-            stakeBadgeHtml +
-        '</div>' +
-        '<button class="scheduled-match-action" type="button">' + getScheduledItemActionLabel(item) + '</button>';
+            '<span class="scheduled-match-entry-stake">' + coinHtml(item.entryFee) + stakeHtml + '</span>' +
+        '</div>';
 
     card.addEventListener("click", function () {
         window.location.href =
