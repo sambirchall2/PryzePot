@@ -389,11 +389,10 @@ function coinHtml(amount) {
         Number(amount || 0).toFixed(2);
 }
 
-// Matches are real now (see backend step) - fetched from GET
-// /api/matches?matchType=scheduled and normalized into the same item
-// shape buildScheduledMatchCard already expects. Tournaments stay mock
-// (getMockScheduledTournaments below) until scheduled-tournament
-// creation and per-participant staking are wired up.
+// Both matches and tournaments are real now, fetched from
+// GET /api/matches?matchType=scheduled and
+// GET /api/tournaments?tournamentType=scheduled respectively, and
+// normalized onto the same item shape buildScheduledMatchCard expects.
 function shortGameKey(fullGameName) {
     return fullGameName === "Chess.com" ? "chess" : "clash";
 }
@@ -405,6 +404,7 @@ function normalizeRealMatchToScheduledItem(match) {
         game: shortGameKey(match.game),
         scheduledFor: match.scheduledTime,
         entryFee: match.entryFee,
+        stakeableTotal: match.entryFee,
         stakingEnabled: match.stakingEnabled,
         stakedAmount: match.totalStaked || 0,
         creator: match.creatorUsername,
@@ -425,49 +425,37 @@ function loadRealScheduledMatches() {
         });
 }
 
-// Placeholder data covering every button/badge state for tournaments —
-// open slot, filled + staking room, filled + staking off — until
-// scheduled-tournament creation and per-participant staking exist.
-function getMockScheduledTournaments() {
-    const now = Date.now();
-    const hours = 60 * 60 * 1000;
-    const days = 24 * hours;
+// Tournament staking is per-participant, not per-tournament (see the
+// backend step's attachTournamentStakeSummary), so stakedAmount here is
+// summed across every opted-in participant - the % shown on the card is
+// against stakeableTotal (entryFee * joinedCount, the sum of everyone's
+// individual stakeable ceiling), not the flat per-player entryFee.
+function normalizeRealTournamentToScheduledItem(tournament) {
+    return {
+        id: tournament.id,
+        type: "tournament",
+        game: shortGameKey(tournament.game),
+        scheduledFor: tournament.scheduled_time,
+        entryFee: tournament.entry_fee,
+        stakeableTotal: Number(tournament.entry_fee || 0) * Number(tournament.current_players || 0),
+        stakingEnabled: tournament.stakingEnabled,
+        stakedAmount: tournament.stakedAmount || 0,
+        bracketSize: tournament.max_players,
+        joinedCount: tournament.current_players
+    };
+}
 
-    return [
-        {
-            id: "st_open_clash",
-            type: "tournament",
-            game: "clash",
-            scheduledFor: new Date(now + 3 * hours).toISOString(),
-            entryFee: 250,
-            stakingEnabled: true,
-            stakedAmount: 100,
-            bracketSize: 8,
-            joinedCount: 3
-        },
-        {
-            id: "st_full_chess_nostake",
-            type: "tournament",
-            game: "chess",
-            scheduledFor: new Date(now + 26 * hours).toISOString(),
-            entryFee: 500,
-            stakingEnabled: false,
-            stakedAmount: 0,
-            bracketSize: 4,
-            joinedCount: 4
-        },
-        {
-            id: "st_full_clash_stake",
-            type: "tournament",
-            game: "clash",
-            scheduledFor: new Date(now + 70 * hours).toISOString(),
-            entryFee: 1000,
-            stakingEnabled: true,
-            stakedAmount: 300,
-            bracketSize: 16,
-            joinedCount: 16
-        }
-    ];
+function loadRealScheduledTournaments() {
+    return apiFetch("/api/tournaments?tournamentType=scheduled")
+        .then(function (data) {
+            if (!data.success || !data.tournaments) return [];
+
+            return data.tournaments.map(normalizeRealTournamentToScheduledItem);
+        })
+        .catch(function (error) {
+            console.log("SCHEDULED TOURNAMENTS LOAD ERROR:", error);
+            return [];
+        });
 }
 
 function scheduledItemHasOpenSlot(item) {
@@ -493,8 +481,10 @@ function buildScheduledMatchCard(item) {
         : item.creator + ' vs ' +
           (item.opponent ? item.opponent : '<span class="open-slot">Open slot</span>');
 
-    const stakePct = item.stakingEnabled && item.entryFee > 0
-        ? Math.min(Math.round((item.stakedAmount / item.entryFee) * 100), 100)
+    const stakeableTotal = item.stakeableTotal || item.entryFee;
+
+    const stakePct = item.stakingEnabled && stakeableTotal > 0
+        ? Math.min(Math.round((item.stakedAmount / stakeableTotal) * 100), 100)
         : null;
 
     const stakeHtml = stakePct !== null
@@ -534,12 +524,9 @@ function loadScheduledMatches() {
 
     if (!section || !list) return;
 
-    // TODO: once scheduled tournaments have a real endpoint, fetch them
-    // the same way as matches and merge + sort exactly like this — one
-    // combined list, not two — rather than concatenating a mock array.
-    loadRealScheduledMatches().then(function (realMatches) {
-        const items = realMatches
-            .concat(getMockScheduledTournaments())
+    Promise.all([loadRealScheduledMatches(), loadRealScheduledTournaments()]).then(function (results) {
+        const items = results[0]
+            .concat(results[1])
             .sort(function (a, b) {
                 return new Date(a.scheduledFor) - new Date(b.scheduledFor);
             });

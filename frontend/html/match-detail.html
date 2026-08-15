@@ -180,6 +180,12 @@
                 <div id="tSlotsGrid" class="tournament-slots-grid"></div>
             </section>
 
+            <section id="tCancelSection" class="detail-card hidden">
+                <h2>Manage Tournament</h2>
+                <p>Cancel this tournament before it fills up. Every joined player's entry fee, and any stakes placed, are refunded in full.</p>
+                <button id="tCancelBtn" class="danger-btn">CANCEL TOURNAMENT</button>
+            </section>
+
             <section id="tJoinSection" class="detail-card hidden">
                 <h2>Join This Tournament</h2>
                 <p>Take an open slot in this bracket.</p>
@@ -220,6 +226,12 @@
             <section id="tStakingSection" class="detail-card hidden">
                 <h2>Staking</h2>
                 <div id="tStakingList" class="tournament-staking-list"></div>
+            </section>
+
+            <section id="tPayoutSection" class="detail-card hidden">
+                <h2 id="tPayoutHeading">Payout Breakdown</h2>
+                <p id="tPayoutSummaryLine"></p>
+                <div id="tPayoutList" class="payout-list"></div>
             </section>
 
             <section class="detail-card watch-live-card">

@@ -248,24 +248,57 @@ if (confirmBtn) {
     confirmBtn.addEventListener("click", function () {
         if (confirmBtn.disabled) return;
 
-        if (isTournament) {
-            // Scheduled tournaments aren't wired to the backend yet - the
-            // existing tournament-expiry job (expireStaleTournaments)
-            // auto-cancels any "Open" tournament after a fixed 1-hour
-            // staleness window rather than a per-tournament deadline, which
-            // would kill a multi-day-scheduled tournament the same way
-            // matches.expires_at did before that got fixed. That needs
-            // sorting out (plus per-participant staking) before this path
-            // can write a real row.
-            showToast("Scheduling a tournament isn't connected to the backend yet.", "error");
-            return;
-        }
-
         confirmBtn.disabled = true;
         confirmBtn.textContent = "SCHEDULING...";
 
         const scheduledTimeMs = getSelectedDateTime().getTime();
         const stakeAmount = stakeToggle.checked ? getStakeAmount() : null;
+
+        if (isTournament) {
+            const tournamentPayload = {
+                tournamentSize: Number(tournamentSize),
+                entryFee: entryFee,
+                tournamentType: "scheduled",
+                scheduledTime: scheduledTimeMs,
+                stakingEnabled: stakeToggle.checked,
+                creatorStakeAmount: stakeAmount
+            };
+
+            if (createGame === "chess") {
+                tournamentPayload.game = "Chess.com";
+                tournamentPayload.playerTag = getChessUsername();
+            } else {
+                tournamentPayload.playerTag = localStorage.getItem("clashPlayerTag");
+                tournamentPayload.friendLink = getClashFriendLink();
+            }
+
+            apiFetch("/api/tournaments", {
+                method: "POST",
+                body: JSON.stringify(tournamentPayload)
+            })
+                .then(function (data) {
+                    if (!data.success) {
+                        showToast(data.message || "Could not schedule this tournament.", "error");
+
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = "CONFIRM SCHEDULE";
+                        return;
+                    }
+
+                    showToast("Tournament scheduled!", "success");
+
+                    window.location.href = "match-detail.html?matchId=" + data.tournament.id + "&type=tournament";
+                })
+                .catch(function (error) {
+                    console.log("SCHEDULE TOURNAMENT ERROR:", error);
+
+                    showToast("Could not schedule this tournament. Make sure your backend server is running.", "error");
+
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "CONFIRM SCHEDULE";
+                });
+            return;
+        }
 
         const payload = {
             entryFee: entryFee,

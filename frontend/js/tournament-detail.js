@@ -9,13 +9,13 @@
 // tags sharing one global scope, and in non-strict mode a function
 // declared inside a bare block still leaks out to that shared global
 // scope (Annex B). Several names here — renderAll, renderHeader,
-// coinHtml, persistOverride — also exist in match-detail.js; without
-// a real function scope, this file's versions would silently
-// overwrite match-detail.js's on any tournament page load.
+// coinHtml — also exist in match-detail.js; without a real function
+// scope, this file's versions would silently overwrite match-detail.js's
+// on any tournament page load.
 (function () {
 
     const tQueryParams = new URLSearchParams(window.location.search);
-    const tMatchId = tQueryParams.get("matchId") || "st_open_clash";
+    const tMatchId = tQueryParams.get("matchId");
     const tItemType = tQueryParams.get("type") || "match";
 
     if (tItemType !== "tournament") return;
@@ -24,6 +24,10 @@
 
     if (!tCurrentUsername) {
         window.location.href = "index.html";
+    }
+
+    if (!tMatchId) {
+        window.location.href = "home.html";
     }
 
     const tournamentContent = document.getElementById("tournamentContent");
@@ -39,6 +43,9 @@
     const tSlotsSummary = document.getElementById("tSlotsSummary");
     const tSlotsGrid = document.getElementById("tSlotsGrid");
 
+    const tCancelSection = document.getElementById("tCancelSection");
+    const tCancelBtn = document.getElementById("tCancelBtn");
+
     const tJoinSection = document.getElementById("tJoinSection");
     const tJoinStakeToggle = document.getElementById("tJoinStakeToggle");
     const tJoinStakeSection = document.getElementById("tJoinStakeSection");
@@ -50,6 +57,11 @@
 
     const tStakingSection = document.getElementById("tStakingSection");
     const tStakingList = document.getElementById("tStakingList");
+
+    const tPayoutSection = document.getElementById("tPayoutSection");
+    const tPayoutHeading = document.getElementById("tPayoutHeading");
+    const tPayoutSummaryLine = document.getElementById("tPayoutSummaryLine");
+    const tPayoutList = document.getElementById("tPayoutList");
 
     const GAMES = {
         clash: { name: "Clash Royale", icon: "../assets/games/clash-royale.png" },
@@ -76,76 +88,81 @@
         return entryFee > 0 ? (amount / entryFee) * 100 : 0;
     }
 
-    // Placeholder scenarios: open slots + joinable (creator is the
-    // logged-in user, so the participant view is directly reachable),
-    // fully filled with no staking anywhere, and fully filled with
-    // several participants staking at different fill levels — until
-    // the scheduled-tournament backend exists.
-    const MOCK_TOURNAMENTS = {
-        st_open_clash: function () {
-            return {
-                id: "st_open_clash", type: "tournament", game: "clash",
-                scheduledFor: new Date(Date.now() + 24 * 3600000).toISOString(),
-                entryFee: 250, bracketSize: 8,
-                players: [tCurrentUsername, "RivalRook", "KnightMoves", null, null, null, null, null],
-                staking: {
-                    [tCurrentUsername]: { enabled: true, ownStake: 100, otherStakes: [{ username: "SpectatorFan", amount: 60 }] }
-                }
+    function shortGameKey(fullGameName) {
+        return fullGameName === "Chess.com" ? "chess" : "clash";
+    }
+
+    function isChessTournament(t) {
+        return t.game === "chess";
+    }
+
+    // Maps GET /api/tournaments/:id's response (tournaments/tournament_players
+    // raw columns, plus tournament_stakes/tournament_payouts arrays) onto the
+    // shape the rest of this file renders. players is padded with null up to
+    // max_players so open slots render the same way the old mock data did.
+    function normalizeRealTournament(data) {
+        const t = data.tournament;
+        const joinedUsernames = (data.players || []).map(function (p) { return p.username; });
+        const openSlots = Math.max(Number(t.max_players || 0) - joinedUsernames.length, 0);
+
+        const staking = {};
+
+        (data.players || []).forEach(function (p) {
+            if (!p.staking_enabled) return;
+
+            staking[p.username] = {
+                enabled: true,
+                ownStake: Number(p.own_stake_amount) || 0,
+                fallbackAmount: p.fallback_amount === null ? null : Number(p.fallback_amount),
+                otherStakes: (data.stakes || [])
+                    .filter(function (stake) { return stake.staked_username === p.username; })
+                    .map(function (stake) { return { username: stake.staker_username, amount: Number(stake.amount) }; })
             };
-        },
-        st_full_chess_nostake: function () {
-            return {
-                id: "st_full_chess_nostake", type: "tournament", game: "chess",
-                scheduledFor: new Date(Date.now() + 26 * 3600000).toISOString(),
-                entryFee: 500, bracketSize: 4,
-                players: ["PixelPrince", "CrownBreaker", "EndgameEnjoyer", "RookRider"],
-                staking: {}
-            };
-        },
-        st_full_clash_stake: function () {
-            return {
-                id: "st_full_clash_stake", type: "tournament", game: "clash",
-                scheduledFor: new Date(Date.now() + 70 * 3600000).toISOString(),
-                entryFee: 1000, bracketSize: 8,
-                players: [
-                    "IceQueenBex", "FrostByte", "ShadowByte", "KnightRider",
-                    "PawnStorm", "RookRider", "BishopBlitz", "QueenGambit"
-                ],
-                staking: {
-                    IceQueenBex: { enabled: true, ownStake: 400, otherStakes: [{ username: "SpectatorFan", amount: 600 }] },
-                    FrostByte: { enabled: true, ownStake: 200, otherStakes: [{ username: "AnotherFan", amount: 100 }] }
-                }
-            };
-        }
-    };
-    function getBaseMockTournament(id) {
-        const factory = MOCK_TOURNAMENTS[id] || MOCK_TOURNAMENTS.st_open_clash;
-        return factory();
+        });
+
+        return {
+            id: t.id,
+            type: "tournament",
+            game: shortGameKey(t.game),
+            scheduledFor: t.scheduled_time,
+            entryFee: Number(t.entry_fee) || 0,
+            bracketSize: Number(t.max_players) || 0,
+            players: joinedUsernames.concat(Array(openSlots).fill(null)),
+            status: t.status,
+            creatorUsername: t.creator_username,
+            winnerUsername: t.winner_username,
+            stakeResolvedAt: t.stake_resolved_at,
+            staking: staking,
+            payouts: (data.payouts || []).map(function (payout) {
+                return { username: payout.username, amount: Number(payout.amount), share: Number(payout.share) };
+            })
+        };
     }
 
-    function getOverridesKey(id) {
-        return "scheduledTournamentOverrides_" + id;
-    }
-
-    function loadOverrides(id) {
-        try {
-            return JSON.parse(localStorage.getItem(getOverridesKey(id))) || {};
-        } catch (error) {
-            return {};
-        }
-    }
-
-    function persistOverride(patch) {
-        const merged = Object.assign({}, loadOverrides(tMatchId), patch);
-        localStorage.setItem(getOverridesKey(tMatchId), JSON.stringify(merged));
-    }
-
-    function getEffectiveTournament(id) {
-        return Object.assign({}, getBaseMockTournament(id), loadOverrides(id));
-    }
-
-    let currentTournament = getEffectiveTournament(tMatchId);
+    let currentTournament = null;
     let tCountdownStopFn = null;
+
+    function loadTournament() {
+        apiFetch("/api/tournaments/" + tMatchId)
+            .then(function (data) {
+                if (!data.success || !data.tournament) {
+                    showToast((data && data.message) || "Could not load this tournament.", "error");
+                    window.location.href = "home.html";
+                    return;
+                }
+
+                currentTournament = normalizeRealTournament(data);
+                renderAll();
+            })
+            .catch(function (error) {
+                console.log("LOAD TOURNAMENT ERROR:", error);
+                showToast("Could not load this tournament. Make sure your backend server is running.", "error");
+            });
+    }
+
+    function isCreator(t) {
+        return !!tCurrentUsername && t.creatorUsername === tCurrentUsername;
+    }
 
     function renderHeader(t) {
         const info = GAMES[t.game] || { name: t.game, icon: "" };
@@ -164,6 +181,13 @@
     function refreshCountdown() {
         if (!tCountdownBadge || tCountdownStopFn) return;
         tCountdownStopFn = startCountdown(tCountdownBadge, currentTournament.scheduledFor, { intervalMs: 30000 });
+    }
+
+    function stopCountdown() {
+        if (tCountdownStopFn) {
+            tCountdownStopFn();
+            tCountdownStopFn = null;
+        }
     }
 
     function joinedCount(t) {
@@ -215,7 +239,17 @@
         const alreadyIn = t.players.indexOf(tCurrentUsername) !== -1;
         const hasOpenSlot = t.players.indexOf(null) !== -1;
 
-        return hasOpenSlot && !alreadyIn;
+        return t.status === "Open" && hasOpenSlot && !alreadyIn;
+    }
+
+    // Mirrors what POST /api/tournaments/:id/cancel actually enforces
+    // server-side (creator, still "Open") - this is just the UI gate, the
+    // backend re-checks both regardless.
+    function renderCancelSection(t) {
+        if (!tCancelSection) return;
+
+        const canCancel = isCreator(t) && t.status === "Open";
+        tCancelSection.classList.toggle("hidden", !canCancel);
     }
 
     function refreshJoinStakeForm() {
@@ -328,18 +362,35 @@
             if (confirmBtn.disabled) return;
 
             const amount = Number(input.value);
-            const record = currentTournament.staking[username] || { enabled: true, ownStake: 0, otherStakes: [] };
-            const newStakes = (record.otherStakes || []).concat([{ username: tCurrentUsername, amount: amount }]);
 
-            const newStaking = Object.assign({}, currentTournament.staking);
-            newStaking[username] = Object.assign({}, record, { otherStakes: newStakes });
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "STAKING...";
 
-            currentTournament.staking = newStaking;
-            persistOverride({ staking: newStaking });
+            apiFetch("/api/tournaments/" + tMatchId + "/stakes", {
+                method: "POST",
+                body: JSON.stringify({ stakedUsername: username, amount: amount })
+            })
+                .then(function (data) {
+                    if (!data.success) {
+                        showToast(data.message || "Could not place stake.", "error");
 
-            showToast("You staked " + formatCredits(amount) + " Vault Credits on " + username + ".", "success");
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = "CONFIRM STAKE";
+                        return;
+                    }
 
-            renderStakingSection(currentTournament);
+                    showToast("You staked " + formatCredits(amount) + " Vault Credits on " + username + ".", "success");
+
+                    loadTournament();
+                })
+                .catch(function (error) {
+                    console.log("TOURNAMENT STAKE ERROR:", error);
+
+                    showToast("Could not place stake. Make sure your backend server is running.", "error");
+
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "CONFIRM STAKE";
+                });
         });
 
         refresh();
@@ -350,8 +401,9 @@
         const b = getParticipantBreakdown(t.entryFee, record);
         const safeId = username.replace(/[^a-zA-Z0-9]/g, "");
 
+        const stakingClosed = !!t.stakeResolvedAt;
         const alreadyStaked = b.currentUserAmount > 0;
-        const canStakeMore = b.remaining > 0 && !alreadyStaked;
+        const canStakeMore = !stakingClosed && b.remaining > 0 && !alreadyStaked;
 
         const youRowHtml = alreadyStaked
             ? '<div class="stake-breakdown-row you-row">' +
@@ -376,6 +428,10 @@
               '</div>'
             : "";
 
+        const resolvedNoteHtml = stakingClosed && b.remaining > 0
+            ? '<p class="stake-resolved-note">' + username + ' covered the remaining ' + coinHtml(b.remaining) + ' after staking closed.</p>'
+            : "";
+
         const card = document.createElement("div");
         card.className = "participant-stake-card";
 
@@ -397,6 +453,7 @@
                 '<span>Remaining Room</span>' +
                 '<strong>' + coinHtml(b.remaining) + ' (' + formatPercent(pctOf(b.remaining, t.entryFee)) + ')</strong>' +
             '</div>' +
+            resolvedNoteHtml +
             formHtml;
 
         if (canStakeMore) {
@@ -413,7 +470,7 @@
             return t.staking[username] && t.staking[username].enabled && t.players.indexOf(username) !== -1;
         });
 
-        if (stakingUsernames.length === 0) {
+        if (stakingUsernames.length === 0 || t.status === "Completed") {
             tStakingSection.classList.add("hidden");
             return;
         }
@@ -426,12 +483,90 @@
         });
     }
 
+    // payouts is only ever populated when the champion had staking enabled
+    // (see recordTournamentStakingPayoutBreakdown in server.js, which
+    // returns early otherwise) - an empty array here always means no
+    // staking was involved in the win, so the section just stays hidden
+    // rather than needing a "stakes weren't paid out" branch the way
+    // match-detail.js's payout section does for the losing side of a 1v1.
+    function renderPayoutSection(t) {
+        if (!tPayoutSection) return;
+
+        if (t.status !== "Completed" || t.payouts.length === 0) {
+            tPayoutSection.classList.add("hidden");
+            return;
+        }
+
+        tPayoutSection.classList.remove("hidden");
+
+        if (tPayoutHeading) tPayoutHeading.textContent = "Payout Breakdown";
+
+        if (tPayoutSummaryLine) {
+            tPayoutSummaryLine.textContent =
+                (t.winnerUsername || "The champion") + " won the tournament — here's how the payout split by stake share.";
+        }
+
+        if (tPayoutList) {
+            tPayoutList.innerHTML = "";
+
+            t.payouts.forEach(function (payout) {
+                const isYou = payout.username === tCurrentUsername;
+                const row = document.createElement("div");
+                row.className = "payout-row" + (isYou ? " you-row" : "");
+
+                row.innerHTML =
+                    '<div class="payout-row-name">' +
+                        '<strong>' + payout.username + (isYou ? " (You)" : "") + '</strong>' +
+                        '<span>' + formatPercent(payout.share * 100) + ' share</span>' +
+                    '</div>' +
+                    '<div class="payout-row-amount">' + coinHtml(payout.amount) + '</div>';
+
+                tPayoutList.appendChild(row);
+            });
+        }
+    }
+
+    function refreshStatus() {
+        if (!currentTournament || !tCountdownBadge) return;
+
+        if (currentTournament.status === "Completed") {
+            stopCountdown();
+            tCountdownBadge.textContent = "Tournament Complete";
+            tCountdownBadge.classList.remove("waiting");
+            tCountdownBadge.classList.add("ready");
+            return;
+        }
+
+        if (currentTournament.status === "Cancelled") {
+            stopCountdown();
+            tCountdownBadge.textContent = "Tournament Cancelled";
+            tCountdownBadge.classList.remove("ready");
+            tCountdownBadge.classList.add("waiting");
+            return;
+        }
+
+        const hasStarted = Number(currentTournament.scheduledFor) <= Date.now();
+
+        if (hasStarted) {
+            stopCountdown();
+            tCountdownBadge.textContent = currentTournament.status === "Full" ? "Bracket Forming..." : "Entries Closed";
+            tCountdownBadge.classList.remove("ready");
+            tCountdownBadge.classList.add("waiting");
+        } else {
+            tCountdownBadge.classList.remove("ready");
+            tCountdownBadge.classList.add("waiting");
+            refreshCountdown();
+        }
+    }
+
     function renderAll() {
         renderHeader(currentTournament);
         renderSlots(currentTournament);
+        renderCancelSection(currentTournament);
         renderJoinSection(currentTournament);
         renderStakingSection(currentTournament);
-        refreshCountdown();
+        renderPayoutSection(currentTournament);
+        refreshStatus();
     }
 
     if (tJoinStakeToggle) {
@@ -452,38 +587,98 @@
         tJoinBtn.addEventListener("click", function () {
             if (tJoinBtn.disabled) return;
 
-            const players = currentTournament.players.slice();
-            const openIndex = players.indexOf(null);
+            const isChess = isChessTournament(currentTournament);
+            const gameFolder = isChess ? "chess" : "clash";
 
-            if (openIndex === -1) return;
+            const playerTag = isChess ? getChessUsername() : localStorage.getItem("clashPlayerTag");
+            const friendLink = isChess ? null : getClashFriendLink();
 
-            players[openIndex] = tCurrentUsername;
-
-            const staking = Object.assign({}, currentTournament.staking);
-
-            if (tJoinStakeToggle.checked) {
-                staking[tCurrentUsername] = {
-                    enabled: true,
-                    ownStake: Number(tJoinStakeAmountInput.value),
-                    otherStakes: []
-                };
+            if (!playerTag || (!isChess && !friendLink)) {
+                localStorage.setItem(
+                    "afterConnectRedirect",
+                    "../html/match-detail.html?matchId=" + tMatchId + "&type=tournament"
+                );
+                window.location.href = "../" + gameFolder + "/connect-" + gameFolder + ".html";
+                return;
             }
 
-            currentTournament.players = players;
-            currentTournament.staking = staking;
+            tJoinBtn.disabled = true;
+            tJoinBtn.textContent = "JOINING...";
 
-            persistOverride({ players: players, staking: staking });
+            const stakingEnabled = tJoinStakeToggle.checked;
+            const stakeAmount = stakingEnabled ? Number(tJoinStakeAmountInput.value) : null;
 
-            showToast("You joined the tournament.", "success");
+            apiFetch("/api/tournaments/" + tMatchId + "/join", {
+                method: "POST",
+                body: JSON.stringify({
+                    playerTag: playerTag,
+                    friendLink: friendLink,
+                    stakingEnabled: stakingEnabled,
+                    stakeAmount: stakeAmount
+                })
+            })
+                .then(function (data) {
+                    if (!data.success) {
+                        showToast(data.message || "Could not join this tournament.", "error");
 
-            tJoinStakeToggle.checked = false;
-            tJoinStakeSection.classList.remove("expanded");
-            tJoinStakeAmountInput.value = "";
+                        tJoinBtn.disabled = false;
+                        tJoinBtn.textContent = "CONFIRM & JOIN";
+                        return;
+                    }
 
-            renderAll();
+                    showToast("You joined the tournament.", "success");
+
+                    tJoinStakeToggle.checked = false;
+                    tJoinStakeSection.classList.remove("expanded");
+                    tJoinStakeAmountInput.value = "";
+
+                    loadTournament();
+                })
+                .catch(function (error) {
+                    console.log("JOIN TOURNAMENT ERROR:", error);
+
+                    showToast("Could not join this tournament. Make sure your backend server is running.", "error");
+
+                    tJoinBtn.disabled = false;
+                    tJoinBtn.textContent = "CONFIRM & JOIN";
+                });
         });
     }
 
-    renderAll();
+    if (tCancelBtn) {
+        tCancelBtn.addEventListener("click", function () {
+            tCancelBtn.disabled = true;
+            tCancelBtn.textContent = "CANCELLING...";
+
+            apiFetch("/api/tournaments/" + tMatchId + "/cancel", {
+                method: "POST",
+                body: JSON.stringify({})
+            })
+                .then(function (data) {
+                    if (!data.success) {
+                        showToast(data.message || "Could not cancel this tournament.", "error");
+
+                        tCancelBtn.disabled = false;
+                        tCancelBtn.textContent = "CANCEL TOURNAMENT";
+                        return;
+                    }
+
+                    showToast("Tournament cancelled — every joined player's entry fee, and any stakes placed, were refunded.", "success");
+
+                    window.location.href = "home.html";
+                })
+                .catch(function (error) {
+                    console.log("CANCEL TOURNAMENT ERROR:", error);
+
+                    showToast("Could not cancel this tournament. Make sure your backend server is running.", "error");
+
+                    tCancelBtn.disabled = false;
+                    tCancelBtn.textContent = "CANCEL TOURNAMENT";
+                });
+        });
+    }
+
+    loadTournament();
+    setInterval(refreshStatus, 30000);
 
 })();
