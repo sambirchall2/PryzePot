@@ -186,7 +186,7 @@ function loadDisputeDetail(disputeId) {
 function renderDisputeDetail(data) {
     const dispute = data.dispute;
     const match = data.match;
-    const entryFee = data.entryFee;
+    const entryFee = Number(data.entryFee) || 0;
 
     const evidenceHtml = (data.evidenceUrls || []).map(function (url) {
         const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(url);
@@ -330,7 +330,7 @@ function setupSearchTool(inputId, resultsId, onSelect) {
                     if (!data.success) return;
 
                     results.innerHTML = (data.users || []).map(function (user) {
-                        return `<div class="search-result-item" data-username="${user.username}">${user.username} — ${user.balance.toLocaleString()} credits, Lvl ${user.level}</div>`;
+                        return `<div class="search-result-item" data-username="${user.username}">${user.username} — ${Number(user.balance).toLocaleString()} credits, Lvl ${user.level}</div>`;
                     }).join("");
 
                     results.querySelectorAll(".search-result-item").forEach(function (item) {
@@ -372,7 +372,7 @@ document.getElementById("sendCurrencyBtn").addEventListener("click", function ()
     })
         .then(function (data) {
             resultText.textContent = data.success
-                ? "Sent. New balance: " + data.balance.toLocaleString()
+                ? "Sent. New balance: " + Number(data.balance).toLocaleString()
                 : (data.message || "Could not send credits.");
         })
         .catch(function (error) {

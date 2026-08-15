@@ -110,7 +110,7 @@ function updateTimer() {
 }
 
 function updateRoomState(match) {
-    entryDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + match.entryFee;
+    entryDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(match.entryFee);
     prizeDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(match.entryFee) * 2;
 
     if (lastPlayerOneUsername !== match.creatorUsername) {

@@ -12,7 +12,7 @@ if (backBtn) {
         "click",
         function () {
             window.location.href =
-                "entry.html";
+                "../html/play-mode.html";
         }
     );
 }

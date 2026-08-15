@@ -379,11 +379,203 @@ if (returnTournamentBtn) {
             "../clash/tournament-room.html";
     });
 }
+const SCHEDULED_MATCH_GAMES = {
+    clash: { name: "Clash Royale", icon: "../assets/games/clash-royale.png" },
+    chess: { name: "Chess.com", icon: "../assets/games/chess-com.png" }
+};
+
+function coinHtml(amount) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' +
+        Number(amount || 0).toFixed(2);
+}
+
+// Matches are real now (see backend step) - fetched from GET
+// /api/matches?matchType=scheduled and normalized into the same item
+// shape buildScheduledMatchCard already expects. Tournaments stay mock
+// (getMockScheduledTournaments below) until scheduled-tournament
+// creation and per-participant staking are wired up.
+function shortGameKey(fullGameName) {
+    return fullGameName === "Chess.com" ? "chess" : "clash";
+}
+
+function normalizeRealMatchToScheduledItem(match) {
+    return {
+        id: match.id,
+        type: "match",
+        game: shortGameKey(match.game),
+        scheduledFor: match.scheduledTime,
+        entryFee: match.entryFee,
+        stakingEnabled: match.stakingEnabled,
+        stakedAmount: match.totalStaked || 0,
+        creator: match.creatorUsername,
+        opponent: match.opponentUsername
+    };
+}
+
+function loadRealScheduledMatches() {
+    return apiFetch("/api/matches?matchType=scheduled")
+        .then(function (data) {
+            if (!data.success || !data.matches) return [];
+
+            return data.matches.map(normalizeRealMatchToScheduledItem);
+        })
+        .catch(function (error) {
+            console.log("SCHEDULED MATCHES LOAD ERROR:", error);
+            return [];
+        });
+}
+
+// Placeholder data covering every button/badge state for tournaments —
+// open slot, filled + staking room, filled + staking off — until
+// scheduled-tournament creation and per-participant staking exist.
+function getMockScheduledTournaments() {
+    const now = Date.now();
+    const hours = 60 * 60 * 1000;
+    const days = 24 * hours;
+
+    return [
+        {
+            id: "st_open_clash",
+            type: "tournament",
+            game: "clash",
+            scheduledFor: new Date(now + 3 * hours).toISOString(),
+            entryFee: 250,
+            stakingEnabled: true,
+            stakedAmount: 100,
+            bracketSize: 8,
+            joinedCount: 3
+        },
+        {
+            id: "st_full_chess_nostake",
+            type: "tournament",
+            game: "chess",
+            scheduledFor: new Date(now + 26 * hours).toISOString(),
+            entryFee: 500,
+            stakingEnabled: false,
+            stakedAmount: 0,
+            bracketSize: 4,
+            joinedCount: 4
+        },
+        {
+            id: "st_full_clash_stake",
+            type: "tournament",
+            game: "clash",
+            scheduledFor: new Date(now + 70 * hours).toISOString(),
+            entryFee: 1000,
+            stakingEnabled: true,
+            stakedAmount: 300,
+            bracketSize: 16,
+            joinedCount: 16
+        }
+    ];
+}
+
+function scheduledItemHasOpenSlot(item) {
+    return item.type === "tournament"
+        ? item.joinedCount < item.bracketSize
+        : !item.opponent;
+}
+
+function getScheduledItemActionLabel(item) {
+    return scheduledItemHasOpenSlot(item) ? "Join/Stake" : "View/Stake";
+}
+
+function buildScheduledMatchCard(item) {
+    const gameInfo = SCHEDULED_MATCH_GAMES[item.game] || { name: item.game, icon: "" };
+    const remainingToStake = Math.max(item.entryFee - item.stakedAmount, 0);
+    const isTournament = item.type === "tournament";
+
+    const stakeBadgeHtml = item.stakingEnabled
+        ? '<span class="scheduled-match-stake-badge">' +
+            coinHtml(remainingToStake) + ' of ' + coinHtml(item.entryFee) + ' open to stake' +
+          '</span>'
+        : "";
+
+    const typeBadgeHtml = isTournament
+        ? '<span class="scheduled-match-type-badge">Tournament</span>'
+        : "";
+
+    const participantsHtml = isTournament
+        ? '<span class="tournament-slots">' + item.joinedCount + '/' + item.bracketSize + ' Joined</span>'
+        : '<span class="player">' + item.creator + '</span>' +
+          '<span class="vs">vs</span>' +
+          (item.opponent
+              ? '<span class="player">' + item.opponent + '</span>'
+              : '<span class="player open-slot">Open Slot</span>');
+
+    const card = document.createElement("div");
+    card.className = "scheduled-match-card";
+    card.dataset.matchId = item.id;
+
+    card.innerHTML =
+        '<div class="scheduled-match-top">' +
+            '<div class="scheduled-match-game">' +
+                '<img class="scheduled-match-game-icon" src="' + gameInfo.icon + '" alt="' + gameInfo.name + '">' +
+                '<span class="scheduled-match-game-name">' + gameInfo.name + '</span>' +
+                typeBadgeHtml +
+            '</div>' +
+            '<span class="scheduled-match-countdown" id="countdown-' + item.id + '"></span>' +
+        '</div>' +
+        '<div class="scheduled-match-players">' + participantsHtml + '</div>' +
+        '<div class="scheduled-match-meta">' +
+            '<span class="scheduled-match-entry">' + coinHtml(item.entryFee) + ' Entry</span>' +
+            stakeBadgeHtml +
+        '</div>' +
+        '<button class="scheduled-match-action" type="button">' + getScheduledItemActionLabel(item) + '</button>';
+
+    card.addEventListener("click", function () {
+        window.location.href =
+            "match-detail.html?matchId=" + encodeURIComponent(item.id) + "&type=" + item.type;
+    });
+
+    return card;
+}
+
+function loadScheduledMatches() {
+    const section = document.getElementById("scheduledMatchesSection");
+    const list = document.getElementById("scheduledMatchesList");
+
+    if (!section || !list) return;
+
+    // TODO: once scheduled tournaments have a real endpoint, fetch them
+    // the same way as matches and merge + sort exactly like this — one
+    // combined list, not two — rather than concatenating a mock array.
+    loadRealScheduledMatches().then(function (realMatches) {
+        const items = realMatches
+            .concat(getMockScheduledTournaments())
+            .sort(function (a, b) {
+                return new Date(a.scheduledFor) - new Date(b.scheduledFor);
+            });
+
+        renderScheduledMatches(section, list, items);
+    });
+}
+
+function renderScheduledMatches(section, list, items) {
+    if (items.length === 0) {
+        section.classList.add("hidden");
+        return;
+    }
+
+    list.innerHTML = "";
+
+    items.forEach(function (item) {
+        list.appendChild(buildScheduledMatchCard(item));
+    });
+
+    section.classList.remove("hidden");
+
+    items.forEach(function (item) {
+        startCountdown(document.getElementById("countdown-" + item.id), item.scheduledFor);
+    });
+}
+
 loadHomeProfile();
 loadNotificationCount();
 loadOnlineFriendsCount();
 loadActiveTournament();
 claimDailyReward();
+loadScheduledMatches();
 
 setInterval(loadNotificationCount, 15000);
 setInterval(loadOnlineFriendsCount, 15000);

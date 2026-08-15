@@ -79,5 +79,7 @@ continueBtn.addEventListener("click", function () {
     localStorage.removeItem("selectedMatchId");
     localStorage.removeItem("lastVerifiedMatch");
 
-    window.location.href = "rules.html";
+    localStorage.setItem("createGame", "clash");
+
+    window.location.href = "../html/play-mode.html";
 });

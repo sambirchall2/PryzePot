@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Details | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+    <link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/match-detail.css">
+    <link rel="stylesheet" href="../css/tournament-detail.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="match-detail-page">
+
+        <!-- Same /match/[matchId] route for both. match-detail.js and
+             tournament-detail.js each un-hide only their own container
+             below, based on ?type=match|tournament — a 2-player match
+             and an N-slot bracket are different enough data shapes
+             that one file branching internally would tangle two
+             unrelated render trees together. -->
+        <div id="matchContent" class="hidden">
+
+            <div class="game-label">
+                <img id="gameIcon" class="game-icon" src="" alt="">
+                <span id="gameName"></span>
+            </div>
+
+            <div class="entry-fee-pill">
+                <span>Entry Fee</span>
+                <strong id="entryFeeDisplay"></strong>
+            </div>
+
+            <div class="versus-area">
+                <div id="playerOneCard" class="profile-player-card"></div>
+                <div class="vs-badge">VS</div>
+                <div id="playerTwoCard" class="profile-player-card"></div>
+            </div>
+
+            <section class="status-section">
+                <div id="countdownBadge" class="status-badge waiting"></div>
+                <button id="launchMatchBtn" class="main-btn hidden">LAUNCH MATCH</button>
+            </section>
+
+            <section id="joinSection" class="detail-card hidden">
+                <h2>Open Slot</h2>
+                <p>This match is waiting for an opponent. Join to take the second slot.</p>
+                <button id="joinBtn" class="main-btn">JOIN MATCH</button>
+            </section>
+
+            <section id="cancelSection" class="detail-card hidden">
+                <h2>Manage Match</h2>
+                <p>Cancel this match before an opponent joins. Your entry fee, and any stakes placed on it, are refunded in full.</p>
+                <button id="cancelMatchBtn" class="danger-btn">CANCEL MATCH</button>
+            </section>
+
+            <section id="stakingSection" class="detail-card hidden">
+                <h2>Staking</h2>
+
+                <div class="stake-breakdown">
+                    <div class="stake-breakdown-row">
+                        <span>Total Entry Fee</span>
+                        <strong id="stakeTotalEntry"></strong>
+                    </div>
+
+                    <div class="stake-breakdown-row">
+                        <span id="stakeCreatorLabel">Creator Staked</span>
+                        <strong id="stakeCreatorAmount"></strong>
+                    </div>
+
+                    <div class="stake-breakdown-row">
+                        <span>Staked By Others</span>
+                        <strong id="stakeOthersAmount"></strong>
+                    </div>
+
+                    <div id="stakeYouRow" class="stake-breakdown-row you-row hidden">
+                        <span>You Staked</span>
+                        <strong id="stakeYouAmount"></strong>
+                    </div>
+
+                    <div class="stake-breakdown-row stake-remaining-row">
+                        <span>Remaining Room</span>
+                        <strong id="stakeRemainingAmount"></strong>
+                    </div>
+                </div>
+
+                <p id="stakeResolvedNote" class="stake-resolved-note hidden"></p>
+
+                <div id="stakeFormWrap" class="stake-form-wrap hidden">
+
+                    <label class="stake-amount-label" for="detailStakeAmountInput" id="detailStakeAmountLabel"></label>
+
+                    <div class="stake-amount-row">
+                        <div class="stake-amount-input-wrap">
+                            <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                            <input
+                                type="number"
+                                id="detailStakeAmountInput"
+                                class="stake-amount-input"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="0.00"
+                                inputmode="decimal"
+                            >
+                        </div>
+
+                        <span id="detailStakePercentLabel" class="stake-percent-label"></span>
+                    </div>
+
+                    <p id="detailStakeError" class="stake-error hidden"></p>
+
+                    <p id="detailStakePayoutLine" class="stake-payout-line"></p>
+
+                    <div id="detailStakeDisclaimer" class="stake-disclaimer hidden">
+                        <span class="stake-disclaimer-icon">⚠</span>
+                        <span id="detailStakeDisclaimerText"></span>
+                    </div>
+
+                    <button id="detailConfirmStakeBtn" class="main-btn" disabled>
+                        CONFIRM STAKE
+                    </button>
+
+                </div>
+
+            </section>
+
+            <section id="payoutSection" class="detail-card hidden">
+                <h2 id="payoutHeading">Payout Breakdown</h2>
+                <p id="payoutSummaryLine"></p>
+                <div id="payoutList" class="payout-list"></div>
+            </section>
+
+            <section class="detail-card watch-live-card">
+                <h2>Watch Live</h2>
+                <button class="main-btn watch-live-btn" disabled>
+                    Streaming Coming Soon
+                </button>
+            </section>
+
+        </div>
+
+        <div id="tournamentContent" class="hidden">
+
+            <div class="game-label">
+                <img id="tGameIcon" class="game-icon" src="" alt="">
+                <span id="tGameName"></span>
+            </div>
+
+            <div class="tournament-header-pills">
+                <div class="entry-fee-pill">
+                    <span>Entry Per Player</span>
+                    <strong id="tEntryFeeDisplay"></strong>
+                </div>
+
+                <div class="entry-fee-pill">
+                    <span>Bracket Size</span>
+                    <strong id="tBracketSizeDisplay"></strong>
+                </div>
+
+                <div class="entry-fee-pill">
+                    <span>Total Pool</span>
+                    <strong id="tPoolDisplay"></strong>
+                </div>
+            </div>
+
+            <section class="status-section">
+                <div id="tCountdownBadge" class="status-badge waiting"></div>
+            </section>
+
+            <section class="detail-card">
+                <h2>Participants</h2>
+                <p id="tSlotsSummary"></p>
+                <div id="tSlotsGrid" class="tournament-slots-grid"></div>
+            </section>
+
+            <section id="tJoinSection" class="detail-card hidden">
+                <h2>Join This Tournament</h2>
+                <p>Take an open slot in this bracket.</p>
+
+                <label class="stake-toggle-row" for="tJoinStakeToggle">
+                    <input type="checkbox" id="tJoinStakeToggle">
+                    <span>Enable staking for your entry</span>
+                </label>
+
+                <div id="tJoinStakeSection" class="join-stake-section">
+                    <label class="stake-amount-label" id="tJoinStakeAmountLabel"></label>
+
+                    <div class="stake-amount-row">
+                        <div class="stake-amount-input-wrap">
+                            <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                            <input
+                                type="number"
+                                id="tJoinStakeAmountInput"
+                                class="stake-amount-input"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="0.00"
+                                inputmode="decimal"
+                            >
+                        </div>
+
+                        <span id="tJoinStakePercentLabel" class="stake-percent-label"></span>
+                    </div>
+
+                    <p id="tJoinStakeError" class="stake-error hidden"></p>
+                </div>
+
+                <button id="tJoinBtn" class="main-btn">
+                    CONFIRM &amp; JOIN
+                </button>
+            </section>
+
+            <section id="tStakingSection" class="detail-card hidden">
+                <h2>Staking</h2>
+                <div id="tStakingList" class="tournament-staking-list"></div>
+            </section>
+
+            <section class="detail-card watch-live-card">
+                <h2>Watch Live</h2>
+                <button class="main-btn watch-live-btn" disabled>
+                    Streaming Coming Soon
+                </button>
+            </section>
+
+        </div>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/toast.js"></script>
+    <script src="../js/profile-system.js"></script>
+    <script src="../js/countdown.js"></script>
+    <script src="../js/match-detail.js"></script>
+    <script src="../js/tournament-detail.js"></script>
+
+</body>
+</html>

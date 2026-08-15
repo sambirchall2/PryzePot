@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const supabase = require("./supabase");
 const { Resend } = require("resend");
+const { calculatePayoutBreakdown } = require("./payout-math");
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "PryzePot <onboarding@resend.dev>";
@@ -522,7 +523,16 @@ function dbMatchToFrontend(match) {
         loserUsername: match.loser_username,
         loserTag: match.loser_tag,
 
-        verifiedAt: match.verified_at
+        verifiedAt: match.verified_at,
+
+        matchType: match.match_type,
+        scheduledTime: match.scheduled_time,
+
+        stakingEnabled: match.staking_enabled,
+        creatorStakeAmount: match.creator_stake_amount,
+
+        stakeResolvedAt: match.stake_resolved_at,
+        creatorFallbackAmount: match.creator_fallback_amount
     };
 }
 
@@ -937,7 +947,7 @@ async function expireOldMatches() {
 
     const waiting = await supabase
         .from("matches")
-        .select("id, creator_username, entry_fee")
+        .select("id, creator_username, entry_fee, staking_enabled")
         .eq("status", "Waiting for opponent")
         .lt("expires_at", now);
 
@@ -952,12 +962,16 @@ async function expireOldMatches() {
 
         if (!updated.error && updated.data) {
             await adjustBalance(match.creator_username, Number(match.entry_fee) || 0);
+
+            if (match.staking_enabled) {
+                await refundMatchStakes(match.id);
+            }
         }
     }
 
     const ready = await supabase
         .from("matches")
-        .select("id, creator_username, opponent_username, entry_fee")
+        .select("id, creator_username, opponent_username, entry_fee, staking_enabled")
         .eq("status", "Match ready")
         .lt("verify_expires_at", now);
 
@@ -975,6 +989,10 @@ async function expireOldMatches() {
 
             await adjustBalance(match.creator_username, fee);
             await adjustBalance(match.opponent_username, fee);
+
+            if (match.staking_enabled) {
+                await refundMatchStakes(match.id);
+            }
         }
     }
 }
@@ -1087,6 +1105,53 @@ async function expireStaleTournamentMatches() {
         }
 
         await advanceTournamentRoundIfReady(match.tournament_id, match.round_number);
+    }
+}
+
+// Runs on the same setInterval heartbeat as the expiry jobs above (see the
+// bottom of this file) - there is no cron/pg_cron/Edge Function anywhere in
+// this repo, so this matches the only existing "wakes up on its own"
+// mechanism rather than introducing a second one for just this feature.
+//
+// This is a LIABILITY RECORD only, not an actual charge: no payment
+// processor is connected yet. creator_fallback_amount just states, from the
+// moment a scheduled match's staking window closes, how much of the entry
+// fee went unstaked and is therefore the creator's responsibility to cover.
+// stake_resolved_at is stamped on every candidate (even fully-staked ones)
+// so this job never re-processes the same match twice.
+async function resolveExpiredStakes() {
+    const now = Date.now();
+
+    const candidates = await supabase
+        .from("matches")
+        .select("id, entry_fee, creator_stake_amount")
+        .eq("match_type", "scheduled")
+        .eq("staking_enabled", true)
+        .is("stake_resolved_at", null)
+        .lt("scheduled_time", now);
+
+    for (const match of candidates.data || []) {
+        const stakesResult = await supabase
+            .from("match_stakes")
+            .select("amount")
+            .eq("match_id", match.id);
+
+        const othersStaked = (stakesResult.data || []).reduce(function (sum, stake) {
+            return sum + Number(stake.amount);
+        }, 0);
+
+        const entryFee = Number(match.entry_fee) || 0;
+        const totalStaked = (Number(match.creator_stake_amount) || 0) + othersStaked;
+        const fallbackAmount = Math.max(entryFee - totalStaked, 0);
+
+        await supabase
+            .from("matches")
+            .update({
+                stake_resolved_at: Date.now(),
+                creator_fallback_amount: fallbackAmount > 0 ? fallbackAmount : null
+            })
+            .eq("id", match.id)
+            .is("stake_resolved_at", null);
     }
 }
 
@@ -2094,16 +2159,144 @@ app.post("/api/users/save-chess", requireAuth, async function (req, res) {
     });
 });
 
+// Attaches { totalStaked, remainingToStake } to each match's frontend shape
+// by summing match_stakes in one grouped query rather than one query per
+// match. Only meaningful for staking_enabled matches; harmless no-op amount
+// (0) on the rest.
+async function attachStakeTotals(matches) {
+    const stakingMatchIds = matches
+        .filter(function (match) { return match.stakingEnabled; })
+        .map(function (match) { return match.id; });
+
+    const totalsByMatchId = {};
+
+    if (stakingMatchIds.length > 0) {
+        const stakesResult = await supabase
+            .from("match_stakes")
+            .select("match_id, amount")
+            .in("match_id", stakingMatchIds);
+
+        for (const stake of stakesResult.data || []) {
+            totalsByMatchId[stake.match_id] = (totalsByMatchId[stake.match_id] || 0) + Number(stake.amount);
+        }
+    }
+
+    return matches.map(function (match) {
+        if (!match.stakingEnabled) {
+            return Object.assign({}, match, { totalStaked: 0, remainingToStake: 0 });
+        }
+
+        const otherStakesTotal = totalsByMatchId[match.id] || 0;
+        const totalStaked = Number(match.creatorStakeAmount || 0) + otherStakesTotal;
+        const remainingToStake = Math.max(Number(match.entryFee || 0) - totalStaked, 0);
+
+        return Object.assign({}, match, { totalStaked: totalStaked, remainingToStake: remainingToStake });
+    });
+}
+
+// Computes and durably stores the staking payout breakdown once a
+// staked match resolves with the staked-on player (the creator) as the
+// winner. Staking in this app only backs the creator's entry (see the
+// Step 5/6 design notes), so there is nothing to compute if the
+// opponent won instead - their stakers just lose the bet, same as any
+// other prediction market, and there is no payout row for that side.
+//
+// Deliberately never throws out to the caller: the real money movement
+// (adjustBalance just above where this is called) must complete
+// regardless of whether the staking breakdown succeeds. A calculation
+// or storage failure here is logged loudly and skipped, not allowed to
+// block match verification.
+async function recordStakingPayoutBreakdown(match, winnerUsername, totalWinnings) {
+    if (!match.staking_enabled) return;
+    if (winnerUsername !== match.creator_username) return;
+
+    try {
+        const stakesResult = await supabase
+            .from("match_stakes")
+            .select("username, amount")
+            .eq("match_id", match.id);
+
+        const breakdown = calculatePayoutBreakdown(
+            match.entry_fee,
+            match.creator_username,
+            match.creator_stake_amount,
+            match.creator_fallback_amount,
+            stakesResult.data || [],
+            totalWinnings
+        );
+
+        const now = Date.now();
+
+        const rows = breakdown.map(function (entry) {
+            return {
+                match_id: match.id,
+                username: entry.username,
+                share: entry.share,
+                amount: entry.amount,
+                created_at: now,
+                paid_at: null
+            };
+        });
+
+        const insertResult = await supabase.from("match_payouts").insert(rows);
+
+        if (insertResult.error) {
+            console.log("MATCH PAYOUT BREAKDOWN INSERT ERROR:", match.id, insertResult.error);
+        }
+    } catch (error) {
+        console.log("MATCH PAYOUT BREAKDOWN CALCULATION ERROR:", match.id, error.message);
+    }
+}
+
+// A match that gets cancelled (creator-initiated, still "Waiting for
+// opponent") or auto-expires without ever being played (see
+// expireOldMatches) never happened - every match_stakes row for it is
+// real money someone put up that has to come back, the same way the
+// creator's own entry fee already does in both of those call sites.
+// creator_stake_amount itself needs no separate refund: it was never a
+// second charge, just a record of how much of the creator's own
+// (already-being-refunded) entry fee they'd claimed - see Step 8.
+//
+// Guards on refunded_at IS NULL so this is safe to call more than once
+// for the same match (e.g. if a future change ever calls it from two
+// places for the same match) without double-paying anyone.
+async function refundMatchStakes(matchId) {
+    const stakesResult = await supabase
+        .from("match_stakes")
+        .select("id, username, amount")
+        .eq("match_id", matchId)
+        .is("refunded_at", null);
+
+    for (const stake of stakesResult.data || []) {
+        const refund = await adjustBalance(stake.username, Number(stake.amount) || 0);
+
+        if (!refund.success) {
+            console.log("STAKE REFUND ERROR:", matchId, stake.username, refund.message);
+            continue;
+        }
+
+        await supabase
+            .from("match_stakes")
+            .update({ refunded_at: Date.now() })
+            .eq("id", stake.id)
+            .is("refunded_at", null);
+    }
+}
+
 app.get("/api/matches", async function (req, res) {
     let query = supabase
         .from("matches")
         .select(
-            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at"
+            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at, match_type, scheduled_time, staking_enabled, creator_stake_amount, stake_resolved_at, creator_fallback_amount"
         )
         .in("status", ["Waiting for opponent", "Match ready"]);
 
     if (req.query.game) {
         query = query.eq("game", req.query.game);
+    }
+
+    if (req.query.matchType) {
+        query = query.eq("match_type", req.query.matchType);
     }
 
     const result = await query.order("id", { ascending: false });
@@ -2118,9 +2311,11 @@ app.get("/api/matches", async function (req, res) {
         return;
     }
 
+    const matches = await attachStakeTotals(result.data.map(dbMatchToFrontend));
+
     res.json({
         success: true,
-        matches: result.data.map(dbMatchToFrontend)
+        matches: matches
     });
 });
 app.post("/api/matches", requireAuth, async function (req, res) {
@@ -2145,6 +2340,28 @@ app.post("/api/matches", requireAuth, async function (req, res) {
         return;
     }
 
+    const matchType = req.body.matchType === "scheduled" ? "scheduled" : "instant";
+    const scheduledTime = matchType === "scheduled" ? Number(req.body.scheduledTime) : null;
+
+    if (matchType === "scheduled" && !(scheduledTime > Date.now())) {
+        res.json({
+            success: false,
+            message: "Scheduled time must be a valid time in the future."
+        });
+        return;
+    }
+
+    const stakingEnabled = !!req.body.stakingEnabled;
+    const creatorStakeAmount = stakingEnabled ? Number(req.body.creatorStakeAmount) : null;
+
+    if (stakingEnabled && !(creatorStakeAmount > 0 && creatorStakeAmount <= entryFee)) {
+        res.json({
+            success: false,
+            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
+        });
+        return;
+    }
+
     const debit = await adjustBalance(username, -entryFee);
 
     if (!debit.success) {
@@ -2156,6 +2373,17 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     }
 
     const now = Date.now();
+
+    // Scheduled matches need to stay joinable until (at least) their
+    // scheduled time, which can be days out - anchoring expires_at off
+    // creation time here (like instant matches do) would let
+    // expireOldMatches() auto-cancel and refund the match within
+    // OPEN_MATCH_EXPIRATION_MINUTES of it being created, regardless of how
+    // far out it's scheduled. Anchor off scheduledTime instead so the same
+    // grace window applies after the match is actually supposed to start.
+    const expiresAt = matchType === "scheduled"
+        ? scheduledTime + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000
+        : now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000;
 
     const result = await supabase
         .from("matches")
@@ -2175,14 +2403,23 @@ app.post("/api/matches", requireAuth, async function (req, res) {
             status: "Waiting for opponent",
 
             created_at: now,
-            expires_at: now + OPEN_MATCH_EXPIRATION_MINUTES * 60 * 1000,
+            expires_at: expiresAt,
             verify_expires_at: null,
 
             winner_username: null,
             winner_tag: null,
             loser_username: null,
             loser_tag: null,
-            verified_at: null
+            verified_at: null,
+
+            match_type: matchType,
+            scheduled_time: scheduledTime,
+
+            staking_enabled: stakingEnabled,
+            creator_stake_amount: creatorStakeAmount,
+
+            stake_resolved_at: null,
+            creator_fallback_amount: null
         })
         .select()
         .single();
@@ -2697,6 +2934,17 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     }
 
     const verificationStartedAt = Date.now();
+
+    // For a scheduled match joined ahead of time, the verify window has to
+    // count down from the scheduled start, not from whenever the opponent
+    // happened to join - otherwise joining days early would expire the
+    // match long before it's even supposed to start (same class of bug as
+    // expires_at on creation; see POST /api/matches).
+    const verifyWindowStart =
+        foundMatch.match_type === "scheduled" && Number(foundMatch.scheduled_time) > verificationStartedAt
+            ? Number(foundMatch.scheduled_time)
+            : verificationStartedAt;
+
     const update = await supabase
         .from("matches")
         .update({
@@ -2705,9 +2953,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
             opponent_friend_link: friendLink,
             status: "Match ready",
             verification_started_at: verificationStartedAt,
-            verify_expires_at:
-                verificationStartedAt +
-    ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000
+            verify_expires_at: verifyWindowStart + ACTIVE_MATCH_EXPIRATION_MINUTES * 60 * 1000
         })
         .eq("id", matchId)
         .eq("status", "Waiting for opponent")
@@ -2730,6 +2976,121 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         success: true,
         message: "Match joined!",
         match: dbMatchToFrontend(update.data)
+    });
+});
+app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+    const amount = Number(req.body.amount);
+
+    if (!(amount > 0)) {
+        res.json({
+            success: false,
+            message: "Enter a stake amount greater than 0."
+        });
+        return;
+    }
+
+    const found = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({
+            success: false,
+            message: "Match not found."
+        });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.match_type !== "scheduled" || !match.staking_enabled) {
+        res.json({
+            success: false,
+            message: "Staking is not open on this match."
+        });
+        return;
+    }
+
+    if (match.stake_resolved_at) {
+        res.json({
+            success: false,
+            message: "Staking has closed for this match."
+        });
+        return;
+    }
+
+    const entryFee = Number(match.entry_fee) || 0;
+    const creatorStake = Number(match.creator_stake_amount) || 0;
+
+    const debit = await adjustBalance(username, -amount);
+
+    if (!debit.success) {
+        res.json({
+            success: false,
+            message: "Not enough Vault Credits to stake that amount."
+        });
+        return;
+    }
+
+    const insertResult = await supabase
+        .from("match_stakes")
+        .insert({
+            match_id: matchId,
+            username: username,
+            amount: amount,
+            created_at: Date.now()
+        })
+        .select()
+        .single();
+
+    if (insertResult.error || !insertResult.data) {
+        console.log("CREATE STAKE ERROR:", insertResult.error);
+
+        await adjustBalance(username, amount);
+
+        res.json({
+            success: false,
+            message: "Could not record stake."
+        });
+        return;
+    }
+
+    // Re-check the actual total post-insert rather than trusting a
+    // pre-insert read, which could race with another stake landing
+    // between the check and the write - mirrors how tournament join
+    // handles its own over-capacity race in POST /api/tournaments/:id/join.
+    const allStakesResult = await supabase
+        .from("match_stakes")
+        .select("amount")
+        .eq("match_id", matchId);
+
+    const totalStaked = creatorStake + (allStakesResult.data || []).reduce(function (sum, stake) {
+        return sum + Number(stake.amount);
+    }, 0);
+
+    if (totalStaked > entryFee) {
+        await supabase
+            .from("match_stakes")
+            .delete()
+            .eq("id", insertResult.data.id);
+
+        await adjustBalance(username, amount);
+
+        res.json({
+            success: false,
+            message: "That stake would push the total past the entry fee - someone else staked first."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Stake placed!",
+        stake: insertResult.data
     });
 });
 app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req, res) {
@@ -3208,11 +3569,14 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
             console.log("MATCH RESULT INSERT ERROR:", resultInsert.error);
         }
 
-        const payout = await adjustBalance(winnerUsername, Number(completed.data.entry_fee) * 2);
+        const totalWinnings = Number(completed.data.entry_fee) * 2;
+        const payout = await adjustBalance(winnerUsername, totalWinnings);
 
         if (!payout.success) {
             console.log("MATCH PAYOUT ERROR:", winnerUsername, payout.message);
         }
+
+        await recordStakingPayoutBreakdown(completed.data, winnerUsername, totalWinnings);
 
         const winnerXpEarned = getMatchXpForResult("win");
 const loserXpEarned = getMatchXpForResult("loss");
@@ -3296,6 +3660,10 @@ app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
 
     await adjustBalance(username, Number(cancelled.data.entry_fee));
 
+    if (cancelled.data.staking_enabled) {
+        await refundMatchStakes(matchId);
+    }
+
     res.json({
         success: true,
         message: "Match cancelled."
@@ -3321,9 +3689,35 @@ app.get("/api/matches/:id", async function (req, res) {
 
     const match = await attachMatchProfiles(dbMatchToFrontend(found.data));
 
+    let stakes = [];
+
+    if (match.stakingEnabled) {
+        const stakesResult = await supabase
+            .from("match_stakes")
+            .select("username, amount, created_at")
+            .eq("match_id", matchId)
+            .order("created_at", { ascending: true });
+
+        stakes = stakesResult.data || [];
+    }
+
+    let payouts = [];
+
+    if (match.status === "Completed") {
+        const payoutsResult = await supabase
+            .from("match_payouts")
+            .select("username, share, amount, paid_at")
+            .eq("match_id", matchId)
+            .order("amount", { ascending: false });
+
+        payouts = payoutsResult.data || [];
+    }
+
     res.json({
         success: true,
-        match: match
+        match: match,
+        stakes: stakes,
+        payouts: payouts
     });
 });
 app.post("/api/users/save-clash", requireAuth, async function (req, res) {
@@ -6012,7 +6406,9 @@ app.listen(PORT, function () {
 expireOldMatches();
 expireStaleTournaments();
 ensureSeasonZeroTournament();
+resolveExpiredStakes();
 setInterval(expireOldMatches, 60 * 1000);
 setInterval(expireStaleTournaments, 60 * 1000);
 setInterval(expireStaleClashLinks, 60 * 1000);
 setInterval(expireStaleTournamentMatches, 60 * 1000);
+setInterval(resolveExpiredStakes, 60 * 1000);

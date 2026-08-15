@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule a Match | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="../css/schedule-match.css">
+    <link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="schedule-match-page">
+
+        <h1>Schedule a Time</h1>
+        <p id="subtitle" class="subtitle">Set up your match details below.</p>
+
+        <div id="tournamentContext" class="tournament-context hidden">
+            <span class="tournament-context-label">Tournament Size</span>
+            <strong id="tournamentContextValue">—</strong>
+        </div>
+
+        <section class="schedule-section">
+
+            <label class="stake-toggle-row" for="stakeToggle">
+                <input type="checkbox" id="stakeToggle">
+                <span>Enable staking for this match</span>
+            </label>
+
+            <div id="stakeSection" class="stake-section">
+
+                <label class="stake-amount-label" for="stakeAmountInput">
+                    How much of your <span id="stakeEntryFeeLabel" class="stake-entry-fee-label"></span> entry are you putting up?
+                </label>
+
+                <div class="stake-amount-row">
+                    <div class="stake-amount-input-wrap">
+                        <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                        <input
+                            type="number"
+                            id="stakeAmountInput"
+                            class="stake-amount-input"
+                            min="0.01"
+                            step="0.01"
+                            placeholder="0.00"
+                            inputmode="decimal"
+                        >
+                    </div>
+
+                    <span id="stakePercentLabel" class="stake-percent-label">0 (0%)</span>
+                </div>
+
+                <p id="stakeError" class="stake-error hidden"></p>
+
+                <p id="stakeRemainingLine" class="stake-remaining-line"></p>
+
+                <div id="stakeDisclaimer" class="stake-disclaimer hidden">
+                    <span class="stake-disclaimer-icon">⚠</span>
+                    <span>
+                        If the remaining <strong id="stakeDisclaimerAmount"></strong> isn't staked by other players before the match starts, you're responsible for covering the full entry fee yourself.
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="schedule-section">
+            <label class="schedule-datetime-label">When do you want to play?</label>
+
+            <div class="datetime-field">
+                <label for="scheduleDate" class="datetime-field-label">Date</label>
+                <input type="date" id="scheduleDate" class="datetime-input">
+            </div>
+
+            <div class="datetime-time-row">
+                <div class="datetime-field">
+                    <label for="scheduleHour" class="datetime-field-label">Hour</label>
+                    <select id="scheduleHour" class="datetime-input datetime-select">
+                        <option value="12">12</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                    </select>
+                </div>
+
+                <span class="datetime-colon">:</span>
+
+                <div class="datetime-field">
+                    <label for="scheduleMinute" class="datetime-field-label">Minute</label>
+                    <select id="scheduleMinute" class="datetime-input datetime-select">
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                </div>
+
+                <div class="datetime-field">
+                    <label for="scheduleMeridiem" class="datetime-field-label">&nbsp;</label>
+                    <select id="scheduleMeridiem" class="datetime-input datetime-select">
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                    </select>
+                </div>
+            </div>
+
+            <p id="scheduleDateTimeError" class="schedule-error hidden"></p>
+        </section>
+
+        <button id="confirmBtn" class="confirm-btn" disabled>
+            CONFIRM SCHEDULE
+        </button>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/toast.js"></script>
+    <script src="../js/schedule-match.js"></script>
+
+</body>
+</html>

@@ -175,7 +175,7 @@ function renderPreview(tier) {
     previewPanel.innerHTML = `
         <h3>${tier.name}</h3>
 
-        <p>Every item in this Vault costs ${tier.price.toLocaleString()} Vault Credits.</p>
+        <p>Every item in this Vault costs ${Number(tier.price).toLocaleString()} Vault Credits.</p>
 
         ${groupsHtml}
     `;

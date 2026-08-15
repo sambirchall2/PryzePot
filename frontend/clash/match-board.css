@@ -357,6 +357,59 @@ h1 {
     color: var(--ink-dim);
     margin-top: 24px;
 }
+
+.scheduled-matches {
+    margin-top: 8px;
+}
+
+/* Separate class from .join-btn (same visual treatment, copied rather
+   than shared) - attachButtonListeners() wires up EVERY .join-btn in the
+   document with the instant-match join flow via a global querySelectorAll,
+   not scoped to #matchesContainer, so a scheduled-match card literally
+   using that class would get the wrong click behavior attached to it. */
+.scheduled-match-btn {
+    width: 100%;
+    height: 56px;
+
+    margin-top: 18px;
+
+    border: none;
+    border-radius: var(--r-md);
+
+    background: var(--accent);
+    color: var(--accent-ink);
+
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: transform .16s var(--ease), filter .16s var(--ease);
+}
+
+.scheduled-match-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.scheduled-match-btn:active {
+    transform: translateY(0) scale(.98);
+}
+
+.match-stake-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 10px;
+    padding: 5px 12px;
+
+    border-radius: 999px;
+    background: rgba(200, 255, 0, 0.08);
+    border: 1px solid rgba(200, 255, 0, 0.25);
+
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+}
 .join-tournament-btn {
     width: 100%;
     height: 56px;

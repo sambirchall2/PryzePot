@@ -1,0 +1,13 @@
+-- PryzePot: track stake refunds (cancelled/expired scheduled matches)
+-- Run this once in the Supabase SQL editor (Dashboard -> SQL Editor -> New query).
+-- Purely additive - one nullable column - safe to re-run (IF NOT EXISTS).
+--
+-- When a scheduled match is cancelled by its creator, or auto-expires
+-- without ever being played (see expireOldMatches/POST /api/matches/:id/
+-- cancel in server.js), every match_stakes row for it needs to be
+-- refunded via adjustBalance, same as the creator's own entry fee already
+-- is. refunded_at (bigint epoch-ms, matching every other timestamp column
+-- added in this feature) records when that happened and guards against
+-- refunding the same stake twice if this were ever triggered more than
+-- once for the same match.
+alter table public.match_stakes add column if not exists refunded_at bigint;

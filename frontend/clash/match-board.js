@@ -1,8 +1,18 @@
 const backBtn = document.getElementById("backBtn");
 const matchesContainer = document.getElementById("matchesContainer");
+const scheduledMatchesContainer = document.getElementById("scheduledMatchesContainer");
 const tournamentsContainer = document.getElementById("tournamentsContainer");
 const seasonZeroStatus = document.getElementById("seasonZeroStatus");
 const seasonZeroJoinBtn = document.getElementById("seasonZeroJoinBtn");
+
+// entry_fee (matches and tournaments) is a NUMERIC(10,2) column as of the
+// staking migration - PostgREST serializes NUMERIC as a JSON string (e.g.
+// "500.00") to avoid float precision loss, so every displayed amount needs
+// to go through Number(...) rather than being interpolated raw.
+function coinHtml(amount) {
+    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' +
+        Number(amount || 0).toFixed(2);
+}
 
 const username = localStorage.getItem("username");
 const clashPlayerTag = localStorage.getItem("clashPlayerTag");
@@ -111,8 +121,19 @@ function isUserInMatch(match) {
     );
 }
 
+function isScheduledMatch(match) {
+    return match.matchType === "scheduled";
+}
+
 function getVisibleMatches(matches) {
     return matches.filter(function (match) {
+        // Scheduled matches get their own section (getVisibleScheduledMatches
+        // below) with a different card treatment - countdown to start
+        // instead of "expires in", staking badge, Join/Stake vs View/Stake -
+        // so they're explicitly excluded here rather than falling through
+        // into the instant-match card template.
+        if (isScheduledMatch(match)) return false;
+
         if (match.status === "Completed") return false;
         if (match.status === "Cancelled") return false;
         if (match.status === "Draw") return false;
@@ -127,6 +148,18 @@ function getVisibleMatches(matches) {
         }
 
         return false;
+    });
+}
+
+function getVisibleScheduledMatches(matches) {
+    return matches.filter(function (match) {
+        if (!isScheduledMatch(match)) return false;
+        if (match.status === "Completed") return false;
+        if (match.status === "Cancelled") return false;
+        if (match.status === "Expired") return false;
+        if (match.status === "Draw") return false;
+
+        return true;
     });
 }
 
@@ -184,7 +217,7 @@ function renderTournaments() {
             </div>
 
             <div class="match-entry">
-                <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">${tournament.entry_fee}
+                ${coinHtml(tournament.entry_fee)}
             </div>
 
             <div class="match-mode">
@@ -196,7 +229,7 @@ function renderTournaments() {
             </div>
 
             <div class="match-timer">
-                Prize Pool: <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">${prizePool}
+                Prize Pool: ${coinHtml(prizePool)}
             </div>
 
             <div class="match-timer">
@@ -315,7 +348,7 @@ async function renderMatches() {
             </div>
 
             <div class="match-entry">
-                <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">${match.entryFee}
+                ${coinHtml(match.entryFee)}
             </div>
 
             <div class="match-mode">
@@ -337,6 +370,133 @@ async function renderMatches() {
     }
 
     attachButtonListeners();
+}
+
+// Join/Stake vs View/Stake - identical logic to home.js's scheduled-match
+// cards (Step 4): open opponent slot means Join/Stake, filled means
+// View/Stake. Kept as a match-board-local copy rather than a shared
+// import since this codebase has no shared-JS-across-pages mechanism
+// beyond the plain <script> files already in ../js/.
+function scheduledMatchHasOpenSlot(match) {
+    return !match.opponentUsername;
+}
+
+function getScheduledMatchActionLabel(match) {
+    return scheduledMatchHasOpenSlot(match) ? "JOIN/STAKE" : "VIEW/STAKE";
+}
+
+function buildScheduledMatchCard(match, creatorProfile) {
+    const avatar = creatorProfile.equipped_avatar || creatorProfile.profile_picture || "avatar1";
+    const level = creatorProfile.level || 1;
+
+    // Same staking-badge treatment as the home screen (Step 4): only shown
+    // while staking is enabled AND there's still room - once remainingToStake
+    // hits 0 the card stays fully visible (still joinable if the opponent
+    // slot is open), just without this badge, per this step's instructions.
+    const stakeBadgeHtml = (match.stakingEnabled && Number(match.remainingToStake) > 0)
+        ? '<div class="match-stake-badge">' +
+            coinHtml(match.remainingToStake) + ' of ' + coinHtml(match.entryFee) + ' open to stake' +
+          '</div>'
+        : "";
+
+    const card = document.createElement("div");
+    card.className = "match-card";
+
+    card.innerHTML = `
+        <div class="match-game">
+            Clash Royale
+        </div>
+
+        <div class="match-player-row">
+            <img
+                class="match-avatar"
+                src="${getCosmeticImagePath(avatar, "Avatar")}"
+                alt="${match.creatorUsername}"
+            >
+
+            <div class="match-player-info">
+                <div class="match-player-name">
+                    ${match.creatorUsername}
+                </div>
+
+                <div class="match-player-level">
+                    Level ${level}
+                </div>
+            </div>
+        </div>
+
+        <div class="match-entry">
+            ${coinHtml(match.entryFee)}
+        </div>
+
+        <div class="match-mode">
+            ${scheduledMatchHasOpenSlot(match) ? "Open Slot" : "vs " + match.opponentUsername}
+        </div>
+
+        ${stakeBadgeHtml}
+
+        <div class="match-timer" id="scheduled-countdown-${match.id}"></div>
+
+        <button class="scheduled-match-btn" data-match-id="${match.id}">
+            ${getScheduledMatchActionLabel(match)}
+        </button>
+    `;
+
+    // The whole card navigates to the shared /match/[matchId] detail page
+    // (Step 5) - that page owns the actual join/stake actions, this board
+    // only lists and filters, so there's no separate modal/logic here.
+    card.addEventListener("click", function () {
+        window.location.href = "../html/match-detail.html?matchId=" + match.id + "&type=match";
+    });
+
+    return card;
+}
+
+// Board re-fetches and re-renders every 5s (see the setInterval below);
+// each render rebuilds the container from scratch, so any countdown
+// intervals started on the previous render's now-detached DOM nodes have
+// to be stopped explicitly first - otherwise they'd keep ticking forever
+// in the background, accumulating one more zombie interval every cycle.
+let scheduledCountdownStopFns = [];
+
+async function renderScheduledMatches() {
+    if (!scheduledMatchesContainer) return;
+
+    scheduledCountdownStopFns.forEach(function (stop) { stop(); });
+    scheduledCountdownStopFns = [];
+
+    const visibleScheduled = getVisibleScheduledMatches(loadedMatches);
+
+    if (visibleScheduled.length === 0) {
+        scheduledMatchesContainer.innerHTML = `
+            <div class="empty-state">
+                No scheduled matches yet.
+            </div>
+        `;
+        return;
+    }
+
+    scheduledMatchesContainer.innerHTML = "";
+
+    await warmProfileCache(visibleScheduled.map(function (match) {
+        return match.creatorUsername;
+    }));
+
+    for (const match of visibleScheduled) {
+        const creatorProfile = await getUserProfile(match.creatorUsername);
+        scheduledMatchesContainer.appendChild(buildScheduledMatchCard(match, creatorProfile));
+    }
+
+    // Reuses the shared countdown component from Step 4 (js/countdown.js)
+    // instead of the "expires in" MM:SS timer instant matches use above -
+    // scheduled matches count down to a start time, not an offer expiry.
+    visibleScheduled.forEach(function (match) {
+        scheduledCountdownStopFns.push(startCountdown(
+            document.getElementById("scheduled-countdown-" + match.id),
+            match.scheduledTime,
+            { intervalMs: 30000 }
+        ));
+    });
 }
 
 function attachButtonListeners() {
@@ -416,6 +576,7 @@ function loadMatches() {
 
             loadedMatches = data.matches;
             renderMatches();
+            renderScheduledMatches();
         })
         .catch(function (error) {
             console.log("MATCH BOARD ERROR:", error);

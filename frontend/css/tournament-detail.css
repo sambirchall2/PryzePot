@@ -1,0 +1,219 @@
+/* Tournament-specific layout for match-detail.html (?type=tournament).
+   Shares .detail-card / .main-btn / .status-badge / .stake-* classes
+   with match-detail.css, which is always linked alongside this file —
+   only additions specific to the N-slot bracket view live here. */
+
+.tournament-header-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.tournament-header-pills .entry-fee-pill {
+    margin: 0;
+    animation-delay: .05s;
+}
+
+#tSlotsSummary {
+    margin: 0 0 14px;
+    color: var(--ink-dim);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.tournament-slots-grid {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- Tournament Roster Cards ----------
+   Ported from frontend/clash/tournament-room.css, which is where
+   profile-system.js's buildTournamentPlayerCard() classes are
+   actually styled (that CSS isn't in the shared stylesheet, and this
+   page lives outside any single game folder). */
+
+.pp-tournament-player-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(8,12,8,0.9);
+    border: 1px solid rgba(var(--accent-rgb),0.22);
+    border-radius: var(--r-md);
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: border-color .18s var(--ease);
+}
+
+.pp-tournament-player-card.filled {
+    border-color: rgba(var(--accent-rgb),0.65);
+}
+
+.pp-tournament-player-card.open-slot-card {
+    border-style: dashed;
+    opacity: .8;
+}
+
+.pp-avatar-tournament {
+    width: 54px;
+    height: 54px;
+}
+
+.pp-avatar-tournament .pp-avatar {
+    width: 44px;
+    height: 44px;
+    border-width: 2px;
+}
+
+.pp-avatar-tournament .pp-frame {
+    width: 58px;
+    height: 58px;
+}
+
+.pp-tournament-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pp-tournament-player-name {
+    font-size: 15px;
+    font-weight: 950;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pp-tournament-player-level {
+    margin-top: 3px;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pp-tournament-rewards {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pp-tournament-rewards .pp-badge {
+    width: 22px;
+    height: 22px;
+}
+
+.pp-tournament-rewards .pp-title {
+    max-width: 120px;
+    font-size: 8px;
+    padding: 4px 8px;
+}
+
+/* ---------- Join-with-staking panel ---------- */
+
+.stake-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+.stake-toggle-row input {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.stake-toggle-row span {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.join-stake-section {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .3s var(--ease), opacity .25s var(--ease), margin-top .3s var(--ease);
+}
+
+.join-stake-section.expanded {
+    max-height: 260px;
+    margin-top: 14px;
+    opacity: 1;
+}
+
+#tJoinBtn {
+    margin-top: 16px;
+}
+
+/* ---------- Per-participant staking cards ---------- */
+
+.tournament-staking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.participant-stake-card {
+    padding: 14px;
+    border-radius: var(--r-md);
+    background: rgba(0,0,0,.4);
+    border: 1px solid var(--surface-line);
+}
+
+.participant-stake-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.participant-stake-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.stake-toggle-btn {
+    padding: 7px 14px;
+    border: none;
+    border-radius: var(--r-sm);
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform .14s var(--ease), filter .14s var(--ease);
+}
+
+.stake-toggle-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.participant-stake-card .stake-form-wrap {
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-top: none;
+    transition: max-height .3s var(--ease), opacity .25s var(--ease), margin-top .3s var(--ease), padding-top .3s var(--ease);
+}
+
+.participant-stake-card .stake-form-wrap.expanded {
+    max-height: 320px;
+    margin-top: 14px;
+    padding-top: 14px;
+    opacity: 1;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
