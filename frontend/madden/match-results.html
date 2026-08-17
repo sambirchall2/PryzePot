@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Result | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="match-results.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<main class="result-page">
+
+    <div id="statusPill" class="status-pill">MATCH VERIFIED</div>
+
+    <h1 id="resultTitle">Winner Confirmed</h1>
+
+    <p id="resultSubtitle" class="subtitle">
+        Your Madden NFL match result has been confirmed.
+    </p>
+
+    <section class="reward-panel">
+        <div id="xpBurst" class="xp-burst">+0 XP</div>
+
+        <div class="result-xp-label">
+            <span id="resultXpText">XP Progress</span>
+            <span id="resultNextLevelText">Next Level</span>
+        </div>
+
+        <div class="result-xp-bar">
+            <div id="resultXpFill" class="result-xp-fill"></div>
+        </div>
+    </section>
+
+    <section class="result-card">
+
+        <div id="winnerCard" class="result-player-card winner-card">
+            <img id="winnerBanner" class="result-banner" src="../assets/profile/banner1.png" alt="Winner Banner">
+            <div class="result-overlay"></div>
+
+            <div id="winnerWinnings" class="winnings-badge hidden">
+                <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                <span id="winningsAmountText"></span>
+            </div>
+
+            <div class="result-content">
+                <img id="winnerAvatar" class="result-avatar" src="../assets/profile/avatar1.png" alt="Winner Avatar">
+
+                <div>
+                    <p class="label">Winner</p>
+                    <h2 id="winnerName">Loading...</h2>
+                    <span id="winnerLevel">Level 1</span>
+                    <strong class="xp-reward">+30 XP</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div id="loserCard" class="result-player-card loser-card">
+            <img id="loserBanner" class="result-banner" src="../assets/profile/banner1.png" alt="Loser Banner">
+            <div class="result-overlay"></div>
+
+            <div class="result-content">
+                <img id="loserAvatar" class="result-avatar" src="../assets/profile/avatar1.png" alt="Loser Avatar">
+
+                <div>
+                    <p class="label loser-label">Loser</p>
+                    <h3 id="loserName">Loading...</h3>
+                    <span id="loserLevel">Level 1</span>
+                    <strong class="xp-reward loser-xp">+10 XP</strong>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <button id="playAgainButton" class="primary-button">
+        PLAY AGAIN
+    </button>
+
+    <button id="backHomeButton" class="secondary-button">
+        BACK HOME
+    </button>
+
+    <button id="disputeButton" class="secondary-button">
+        DISPUTE THIS MATCH
+    </button>
+
+</main>
+
+<div id="levelUpModal" class="level-up-modal hidden">
+    <div class="level-up-box">
+        <p>LEVEL UP!</p>
+        <h2 id="levelUpNumber">LEVEL 2</h2>
+        <span>New PryzePot level reached</span>
+        <button id="levelUpContinueBtn">CONTINUE</button>
+    </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="match-results.js"></script>
+
+</body>
+</html>

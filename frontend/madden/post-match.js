@@ -1,9 +1,15 @@
 const backBtn = document.getElementById("backBtn");
 const entryAmountDisplay = document.getElementById("entryAmountDisplay");
 const eaNameDisplay = document.getElementById("eaNameDisplay");
+const editionDisplay = document.getElementById("editionDisplay");
 const platformDisplay = document.getElementById("platformDisplay");
 const skillDisplay = document.getElementById("skillDisplay");
 const postMatchBtn = document.getElementById("postMatchBtn");
+
+const EDITION_LABELS = {
+    "25": "Madden 25",
+    "26": "Madden 26"
+};
 
 const PLATFORM_LABELS = {
     ps5_xbox: "PS5 / Xbox",
@@ -20,6 +26,7 @@ const SKILL_LABELS = {
 const username = localStorage.getItem("username");
 const entryFee = localStorage.getItem("entryFee");
 const maddenEaName = localStorage.getItem("maddenEaName");
+const maddenEdition = localStorage.getItem("maddenEdition");
 const maddenPlatform = localStorage.getItem("maddenPlatform");
 const maddenSkillDifficulty = localStorage.getItem("maddenSkillDifficulty");
 
@@ -41,6 +48,10 @@ if (!maddenEaName) {
     window.location.href = "connect-madden.html";
 }
 
+if (!maddenEdition) {
+    window.location.href = "edition.html";
+}
+
 if (!maddenPlatform) {
     window.location.href = "platform.html";
 }
@@ -51,6 +62,7 @@ if (!maddenSkillDifficulty) {
 
 entryAmountDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + entryFee;
 eaNameDisplay.textContent = maddenEaName;
+editionDisplay.textContent = EDITION_LABELS[maddenEdition] || maddenEdition;
 platformDisplay.textContent = PLATFORM_LABELS[maddenPlatform] || maddenPlatform;
 skillDisplay.textContent = SKILL_LABELS[maddenSkillDifficulty] || maddenSkillDifficulty;
 
@@ -62,6 +74,7 @@ postMatchBtn.addEventListener("click", function () {
         game: "Madden NFL",
         playerTag: maddenEaName,
         entryFee: Number(entryFee),
+        edition: maddenEdition,
         platform: maddenPlatform,
         skillDifficulty: maddenSkillDifficulty
     };

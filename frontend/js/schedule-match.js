@@ -315,6 +315,7 @@ if (confirmBtn) {
         } else if (createGame === "madden") {
             payload.game = "Madden NFL";
             payload.playerTag = localStorage.getItem("maddenEaName");
+            payload.edition = localStorage.getItem("maddenEdition");
             payload.platform = localStorage.getItem("maddenPlatform");
             payload.skillDifficulty = localStorage.getItem("maddenSkillDifficulty");
         } else {

@@ -11,7 +11,7 @@ let selectedPlatform = null;
 
 if (backBtn) {
     backBtn.addEventListener("click", function () {
-        window.location.href = "../html/play-mode.html";
+        window.location.href = "edition.html";
     });
 }
 

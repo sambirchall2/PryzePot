@@ -9,56 +9,79 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="../css/tokens.css">
     <link rel="stylesheet" href="match-room.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
     <link rel="stylesheet" href="../css/coin-icon.css">
 </head>
+
 <body>
 
-    <button id="backBtn" class="back-btn">‹</button>
+<button id="backBtn" class="back-btn">‹</button>
 
-    <main class="room-page">
+<main class="room-page">
 
-        <div id="statusBadge" class="status-badge waiting">
-            Waiting For Opponent
-        </div>
-
-        <h1>Match Room</h1>
-
-        <p id="roomSubtitle" class="subtitle">
-            Waiting for another player to join your match.
-        </p>
-
-        <section class="hero-card">
-
-            <div class="match-info-row">
-                <div class="info-pill">
-                    <span>Entry</span>
-                    <strong id="entryDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
-                </div>
-
-                <div class="info-pill">
-                    <span>Platform</span>
-                    <strong id="platformDisplay">—</strong>
-                </div>
-            </div>
-
-        </section>
-
-        <button id="cancelBtn" class="cancel-btn">
-            CANCEL MATCH
-        </button>
-
-    </main>
-
-    <div id="joinedPopup" class="popup-overlay hidden">
-        <div class="popup-box">
-            <h2>A Player Joined!</h2>
-            <p id="joinedPopupText"></p>
-            <button id="joinedPopupBtn" class="popup-action-btn">SET UP MATCH</button>
-        </div>
+    <div id="statusBadge" class="status-badge waiting">
+        Searching For Opponent
     </div>
 
-    <script src="../js/api.js"></script>
-    <script src="match-room.js"></script>
+    <h1 id="roomTitle">Match Room</h1>
+
+    <p id="roomSubtitle" class="subtitle">
+        Waiting for another player to join.
+    </p>
+
+    <section class="hero-card">
+
+        <div id="gameLabel" class="game-label">Madden NFL</div>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Entry</span>
+                <strong id="entryDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+
+            <div class="info-pill">
+                <span>Prize Pool</span>
+                <strong id="prizeDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+        </div>
+
+        <div class="timer-block">
+            <span id="timerLabel">Time Left To Join</span>
+            <strong id="timerDisplay">--:--</strong>
+        </div>
+
+        <div class="versus-area">
+
+            <div id="playerOneCard" class="profile-player-card"></div>
+
+            <div class="vs-badge">VS</div>
+
+            <div id="playerTwoCard" class="profile-player-card waiting-card"></div>
+
+        </div>
+
+    </section>
+
+    <section id="instructionsCard" class="instructions-card hidden">
+
+        <h2>Match Instructions</h2>
+
+        <div class="instruction-step">1. Set up match rules and pick your team</div>
+        <div class="instruction-step">2. Invite your opponent in Madden</div>
+        <div class="instruction-step">3. Play the match</div>
+        <div class="instruction-step">4. Report your result</div>
+
+    </section>
+
+    <button id="setupMatchBtn" class="main-btn">
+        WAITING FOR OPPONENT
+    </button>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="match-room.js"></script>
 
 </body>
 </html>

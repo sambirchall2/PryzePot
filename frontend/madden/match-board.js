@@ -11,6 +11,11 @@ function coinHtml(amount) {
         Number(amount || 0).toFixed(2);
 }
 
+const EDITION_LABELS = {
+    "25": "Madden 25",
+    "26": "Madden 26"
+};
+
 const PLATFORM_LABELS = {
     ps5_xbox: "PS5 / Xbox",
     pc: "PC"
@@ -24,10 +29,15 @@ const SKILL_LABELS = {
 };
 
 function matchBadgesHtml(match) {
+    const editionLabel = EDITION_LABELS[match.edition] || match.edition;
     const platformLabel = PLATFORM_LABELS[match.platform] || match.platform;
     const skillLabel = SKILL_LABELS[match.skillDifficulty] || match.skillDifficulty;
 
+    // Edition first - it's the thing players scan the board for before
+    // anything else (see chat: "so people can see what game they wanna
+    // play"), same badge style as platform/skill so it reads as one row.
     return '<div class="match-badge-row">' +
+        (editionLabel ? '<span class="match-stake-badge">' + editionLabel + '</span>' : '') +
         '<span class="match-stake-badge">' + platformLabel + '</span>' +
         '<span class="match-stake-badge">' + skillLabel + '</span>' +
         '</div>';

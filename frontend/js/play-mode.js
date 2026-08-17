@@ -41,16 +41,16 @@ if (backBtn) {
 
 // Madden skips rules.html here entirely (its rules-acknowledgment screen
 // happens later, after someone joins - not at creation) and instead has to
-// collect platform + skill difficulty before the match can be posted. Both
-// the Play Now and Schedule paths detour through madden/platform.html ->
-// skill-difficulty.html first, which then continue on to whichever
-// destination this page stashes below - every other game's routing is
-// unchanged.
+// collect edition + platform + skill difficulty before the match can be
+// posted. Both the Play Now and Schedule paths detour through
+// madden/edition.html -> platform.html -> skill-difficulty.html first,
+// which then continue on to whichever destination this page stashes below -
+// every other game's routing is unchanged.
 if (playNowBtn) {
     playNowBtn.addEventListener("click", function () {
         if (createGame === "madden") {
             localStorage.setItem("maddenPostSetupRedirect", "post-match.html");
-            window.location.href = "../madden/platform.html";
+            window.location.href = "../madden/edition.html";
             return;
         }
 
@@ -62,7 +62,7 @@ if (scheduleBtn) {
     scheduleBtn.addEventListener("click", function () {
         if (createGame === "madden") {
             localStorage.setItem("maddenPostSetupRedirect", "../html/schedule-match.html");
-            window.location.href = "../madden/platform.html";
+            window.location.href = "../madden/edition.html";
             return;
         }
 

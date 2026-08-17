@@ -563,6 +563,9 @@ function dbMatchToFrontend(match) {
         stakeResolvedAt: match.stake_resolved_at,
         creatorFallbackAmount: match.creator_fallback_amount,
 
+        edition: match.edition,
+        editionLabel: match.edition ? "Madden " + match.edition : null,
+
         platform: match.platform,
         skillDifficulty: match.skill_difficulty,
 
@@ -2666,7 +2669,7 @@ app.get("/api/matches", async function (req, res) {
     let query = supabase
         .from("matches")
         .select(
-            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at, match_type, scheduled_time, staking_enabled, creator_stake_amount, stake_resolved_at, creator_fallback_amount, platform, skill_difficulty"
+            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at, match_type, scheduled_time, staking_enabled, creator_stake_amount, stake_resolved_at, creator_fallback_amount, platform, skill_difficulty, edition"
         )
         .in("status", ["Waiting for opponent", "Match ready"]);
 
@@ -2725,11 +2728,12 @@ app.post("/api/matches", requireAuth, async function (req, res) {
 
     const platform = isMadden ? req.body.platform : null;
     const skillDifficulty = isMadden ? req.body.skillDifficulty : null;
+    const edition = isMadden ? req.body.edition : null;
 
-    if (isMadden && (!["ps5_xbox", "pc"].includes(platform) || !["rookie", "pro", "all_pro", "all_madden"].includes(skillDifficulty))) {
+    if (isMadden && (!["ps5_xbox", "pc"].includes(platform) || !["rookie", "pro", "all_pro", "all_madden"].includes(skillDifficulty) || !["25", "26"].includes(edition))) {
         res.json({
             success: false,
-            message: "Platform and skill difficulty are required for Madden matches."
+            message: "Edition, platform, and skill difficulty are required for Madden matches."
         });
         return;
     }
@@ -2817,6 +2821,7 @@ app.post("/api/matches", requireAuth, async function (req, res) {
 
             platform: platform,
             skill_difficulty: skillDifficulty,
+            edition: edition,
             verification_method: isMadden ? "manual_report" : "api"
         })
         .select()

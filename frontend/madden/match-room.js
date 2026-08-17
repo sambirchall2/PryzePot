@@ -1,28 +1,32 @@
 const backBtn = document.getElementById("backBtn");
 const statusBadge = document.getElementById("statusBadge");
+const roomTitle = document.getElementById("roomTitle");
 const roomSubtitle = document.getElementById("roomSubtitle");
-const entryDisplay = document.getElementById("entryDisplay");
-const platformDisplay = document.getElementById("platformDisplay");
-const cancelBtn = document.getElementById("cancelBtn");
-const joinedPopup = document.getElementById("joinedPopup");
-const joinedPopupText = document.getElementById("joinedPopupText");
-const joinedPopupBtn = document.getElementById("joinedPopupBtn");
+const gameLabel = document.getElementById("gameLabel");
 
-const PLATFORM_LABELS = {
-    ps5_xbox: "PS5 / Xbox",
-    pc: "PC"
-};
+const entryDisplay = document.getElementById("entryDisplay");
+const prizeDisplay = document.getElementById("prizeDisplay");
+const timerLabel = document.getElementById("timerLabel");
+const timerDisplay = document.getElementById("timerDisplay");
+
+const playerOneCard = document.getElementById("playerOneCard");
+const playerTwoCard = document.getElementById("playerTwoCard");
+const instructionsCard = document.getElementById("instructionsCard");
+const setupMatchBtn = document.getElementById("setupMatchBtn");
 
 const username = localStorage.getItem("username");
-const matchId = localStorage.getItem("currentMatchId");
+const currentMatchId = localStorage.getItem("currentMatchId");
 
-let pollTimer = null;
+let currentMatch = null;
+let lastPlayerOneUsername = null;
+let lastPlayerTwoUsername = null;
+let handingOff = false;
 
 if (!username) {
     window.location.href = "../html/index.html";
 }
 
-if (!matchId) {
+if (!currentMatchId) {
     window.location.href = "match-board.html";
 }
 
@@ -32,90 +36,179 @@ if (backBtn) {
     });
 }
 
-if (joinedPopupBtn) {
-    joinedPopupBtn.addEventListener("click", function () {
-        window.location.href = "setup-rules.html";
-    });
+function formatCountdown(milliseconds) {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return minutes + ":" + seconds.toString().padStart(2, "0");
 }
 
-if (cancelBtn) {
-    cancelBtn.addEventListener("click", function () {
-        apiFetch("/api/matches/" + matchId + "/cancel", {
-            method: "POST",
-            body: JSON.stringify({})
+function updatePlayerOne(match) {
+    if (!match.creatorUsername) {
+        renderMatchPlayerCard(playerOneCard, null, "PLAYER 1", true);
+        return;
+    }
+
+    loadPlayerProfile(match.creatorUsername)
+        .then(function (profile) {
+            renderMatchPlayerCard(playerOneCard, profile, "PLAYER 1", false);
         })
-            .then(function (data) {
-                alert(data.message);
-                window.location.href = "match-board.html";
-            })
-            .catch(function (error) {
-                console.log("CANCEL MATCH ERROR:", error);
-                alert("Could not cancel this match.");
-            });
-    });
+        .catch(function () {
+            renderMatchPlayerCard(
+                playerOneCard,
+                normalizePlayerProfile({
+                    username: match.creatorUsername,
+                    level: 1
+                }),
+                "PLAYER 1",
+                false
+            );
+        });
 }
 
-function stopPolling() {
-    if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
+function updatePlayerTwo(match) {
+    if (!match.opponentUsername) {
+        renderMatchPlayerCard(playerTwoCard, null, "PLAYER 2", true);
+        return;
+    }
+
+    loadPlayerProfile(match.opponentUsername)
+        .then(function (profile) {
+            renderMatchPlayerCard(playerTwoCard, profile, "PLAYER 2", false);
+        })
+        .catch(function () {
+            renderMatchPlayerCard(
+                playerTwoCard,
+                normalizePlayerProfile({
+                    username: match.opponentUsername,
+                    level: 1
+                }),
+                "PLAYER 2",
+                false
+            );
+        });
+}
+
+function updateTimer() {
+    if (!currentMatch) {
+        timerDisplay.textContent = "--:--";
+        return;
+    }
+
+    const now = Date.now();
+
+    if (currentMatch.status === "Waiting for opponent") {
+        timerLabel.textContent = "Time Left To Join";
+        timerDisplay.textContent = formatCountdown(currentMatch.expiresAt - now);
+    }
+
+    if (currentMatch.status === "Match ready") {
+        timerLabel.textContent = "Time Left To Play & Report";
+        timerDisplay.textContent = formatCountdown(currentMatch.verifyExpiresAt - now);
+    }
+
+    if (currentMatch.status === "Completed") {
+        timerLabel.textContent = "Match Complete";
+        timerDisplay.textContent = "Verified";
     }
 }
 
-// This is the "pop up the moment they join" moment (see chat) - shown
-// either right after a poll detects the opponent joining, or immediately
-// on load if the creator left the room and came back after it happened.
-function showJoinedPopup(match) {
-    stopPolling();
+// Same handoff Clash/Chess use once a match completes (see
+// frontend/clash/match-room.js) - stash the full match and let
+// match-results.html render the shared winner/loser screen.
+function goToResults(match) {
+    if (handingOff) return;
+    handingOff = true;
 
-    if (cancelBtn) cancelBtn.classList.add("hidden");
-
-    statusBadge.textContent = "Match Ready";
-    statusBadge.classList.remove("waiting");
-    statusBadge.classList.add("ready");
-
-    joinedPopupText.innerHTML =
-        (match.opponentUsername || "A player") + " joined your match. " +
-        "Set up the match rules and pick your team, then invite <strong>" +
-        (match.opponentTag || match.opponentUsername) + "</strong> in Madden to start.";
-
-    joinedPopup.classList.remove("hidden");
+    localStorage.setItem("lastVerifiedMatch", JSON.stringify(match));
+    window.location.href = "match-results.html";
 }
 
-function renderWaiting(match) {
-    entryDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(match.entryFee || 0).toFixed(2);
-    platformDisplay.textContent = PLATFORM_LABELS[match.platform] || match.platform;
+// Both roles move on to setup from here: the creator sets match rules,
+// the opponent picks their team. Mirrors the role split
+// frontend/js/match-detail.js already uses for the scheduled-match launch.
+function goToSetup() {
+    if (handingOff) return;
+    handingOff = true;
+
+    const isCreator = currentMatch.creatorUsername === username;
+
+    window.location.href = isCreator ? "setup-rules.html" : "team-select.html";
 }
 
-function pollForOpponent() {
-    if (pollTimer) return;
+function updateRoomState(match) {
+    if (match.editionLabel) {
+        gameLabel.textContent = match.editionLabel;
+    }
 
-    pollTimer = setInterval(function () {
-        apiFetch("/api/matches/" + matchId)
-            .then(function (data) {
-                if (!data.success || !data.match) return;
+    entryDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(match.entryFee);
+    prizeDisplay.innerHTML = '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' + Number(match.entryFee) * 2;
 
-                if (data.match.status === "Match ready") {
-                    showJoinedPopup(data.match);
-                }
-            })
-            .catch(function (error) {
-                console.log("MATCH ROOM POLL ERROR:", error);
-            });
-    }, 5000);
+    if (lastPlayerOneUsername !== match.creatorUsername) {
+        lastPlayerOneUsername = match.creatorUsername;
+        updatePlayerOne(match);
+    }
+
+    if (lastPlayerTwoUsername !== match.opponentUsername) {
+        lastPlayerTwoUsername = match.opponentUsername;
+        updatePlayerTwo(match);
+    }
+
+    if (match.status === "Completed") {
+        goToResults(match);
+        return;
+    }
+
+    // Setup already finished (e.g. they left the room and came back later) -
+    // both roles move on to reporting the result from here.
+    if (match.setupReadyAt) {
+        window.location.href = "report-result.html";
+        return;
+    }
+
+    if (match.opponentUsername) {
+        statusBadge.textContent = "Opponent Found";
+        statusBadge.classList.remove("waiting");
+        statusBadge.classList.add("ready");
+
+        roomTitle.textContent = "Match Ready";
+        roomSubtitle.textContent =
+            "Set up the match rules and pick your team, then invite " +
+            (match.opponentUsername === username ? match.creatorUsername : match.opponentUsername) +
+            " in Madden to start.";
+
+        instructionsCard.classList.remove("hidden");
+
+        setupMatchBtn.disabled = false;
+        setupMatchBtn.textContent = "SET UP MATCH";
+    } else {
+        statusBadge.textContent = "Searching For Opponent";
+        statusBadge.classList.add("waiting");
+        statusBadge.classList.remove("ready");
+
+        roomTitle.textContent = "Match Room";
+        roomSubtitle.textContent = "Waiting for another player to join.";
+
+        instructionsCard.classList.add("hidden");
+
+        setupMatchBtn.disabled = true;
+        setupMatchBtn.textContent = "WAITING FOR OPPONENT";
+    }
+
+    updateTimer();
 }
 
-function init() {
-    apiFetch("/api/matches/" + matchId)
+function loadMatchRoom() {
+    apiFetch("/api/matches/" + currentMatchId)
         .then(function (data) {
-            if (!data.success || !data.match) {
-                alert(data.message || "Could not load this match.");
+            if (!data.success) {
+                alert(data.message);
                 window.location.href = "match-board.html";
                 return;
             }
 
             const match = data.match;
-
             const isCreator = match.creatorUsername === username;
             const isOpponent = match.opponentUsername === username;
 
@@ -124,52 +217,25 @@ function init() {
                 return;
             }
 
-            // Setup already finished (e.g. they left the room and came
-            // back later) - both roles move on to reporting the result
-            // from here, same destination team-select.html's ready popup
-            // uses.
-            if (match.setupReadyAt) {
-                window.location.href = "report-result.html";
-                return;
-            }
-
-            // This room is the creator's "waiting + get notified" screen -
-            // the opponent's own next step is always team-select.html,
-            // reached automatically right after they join (see
-            // connect-madden.js), so they don't need to sit in here too.
-            if (isOpponent) {
-                window.location.href = "team-select.html";
-                return;
-            }
-
-            renderWaiting(match);
-
-            if (match.status === "Waiting for opponent") {
-                if (roomSubtitle) roomSubtitle.textContent = "Waiting for another player to join your match.";
-                pollForOpponent();
-                return;
-            }
-
-            if (match.status === "Match ready") {
-                const setupDone = !!match.rulesAcknowledgedAt && !!match.creatorTeamSelection;
-
-                if (setupDone) {
-                    window.location.href = "team-select.html";
-                    return;
-                }
-
-                showJoinedPopup(match);
-                return;
-            }
-
-            // Completed / Cancelled / Draw / expired - nothing left to do here.
-            window.location.href = "match-board.html";
+            currentMatch = match;
+            updateRoomState(currentMatch);
         })
         .catch(function (error) {
-            console.log("LOAD MATCH ERROR:", error);
-            alert("Could not load this match. Make sure your backend is running.");
-            window.location.href = "match-board.html";
+            console.log("MATCH ROOM ERROR:", error);
+            alert("Could not load match room.");
         });
 }
 
-init();
+loadMatchRoom();
+
+setInterval(loadMatchRoom, 5000);
+setInterval(updateTimer, 1000);
+
+setupMatchBtn.addEventListener("click", function () {
+    if (!currentMatch || currentMatch.status !== "Match ready") {
+        alert("Waiting for opponent.");
+        return;
+    }
+
+    goToSetup();
+});

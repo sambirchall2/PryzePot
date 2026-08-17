@@ -84,6 +84,14 @@ if (chessPlayBtn) {
     });
 }
 
+const maddenPlayBtn = document.getElementById("maddenPlayBtn");
+
+if (maddenPlayBtn) {
+    maddenPlayBtn.addEventListener("click", function () {
+        window.location.href = "../madden/online.html";
+    });
+}
+
 const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {

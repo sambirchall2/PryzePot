@@ -13,28 +13,14 @@ const uploadScreenshotBtn = document.getElementById("uploadScreenshotBtn");
 const waitingScreenshotSection = document.getElementById("waitingScreenshotSection");
 const reviewSection = document.getElementById("reviewSection");
 
-const resolvedSection = document.getElementById("resolvedSection");
-const resolvedTitle = document.getElementById("resolvedTitle");
-const resolvedText = document.getElementById("resolvedText");
-const disputeButton = document.getElementById("disputeButton");
-
 const username = localStorage.getItem("username");
 const matchId = localStorage.getItem("currentMatchId");
 
 let pollTimer = null;
+let handingOffToResults = false;
 
 if (!username) {
     window.location.href = "../html/index.html";
-}
-
-// Same entry point Clash/Chess use on their own results screens
-// (frontend/clash/match-results.js, frontend/chess/match-results.js) -
-// dispute.html is fully game-agnostic (keyed only on ?type=match&id=), so
-// this is a straight reuse, not a new dispute flow.
-if (disputeButton) {
-    disputeButton.addEventListener("click", function () {
-        window.location.href = "../html/dispute.html?type=match&id=" + matchId;
-    });
 }
 
 if (!matchId) {
@@ -49,7 +35,7 @@ if (backBtn) {
 
 const ALL_SECTIONS = [
     reportSection, waitingReportSection, screenshotSection,
-    waitingScreenshotSection, reviewSection, resolvedSection
+    waitingScreenshotSection, reviewSection
 ];
 
 function showSection(section) {
@@ -67,19 +53,36 @@ function stopPolling() {
     }
 }
 
+// Same handoff Clash/Chess use once a match completes (see
+// frontend/clash/match-room.js) - stash the full match (with
+// creatorProfile/opponentProfile already attached by GET /api/matches/:id)
+// and let match-results.html render the shared winner/loser screen, instead
+// of a bare inline message. Guards on handingOffToResults since render()
+// can fire again from the 5s poll before the redirect actually unloads
+// the page.
+function goToResults() {
+    if (handingOffToResults) return;
+    handingOffToResults = true;
+
+    stopPolling();
+
+    apiFetch("/api/matches/" + matchId)
+        .then(function (data) {
+            if (data.success && data.match) {
+                localStorage.setItem("lastVerifiedMatch", JSON.stringify(data.match));
+            }
+
+            window.location.href = "match-results.html";
+        })
+        .catch(function (error) {
+            console.log("LOAD COMPLETED MATCH ERROR:", error);
+            window.location.href = "match-results.html";
+        });
+}
+
 function render(data) {
     if (data.matchStatus === "Completed") {
-        stopPolling();
-
-        const won = data.winnerUsername === username;
-
-        resolvedTitle.textContent = won ? "You Won!" : "You Lost.";
-        resolvedTitle.classList.toggle("loss", !won);
-        resolvedText.textContent = won
-            ? "Your entry fee and winnings have been added to your balance."
-            : "Better luck next time.";
-
-        showSection(resolvedSection);
+        goToResults();
         return;
     }
 
