@@ -7,6 +7,7 @@ if (!username) {
 const backButton = document.getElementById("backButton");
 const clashCard = document.getElementById("clashCard");
 const chessCard = document.getElementById("chessCard");
+const maddenCard = document.getElementById("maddenCard");
 
 if (backButton) {
     backButton.addEventListener("click", function () {
@@ -23,6 +24,12 @@ if (clashCard) {
 if (chessCard) {
     chessCard.addEventListener("click", function () {
         window.location.href = "../chess/online.html";
+    });
+}
+
+if (maddenCard) {
+    maddenCard.addEventListener("click", function () {
+        window.location.href = "../madden/online.html";
     });
 }
 

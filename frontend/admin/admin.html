@@ -38,6 +38,8 @@
 
     <div class="tab-row">
         <button class="tab-btn active" data-tab="disputes">Disputes</button>
+        <button class="tab-btn" data-tab="gameVerification">Game Verification</button>
+        <button class="tab-btn" data-tab="manualDisputes">Disputes &amp; Cheating</button>
         <button class="tab-btn" data-tab="currency">Send Currency</button>
         <button class="tab-btn" data-tab="xp">Send XP</button>
     </div>
@@ -47,6 +49,29 @@
             <div id="disputeList" class="dispute-list"></div>
             <div id="disputeDetail" class="dispute-detail">
                 <p class="empty-hint">Select a dispute to review it.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Routine queue: the bot couldn't auto-resolve a manual_report match
+         (Madden today, any future non-API game later). No accusation here -
+         just confirm what the bot couldn't. Kept as its own tab, never
+         merged with Disputes & Cheating below, so admins never confuse a
+         screenshot-reading miss with an actual accusation. -->
+    <section id="gameVerificationTab" class="tab-panel hidden">
+        <p class="subtitle">Matches the bot couldn't auto-resolve. Pick the winner from what's shown below.</p>
+        <div id="gameVerificationList" class="verify-list"></div>
+    </section>
+
+    <!-- Accusation-driven queue: only match_verifications filed through the
+         existing dispute system (queue_tag = 'dispute') land here. Reads as
+         "investigation needed" on purpose - full match context plus
+         ban tooling, not a quick-pick list. -->
+    <section id="manualDisputesTab" class="tab-panel hidden">
+        <div class="disputes-layout">
+            <div id="manualDisputeList" class="dispute-list"></div>
+            <div id="manualDisputeDetail" class="dispute-detail">
+                <p class="empty-hint">Select a case to review it.</p>
             </div>
         </div>
     </section>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Team | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="team-select.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="team-page">
+
+        <h1>Choose Your Team</h1>
+        <p class="subtitle" id="subtitleText">Pick the team you'll play as.</p>
+
+        <div id="teamList" class="team-list"></div>
+
+        <button id="continueBtn" class="continue-btn hidden" disabled>
+            CONFIRM TEAM
+        </button>
+
+        <div id="waitingPanel" class="waiting-panel hidden">
+            <div class="your-team" id="yourTeamText"></div>
+            <p id="waitingText">Waiting for your opponent to finish setup...</p>
+        </div>
+
+    </main>
+
+    <div id="readyPopup" class="popup-overlay hidden">
+        <div class="popup-box">
+            <h2>Match Ready!</h2>
+            <p id="readyPopupText"></p>
+            <button id="readyPopupCloseBtn" class="popup-close-btn">GOT IT</button>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="team-select.js"></script>
+
+</body>
+</html>

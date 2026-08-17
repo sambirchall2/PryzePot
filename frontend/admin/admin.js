@@ -13,6 +13,13 @@ const disputeDetail = document.getElementById("disputeDetail");
 let allDisputes = [];
 let selectedDisputeId = null;
 
+const gameVerificationList = document.getElementById("gameVerificationList");
+const manualDisputeList = document.getElementById("manualDisputeList");
+const manualDisputeDetail = document.getElementById("manualDisputeDetail");
+
+let allManualDisputes = [];
+let selectedManualDisputeId = null;
+
 if (backButton) {
     backButton.addEventListener("click", function () {
         window.location.href = "../html/home.html";
@@ -115,6 +122,11 @@ document.querySelectorAll(".tab-btn").forEach(function (button) {
 
         button.classList.add("active");
         document.getElementById(button.dataset.tab + "Tab").classList.remove("hidden");
+
+        // Reload on every visit (not just once) so an admin switching back
+        // to either queue always sees current state, not a stale snapshot.
+        if (button.dataset.tab === "gameVerification") loadGameVerifications();
+        if (button.dataset.tab === "manualDisputes") loadManualDisputes();
     });
 });
 
@@ -206,6 +218,49 @@ function renderDisputeDetail(data) {
            </div>`
         : "";
 
+    // Madden-only context (team picks, rules ack, and the bot's own
+    // screenshot reading) so this one screen has everything needed to
+    // decide - see chat. Empty string for every other game.
+    const maddenHtml = (match && match.game === "Madden NFL") ? `
+        <div class="detail-section">
+            <p class="detail-label">Madden Match Details</p>
+            <p class="detail-value">
+                Platform: ${match.platform || "—"} · Skill: ${match.skill_difficulty || "—"}<br>
+                ${match.creator_username}'s team: ${match.creator_team_selection || "not picked"}<br>
+                ${match.opponent_username}'s team: ${match.opponent_team_selection || "not picked"}<br>
+                Rules acknowledged: ${match.rules_acknowledged_at ? formatDate(match.rules_acknowledged_at) : "not yet"}<br>
+                Setup ready: ${match.setup_ready_at ? formatDate(match.setup_ready_at) : "not yet"}
+            </p>
+        </div>
+
+        ${data.maddenVerification ? `
+            <div class="detail-section">
+                <p class="detail-label">Match Verification</p>
+                <p class="detail-value">
+                    Status: ${data.maddenVerification.status} · Queue: ${data.maddenVerification.queue_tag || "—"}<br>
+                    Resolution method: ${data.maddenVerification.resolution_method || "—"} · Winner: ${data.maddenVerification.winner_username || "—"}
+                </p>
+            </div>
+        ` : ""}
+
+        ${(data.maddenScreenshots || []).length > 0 ? `
+            <div class="detail-section">
+                <p class="detail-label">Uploaded Screenshots</p>
+                <div class="evidence-grid">
+                    ${data.maddenScreenshots.map(function (shot) {
+                        return `<div>
+                            ${shot.url ? `<img src="${shot.url}" alt="Screenshot from ${shot.playerUsername}">` : "<p class='detail-value'>Could not load image.</p>"}
+                            <p class="detail-value" style="font-size:12px;">
+                                ${shot.playerUsername}: ${shot.botExtractedTeam1 || "?"} ${shot.botExtractedScore1 || ""} - ${shot.botExtractedTeam2 || "?"} ${shot.botExtractedScore2 || ""}
+                                (${shot.botReadStatus})${shot.botConfidenceNotes ? " — " + shot.botConfidenceNotes : ""}
+                            </p>
+                        </div>`;
+                    }).join("")}
+                </div>
+            </div>
+        ` : ""}
+    ` : "";
+
     disputeDetail.innerHTML = `
         <div class="detail-section">
             <p class="detail-label">Disputing player</p>
@@ -216,6 +271,8 @@ function renderDisputeDetail(data) {
             <p class="detail-label">Match (${dispute.match_type} #${dispute.match_id})</p>
             <p class="detail-value">${matchSummary}</p>
         </div>
+
+        ${maddenHtml}
 
         <div class="detail-section">
             <p class="detail-label">Reason</p>
@@ -305,6 +362,393 @@ function resolveDispute(disputeId, action) {
         .catch(function (error) {
             console.log("RESOLVE DISPUTE ERROR:", error);
             alert("Something went wrong resolving this dispute.");
+        });
+}
+
+/* ---------- game verification (routine queue) ---------- */
+
+function loadGameVerifications() {
+    gameVerificationList.innerHTML = '<p class="empty-hint">Loading...</p>';
+
+    adminFetch("/api/admin/game-verifications")
+        .then(function (data) {
+            if (!data.success) {
+                gameVerificationList.innerHTML = '<p class="empty-hint">Could not load the queue.</p>';
+                return;
+            }
+
+            renderGameVerificationList(data.items || []);
+        })
+        .catch(function (error) {
+            console.log("LOAD GAME VERIFICATIONS ERROR:", error);
+            gameVerificationList.innerHTML = '<p class="empty-hint">Could not load the queue.</p>';
+        });
+}
+
+function screenshotForPlayer(screenshots, username) {
+    return (screenshots || []).find(function (s) { return s.playerUsername === username; }) || null;
+}
+
+function verifySideHtml(username, shot) {
+    if (!username) {
+        return `<div class="verify-side"><div class="verify-player">—</div></div>`;
+    }
+
+    const extracted = shot
+        ? `${shot.botExtractedTeam1 || "?"} ${shot.botExtractedScore1 ?? ""} - ${shot.botExtractedTeam2 || "?"} ${shot.botExtractedScore2 ?? ""}<br>` +
+          `(${shot.botReadStatus || "not_processed"})${shot.botConfidenceNotes ? " — " + shot.botConfidenceNotes : ""}`
+        : "No screenshot uploaded.";
+
+    return `
+        <div class="verify-side">
+            ${shot && shot.url ? `<img src="${shot.url}" alt="Screenshot from ${username}">` : ""}
+            <div class="verify-player">${username}</div>
+            <div class="verify-extracted">${extracted}</div>
+        </div>
+    `;
+}
+
+function renderGameVerificationList(items) {
+    if (items.length === 0) {
+        gameVerificationList.innerHTML = '<p class="empty-hint">Nothing needs review right now.</p>';
+        return;
+    }
+
+    gameVerificationList.innerHTML = items.map(function (item) {
+        const match = item.match;
+        const verification = item.verification;
+
+        if (!match) {
+            return `<div class="verify-card"><p class="detail-value">Match #${verification.match_id} not found.</p></div>`;
+        }
+
+        const creatorShot = screenshotForPlayer(item.screenshots, match.creator_username);
+        const opponentShot = screenshotForPlayer(item.screenshots, match.opponent_username);
+
+        return `
+            <div class="verify-card" data-verification-id="${verification.id}">
+                <div class="verify-card-header">
+                    <span class="status-pill needs_review">needs review</span>
+                    <span class="detail-value">Match #${match.id} · ${Number(match.entry_fee || 0).toLocaleString()} entry</span>
+                </div>
+
+                <div class="verify-matchup">
+                    ${verifySideHtml(match.creator_username, creatorShot)}
+                    <div class="verify-vs">VS</div>
+                    ${verifySideHtml(match.opponent_username, opponentShot)}
+                </div>
+
+                <div class="verify-winner-actions">
+                    <button class="action-btn primary" data-verification-id="${verification.id}" data-winner="${match.creator_username}">Winner: ${match.creator_username}</button>
+                    <button class="action-btn primary" data-verification-id="${verification.id}" data-winner="${match.opponent_username}">Winner: ${match.opponent_username}</button>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    gameVerificationList.querySelectorAll("[data-winner]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            resolveMatchVerification(button.dataset.verificationId, button.dataset.winner, loadGameVerifications);
+        });
+    });
+}
+
+// Shared by both queues below - "select winner" behaves identically no
+// matter which tab it was clicked from (see chat).
+function resolveMatchVerification(verificationId, winnerUsername, onDone) {
+    if (!confirm("Declare " + winnerUsername + " the winner of this match?")) return;
+
+    adminFetch("/api/admin/match-verifications/" + verificationId + "/resolve", {
+        method: "POST",
+        body: JSON.stringify({ winnerUsername: winnerUsername })
+    })
+        .then(function (data) {
+            if (!data.success) {
+                alert(data.message || "Could not resolve this match.");
+                return;
+            }
+
+            if (onDone) onDone();
+        })
+        .catch(function (error) {
+            console.log("RESOLVE MATCH VERIFICATION ERROR:", error);
+            alert("Something went wrong resolving this match.");
+        });
+}
+
+/* ---------- disputes & cheating (investigation queue) ---------- */
+
+function loadManualDisputes() {
+    manualDisputeList.innerHTML = '<p class="empty-hint">Loading...</p>';
+
+    adminFetch("/api/admin/manual-report-disputes")
+        .then(function (data) {
+            if (!data.success) {
+                manualDisputeList.innerHTML = '<p class="empty-hint">Could not load cases.</p>';
+                return;
+            }
+
+            allManualDisputes = data.verifications || [];
+            renderManualDisputeList();
+        })
+        .catch(function (error) {
+            console.log("LOAD MANUAL DISPUTES ERROR:", error);
+            manualDisputeList.innerHTML = '<p class="empty-hint">Could not load cases.</p>';
+        });
+}
+
+function renderManualDisputeList() {
+    if (allManualDisputes.length === 0) {
+        manualDisputeList.innerHTML = '<p class="empty-hint">No open cases.</p>';
+        return;
+    }
+
+    manualDisputeList.innerHTML = allManualDisputes.map(function (verification) {
+        return `
+            <div class="dispute-row ${verification.id === selectedManualDisputeId ? "selected" : ""}" data-id="${verification.id}">
+                <span class="status-pill dispute">dispute</span>
+                <div class="row-title">Match #${verification.match_id}</div>
+                <div class="row-preview">Filed ${formatDate(verification.created_at)}</div>
+            </div>
+        `;
+    }).join("");
+
+    manualDisputeList.querySelectorAll(".dispute-row").forEach(function (row) {
+        row.addEventListener("click", function () {
+            selectedManualDisputeId = Number(row.dataset.id);
+            renderManualDisputeList();
+            loadManualDisputeDetail(selectedManualDisputeId);
+        });
+    });
+}
+
+function loadManualDisputeDetail(verificationId) {
+    manualDisputeDetail.innerHTML = '<p class="empty-hint">Loading...</p>';
+
+    adminFetch("/api/admin/manual-report-disputes/" + verificationId)
+        .then(function (data) {
+            if (!data.success) {
+                manualDisputeDetail.innerHTML = '<p class="empty-hint">Could not load this case.</p>';
+                return;
+            }
+
+            renderManualDisputeDetail(data);
+        })
+        .catch(function (error) {
+            console.log("LOAD MANUAL DISPUTE DETAIL ERROR:", error);
+            manualDisputeDetail.innerHTML = '<p class="empty-hint">Could not load this case.</p>';
+        });
+}
+
+function renderManualDisputeDetail(data) {
+    const verification = data.verification;
+    const match = data.match;
+
+    const disputesHtml = (data.disputes || []).map(function (dispute) {
+        const evidenceHtml = (dispute.evidenceUrls || []).map(function (url) {
+            const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(url);
+            return isVideo ? `<video src="${url}" controls></video>` : `<img src="${url}" alt="Evidence">`;
+        }).join("");
+
+        return `
+            <div class="detail-section">
+                <p class="detail-label">Dispute filed by ${dispute.disputing_username} (${dispute.status})</p>
+                <p class="detail-value">${dispute.reason}</p>
+                <div class="evidence-grid">${evidenceHtml || "<p class='detail-value'>No evidence attached.</p>"}</div>
+            </div>
+        `;
+    }).join("") || `<div class="detail-section"><p class="detail-value">No linked dispute record found.</p></div>`;
+
+    const reportsHtml = (data.reports || []).map(function (r) {
+        return `${r.playerUsername}: ${r.reportedResult}`;
+    }).join(" · ") || "Neither player has reported yet.";
+
+    const screenshotsHtml = (data.screenshots || []).length > 0 ? `
+        <div class="detail-section">
+            <p class="detail-label">Uploaded Screenshots</p>
+            <div class="evidence-grid">
+                ${data.screenshots.map(function (shot) {
+                    return `<div>
+                        ${shot.url ? `<img src="${shot.url}" alt="Screenshot from ${shot.playerUsername}">` : "<p class='detail-value'>Could not load image.</p>"}
+                        <p class="detail-value" style="font-size:12px;">
+                            ${shot.playerUsername}: ${shot.botExtractedTeam1 || "?"} ${shot.botExtractedScore1 ?? ""} - ${shot.botExtractedTeam2 || "?"} ${shot.botExtractedScore2 ?? ""}
+                            (${shot.botReadStatus})${shot.botConfidenceNotes ? " — " + shot.botConfidenceNotes : ""}
+                        </p>
+                    </div>`;
+                }).join("")}
+            </div>
+        </div>
+    ` : "";
+
+    const matchDetailsHtml = match ? `
+        <div class="detail-section">
+            <p class="detail-label">Match #${match.id}</p>
+            <p class="detail-value">
+                Entry fee: ${Number(match.entry_fee || 0).toLocaleString()} · Status: ${match.status}<br>
+                Platform: ${match.platform || "—"} · Skill: ${match.skill_difficulty || "—"}<br>
+                ${match.creator_username}'s team: ${match.creator_team_selection || "not picked"}<br>
+                ${match.opponent_username}'s team: ${match.opponent_team_selection || "not picked"}<br>
+                Rules acknowledged: ${match.rules_acknowledged_at ? formatDate(match.rules_acknowledged_at) : "not yet"}<br>
+                Self-reported results: ${reportsHtml}
+            </p>
+        </div>
+    ` : `<div class="detail-section"><p class="detail-value">Underlying match not found.</p></div>`;
+
+    const canResolve = match && verification.status !== "resolved_by_admin" && match.status !== "Completed";
+
+    const resolveHtml = canResolve ? `
+        <div class="detail-section">
+            <p class="detail-label">Resolve (no penalty)</p>
+            <div class="resolution-actions">
+                <button class="action-btn primary" data-winner="${match.creator_username}">Winner: ${match.creator_username}</button>
+                <button class="action-btn primary" data-winner="${match.opponent_username}">Winner: ${match.opponent_username}</button>
+            </div>
+        </div>
+    ` : `<div class="detail-section"><p class="detail-value">Status: ${verification.status}${match && match.status === "Completed" ? " — already paid out, use the Disputes tab to correct it." : ""}</p></div>`;
+
+    // Combined penalty (see chat): forfeits the match to the other player
+    // (completeMaddenMatch - same payout path every resolution uses) AND
+    // bans the offending account (same banUserAccount the plain Ban button
+    // below calls) in one admin action instead of two separate clicks.
+    const forfeitBanHtml = canResolve ? `
+        <div class="detail-section">
+            <p class="detail-label">Forfeit &amp; Ban (confirmed rules violation)</p>
+            <div class="resolution-actions">
+                <button class="action-btn danger" data-forfeit-ban="${match.creator_username}">Forfeit &amp; Ban ${match.creator_username}</button>
+                <button class="action-btn danger" data-forfeit-ban="${match.opponent_username}">Forfeit &amp; Ban ${match.opponent_username}</button>
+            </div>
+        </div>
+    ` : "";
+
+    const banHtml = match ? `
+        <div class="detail-section">
+            <p class="detail-label">Ban Only (no match action)</p>
+            <div class="resolution-actions">
+                <button class="action-btn" data-ban="${match.creator_username}">Ban ${match.creator_username}</button>
+                <button class="action-btn" data-ban="${match.opponent_username}">Ban ${match.opponent_username}</button>
+            </div>
+        </div>
+    ` : "";
+
+    const eventsHtml = (data.events || []).length > 0 ? `
+        <div class="detail-section">
+            <p class="detail-label">Activity Log</p>
+            <p class="detail-value" style="font-size:12px; line-height:1.7;">
+                ${data.events.map(function (e) {
+                    return formatDate(e.createdAt) + " — " + describeVerificationEvent(e);
+                }).join("<br>")}
+            </p>
+        </div>
+    ` : "";
+
+    manualDisputeDetail.innerHTML = `
+        ${matchDetailsHtml}
+        ${screenshotsHtml}
+        ${disputesHtml}
+        ${resolveHtml}
+        ${forfeitBanHtml}
+        ${banHtml}
+        ${eventsHtml}
+    `;
+
+    manualDisputeDetail.querySelectorAll("[data-winner]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            resolveMatchVerification(verification.id, button.dataset.winner, function () {
+                loadManualDisputes();
+                loadManualDisputeDetail(verification.id);
+            });
+        });
+    });
+
+    manualDisputeDetail.querySelectorAll("[data-forfeit-ban]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            forfeitAndBan(verification.id, button.dataset.forfeitBan, function () {
+                loadManualDisputes();
+                loadManualDisputeDetail(verification.id);
+            });
+        });
+    });
+
+    manualDisputeDetail.querySelectorAll("[data-ban]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            banPlayer(button.dataset.ban, "Madden match #" + verification.match_id + " dispute");
+        });
+    });
+}
+
+// Turns one match_verification_events row into a human-readable line for
+// the Activity Log (see chat - "who reported what, what the bot extracted,
+// who resolved it and when").
+function describeVerificationEvent(e) {
+    if (e.eventType === "result_reported") return (e.actorUsername || "player") + " self-" + e.details;
+    if (e.eventType === "screenshot_uploaded") return (e.actorUsername || "player") + " " + e.details;
+    if (e.eventType === "bot_extraction") return "Bot read: " + e.details;
+    if (e.eventType === "disputed") return (e.actorUsername || "player") + " filed a dispute — " + e.details;
+
+    if (e.eventType === "resolved") {
+        return "Resolved (" + e.resolutionMethod + ")" +
+            (e.actorUsername ? " by " + e.actorUsername : "") +
+            " — winner: " + e.winnerUsername +
+            (e.details ? " — " + e.details : "");
+    }
+
+    if (e.eventType === "penalty_applied") {
+        return "PENALTY by " + (e.actorUsername || "admin") + " — " + e.details;
+    }
+
+    return e.eventType;
+}
+
+function forfeitAndBan(verificationId, offendingUsername, onDone) {
+    const reason = prompt(
+        "Forfeit this match to the other player and ban " + offendingUsername + " - reason:",
+        "Madden match dispute - confirmed rules violation"
+    );
+
+    if (reason === null) return;
+    if (!reason.trim()) {
+        alert("A reason is required.");
+        return;
+    }
+
+    if (!confirm("Forfeit this match to the other player AND ban " + offendingUsername + "? This applies both penalties immediately.")) return;
+
+    adminFetch("/api/admin/match-verifications/" + verificationId + "/forfeit-and-ban", {
+        method: "POST",
+        body: JSON.stringify({ offendingUsername: offendingUsername, reason: reason.trim() })
+    })
+        .then(function (data) {
+            alert(data.message || (data.success ? "Done." : "Could not apply this penalty."));
+
+            if (data.success && onDone) onDone();
+        })
+        .catch(function (error) {
+            console.log("FORFEIT AND BAN ERROR:", error);
+            alert("Something went wrong applying this penalty.");
+        });
+}
+
+function banPlayer(username, contextHint) {
+    const reason = prompt("Ban " + username + " - reason (shown to no one but admins):", contextHint || "");
+
+    if (reason === null) return;
+    if (!reason.trim()) {
+        alert("A reason is required to ban a player.");
+        return;
+    }
+
+    if (!confirm("Ban " + username + "? They will not be able to log in.")) return;
+
+    adminFetch("/api/admin/users/" + encodeURIComponent(username) + "/ban", {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() })
+    })
+        .then(function (data) {
+            alert(data.message || (data.success ? "Player banned." : "Could not ban this player."));
+        })
+        .catch(function (error) {
+            console.log("BAN PLAYER ERROR:", error);
+            alert("Something went wrong banning this player.");
         });
 }
 

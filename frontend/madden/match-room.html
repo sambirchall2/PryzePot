@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Room | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="match-room.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="room-page">
+
+        <div id="statusBadge" class="status-badge waiting">
+            Waiting For Opponent
+        </div>
+
+        <h1>Match Room</h1>
+
+        <p id="roomSubtitle" class="subtitle">
+            Waiting for another player to join your match.
+        </p>
+
+        <section class="hero-card">
+
+            <div class="match-info-row">
+                <div class="info-pill">
+                    <span>Entry</span>
+                    <strong id="entryDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+                </div>
+
+                <div class="info-pill">
+                    <span>Platform</span>
+                    <strong id="platformDisplay">—</strong>
+                </div>
+            </div>
+
+        </section>
+
+        <button id="cancelBtn" class="cancel-btn">
+            CANCEL MATCH
+        </button>
+
+    </main>
+
+    <div id="joinedPopup" class="popup-overlay hidden">
+        <div class="popup-box">
+            <h2>A Player Joined!</h2>
+            <p id="joinedPopupText"></p>
+            <button id="joinedPopupBtn" class="popup-action-btn">SET UP MATCH</button>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="match-room.js"></script>
+
+</body>
+</html>

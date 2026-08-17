@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Entry | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="entry.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <div id="entryBalance" class="entry-balance">
+        <img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0
+    </div>
+
+    <main class="entry-page">
+
+        <h1>Choose Entry Amount</h1>
+        <p class="subtitle">Select how much you want to play for.</p>
+
+        <div id="entryGrid" class="entry-grid"></div>
+
+        <button id="continueBtn" class="continue-btn" disabled>
+            SELECT AN ENTRY
+        </button>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="entry.js"></script>
+
+</body>
+</html>

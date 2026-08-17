@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Result | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="report-result.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="result-page">
+
+        <h1>Report Result</h1>
+        <p class="subtitle">Tell us how your match went.</p>
+
+        <section id="reportSection" class="hidden">
+            <div class="result-btn-row">
+                <button id="reportWinBtn" class="result-btn win">YES,<br>I WON</button>
+                <button id="reportLossBtn" class="result-btn loss">NO,<br>I LOST</button>
+            </div>
+        </section>
+
+        <section id="waitingReportSection" class="panel hidden">
+            <div class="panel-title">Result Submitted</div>
+            <p>Waiting for your opponent to report their result.</p>
+        </section>
+
+        <section id="screenshotSection" class="panel hidden">
+            <div class="panel-title loss">Reports Didn't Match</div>
+
+            <div class="screenshot-note">
+                Take a full, tight photo of the final score screen only. Don't include the TV frame or monitor bezel in the photo — fill the frame with the screen itself. Make sure both team names and the score are clearly visible.
+            </div>
+
+            <div class="file-input-wrap">
+                <input type="file" id="screenshotInput" accept="image/*">
+            </div>
+
+            <button id="uploadScreenshotBtn" class="upload-btn" disabled>
+                UPLOAD SCREENSHOT
+            </button>
+        </section>
+
+        <section id="waitingScreenshotSection" class="panel hidden">
+            <div class="panel-title">Screenshot Received</div>
+            <p>Waiting for your opponent to upload their screenshot.</p>
+        </section>
+
+        <section id="reviewSection" class="panel hidden">
+            <div class="panel-title">Under Review</div>
+            <p>Both screenshots are in. We're reviewing this match and will resolve it shortly.</p>
+        </section>
+
+        <section id="resolvedSection" class="panel hidden">
+            <div class="panel-title" id="resolvedTitle">Match Complete</div>
+            <p id="resolvedText"></p>
+            <button id="disputeButton" class="upload-btn" style="margin-top:16px;background:transparent;border:1px solid rgba(255,157,157,0.4);color:#ff9d9d;">
+                DISPUTE THIS RESULT
+            </button>
+        </section>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="report-result.js"></script>
+
+</body>
+</html>

@@ -381,7 +381,8 @@ if (returnTournamentBtn) {
 }
 const SCHEDULED_MATCH_GAMES = {
     clash: { name: "Clash Royale", icon: "../assets/games/clash-royale.png" },
-    chess: { name: "Chess.com", icon: "../assets/games/chess-com.png" }
+    chess: { name: "Chess.com", icon: "../assets/games/chess-com.png" },
+    madden: { name: "Madden NFL", icon: "../assets/games/madden-nfl.png" }
 };
 
 function coinHtml(amount) {
@@ -394,7 +395,9 @@ function coinHtml(amount) {
 // GET /api/tournaments?tournamentType=scheduled respectively, and
 // normalized onto the same item shape buildScheduledMatchCard expects.
 function shortGameKey(fullGameName) {
-    return fullGameName === "Chess.com" ? "chess" : "clash";
+    if (fullGameName === "Chess.com") return "chess";
+    if (fullGameName === "Madden NFL") return "madden";
+    return "clash";
 }
 
 function normalizeRealMatchToScheduledItem(match) {

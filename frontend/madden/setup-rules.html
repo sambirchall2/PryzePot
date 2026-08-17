@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Setup Rules | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="setup-rules.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="rules-page">
+
+        <h1>Match Setup Rules</h1>
+
+        <div class="rules-box">
+            <ul>
+                <li>5-Minute Quarters</li>
+                <li>Fatigue On</li>
+                <li>Accelerated Clock</li>
+                <li>Injuries Off</li>
+                <li>Even Teams Off</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            Failing to set the match up correctly will result in forfeiture of your entry fee and may result in a permanent ban.
+        </div>
+
+        <div class="checkbox-row">
+            <input type="checkbox" id="agreeCheckbox">
+            <label for="agreeCheckbox">
+                I understand I am responsible for configuring these settings in Madden before the match starts. Failing to set the match up correctly will result in forfeiture of my entry fee and may result in a permanent ban.
+            </label>
+        </div>
+
+        <button id="continueBtn" disabled>
+            ACKNOWLEDGE & CONTINUE
+        </button>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="setup-rules.js"></script>
+
+</body>
+</html>

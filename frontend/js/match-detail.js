@@ -50,7 +50,8 @@ const payoutList = document.getElementById("payoutList");
 
 const GAMES = {
     clash: { name: "Clash Royale", icon: "../assets/games/clash-royale.png" },
-    chess: { name: "Chess.com", icon: "../assets/games/chess-com.png" }
+    chess: { name: "Chess.com", icon: "../assets/games/chess-com.png" },
+    madden: { name: "Madden NFL", icon: "../assets/games/madden-nfl.png" }
 };
 
 const queryParams = new URLSearchParams(window.location.search);
@@ -92,11 +93,17 @@ function formatPercent(percent) {
 }
 
 function shortGameKey(fullGameName) {
-    return fullGameName === "Chess.com" ? "chess" : "clash";
+    if (fullGameName === "Chess.com") return "chess";
+    if (fullGameName === "Madden NFL") return "madden";
+    return "clash";
 }
 
 function isChessMatch(match) {
     return match.game === "chess";
+}
+
+function isMaddenMatch(match) {
+    return match.game === "madden";
 }
 
 // Maps GET /api/matches/:id's response (matches table columns, camelCased
@@ -131,6 +138,7 @@ function normalizeRealMatch(data) {
 
 let currentMatch = null;
 let countdownStopFn = null;
+let maddenAutoLaunched = false;
 
 function loadMatch() {
     apiFetch("/api/matches/" + matchId)
@@ -273,7 +281,25 @@ function refreshStatus() {
             countdownBadge.classList.add("ready");
         }
 
-        if (launchMatchBtn) launchMatchBtn.classList.remove("hidden");
+        // Madden auto-launches the moment the timer hits 0 (see chat) -
+        // no click needed, so the button never even appears for this game.
+        // Only a participant gets sent anywhere; a spectator just sees the
+        // "Ready To Play" badge. maddenAutoLaunched guards against firing
+        // twice - refreshStatus reruns every 30s (see setInterval below)
+        // and window.location.href doesn't unload the page synchronously.
+        if (isMaddenMatch(currentMatch)) {
+            if (!maddenAutoLaunched && (isCreator(currentMatch) || isOpponent(currentMatch))) {
+                maddenAutoLaunched = true;
+
+                localStorage.setItem("currentMatchId", currentMatch.id);
+
+                window.location.href = isCreator(currentMatch)
+                    ? "../madden/setup-rules.html"
+                    : "../madden/team-select.html";
+            }
+        } else if (launchMatchBtn) {
+            launchMatchBtn.classList.remove("hidden");
+        }
     } else {
         if (launchMatchBtn) launchMatchBtn.classList.add("hidden");
 
@@ -516,6 +542,18 @@ function renderAll() {
 
 if (joinBtn) {
     joinBtn.addEventListener("click", function () {
+        // Madden's EA-name-confirm + join call live on connect-madden.html
+        // (always confirmed, same pattern as creation - see chat), reused
+        // here via the same pendingJoinMatchId handoff match-board.js uses.
+        // It routes back to this page afterward rather than into
+        // team-select.html - the setup flow doesn't start until the
+        // scheduled time hits (see launchMatchBtn below).
+        if (isMaddenMatch(currentMatch)) {
+            localStorage.setItem("pendingJoinMatchId", matchId);
+            window.location.href = "../madden/connect-madden.html";
+            return;
+        }
+
         const isChess = isChessMatch(currentMatch);
         const gameFolder = isChess ? "chess" : "clash";
 
@@ -611,6 +649,20 @@ if (launchMatchBtn) {
 
         if (!hasStarted || !isMatchFull(currentMatch)) {
             showToast("This match can't launch before its scheduled start time.", "error");
+            return;
+        }
+
+        // This is the "launches when the timer hits 0" moment for Madden
+        // scheduled matches (see chat) - rules ack (creator) / team select
+        // (both) only become reachable once hasStarted is true; the
+        // backend's loadMaddenSetupMatch guard enforces the same gate
+        // server-side. Clash/Chess keep the placeholder below unchanged.
+        if (isMaddenMatch(currentMatch)) {
+            localStorage.setItem("currentMatchId", matchId);
+
+            window.location.href = isCreator(currentMatch)
+                ? "../madden/setup-rules.html"
+                : "../madden/team-select.html";
             return;
         }
 

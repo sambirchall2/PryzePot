@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect EA Account | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="connect-madden.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="connect-page">
+
+        <h1>Connect EA Account</h1>
+
+        <p class="subtitle">
+            Enter your EA account name so opponents can add you in Madden NFL.
+        </p>
+
+        <div class="connect-box">
+
+            <label for="eaNameInput">EA Account Name</label>
+            <input
+                id="eaNameInput"
+                type="text"
+                placeholder="your-ea-name"
+                autocomplete="off"
+                spellcheck="false"
+            >
+
+            <button id="saveBtn" class="verify-btn">
+                SAVE & CONTINUE
+            </button>
+
+            <p id="statusText" class="status-text">
+                Not connected
+            </p>
+
+        </div>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="connect-madden.js"></script>
+
+</body>
+</html>

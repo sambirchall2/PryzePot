@@ -9,6 +9,7 @@ const multer = require("multer");
 const supabase = require("./supabase");
 const { Resend } = require("resend");
 const { calculatePayoutBreakdown } = require("./payout-math");
+const { runMaddenScreenshotVerification } = require("./madden-screenshot-verification");
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "PryzePot <onboarding@resend.dev>";
@@ -24,6 +25,24 @@ const evidenceUpload = multer({
             cb(null, true);
         } else {
             cb(new Error("Only image or video files are allowed."));
+        }
+    }
+});
+
+// One score-screen photo per player per match (see match_screenshots) -
+// image-only, unlike evidenceUpload's image-or-video since this is
+// specifically a still photo of the final score screen.
+const screenshotUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 15 * 1024 * 1024,
+        files: 1
+    },
+    fileFilter: function (req, file, cb) {
+        if (file.mimetype.startsWith("image/")) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only image files are allowed."));
         }
     }
 });
@@ -151,7 +170,7 @@ async function requireAuth(req, res, next) {
 
         const activeCheck = await supabase
             .from("users")
-            .select("is_active")
+            .select("is_active, is_banned, ban_reason")
             .eq("username", payload.username)
             .maybeSingle();
 
@@ -159,6 +178,16 @@ async function requireAuth(req, res, next) {
             res.status(401).json({
                 success: false,
                 message: "This account has been deactivated."
+            });
+            return;
+        }
+
+        if (activeCheck.data && activeCheck.data.is_banned) {
+            res.status(401).json({
+                success: false,
+                banned: true,
+                message: "This account has been banned." +
+                    (activeCheck.data.ban_reason ? " Reason: " + activeCheck.data.ban_reason : "")
             });
             return;
         }
@@ -532,8 +561,37 @@ function dbMatchToFrontend(match) {
         creatorStakeAmount: match.creator_stake_amount,
 
         stakeResolvedAt: match.stake_resolved_at,
-        creatorFallbackAmount: match.creator_fallback_amount
+        creatorFallbackAmount: match.creator_fallback_amount,
+
+        platform: match.platform,
+        skillDifficulty: match.skill_difficulty,
+
+        creatorTeamSelection: match.creator_team_selection,
+        opponentTeamSelection: match.opponent_team_selection,
+        rulesAcknowledgedAt: match.rules_acknowledged_at,
+        setupReadyAt: match.setup_ready_at
     };
+}
+
+const MADDEN_TEAMS = [
+    "Buffalo Bills", "Miami Dolphins", "New England Patriots", "New York Jets",
+    "Baltimore Ravens", "Cincinnati Bengals", "Cleveland Browns", "Pittsburgh Steelers",
+    "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", "Tennessee Titans",
+    "Denver Broncos", "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers",
+    "Dallas Cowboys", "New York Giants", "Philadelphia Eagles", "Washington Commanders",
+    "Chicago Bears", "Detroit Lions", "Green Bay Packers", "Minnesota Vikings",
+    "Atlanta Falcons", "Carolina Panthers", "New Orleans Saints", "Tampa Bay Buccaneers",
+    "Arizona Cardinals", "Los Angeles Rams", "San Francisco 49ers", "Seattle Seahawks"
+];
+
+// True once both post-join setup steps are done: the creator has
+// acknowledged the setup rules AND both players have picked a team (see
+// 2026-08-16-add-madden.sql). Team selection is symmetric (either player
+// can go first); rules acknowledgment is creator-only (see chat).
+function isMaddenSetupComplete(match) {
+    return !!match.rules_acknowledged_at &&
+        !!match.creator_team_selection &&
+        !!match.opponent_team_selection;
 }
 
 async function attachMatchProfiles(match) {
@@ -912,20 +970,20 @@ async function getMatchCandidates(game, playerOneHandle, playerTwoHandle, cutoff
     });
 }
 
-// Compare two player handles for a given game (Chess = case-insensitive
-// username; Clash = normalized tag).
+// Compare two player handles for a given game (Chess/Madden = case-
+// insensitive username/EA name; Clash = normalized tag).
 function handlesMatch(game, a, b) {
-    if (game === "Chess.com") {
+    if (game === "Chess.com" || game === "Madden NFL") {
         return String(a).toLowerCase() === String(b).toLowerCase();
     }
 
     return cleanTag(a) === cleanTag(b);
 }
 
-// Normalize a raw player handle for storage (Chess = trimmed username;
-// Clash = "#TAG").
+// Normalize a raw player handle for storage (Chess/Madden = trimmed
+// username/EA name; Clash = "#TAG").
 function formatPlayerHandle(game, raw) {
-    if (game === "Chess.com") {
+    if (game === "Chess.com" || game === "Madden NFL") {
         return String(raw).trim();
     }
 
@@ -939,7 +997,9 @@ function buildChessProfileLink(username) {
 }
 
 function normalizeGame(rawGame) {
-    return rawGame === "Chess.com" ? "Chess.com" : "Clash Royale";
+    if (rawGame === "Chess.com") return "Chess.com";
+    if (rawGame === "Madden NFL") return "Madden NFL";
+    return "Clash Royale";
 }
 
 async function expireOldMatches() {
@@ -1711,6 +1771,16 @@ app.post("/api/login", async function (req, res) {
             return;
         }
 
+        if (foundUser.data.is_banned) {
+            res.json({
+                success: false,
+                banned: true,
+                message: "This account has been banned." +
+                    (foundUser.data.ban_reason ? " Reason: " + foundUser.data.ban_reason : "")
+            });
+            return;
+        }
+
         if (!isBcryptHash) {
             const upgradedHash = await bcrypt.hash(password, 10);
 
@@ -2308,6 +2378,46 @@ app.post("/api/users/save-chess", requireAuth, async function (req, res) {
     });
 });
 
+// Madden has no public account API to verify against (see
+// 2026-08-16-add-madden.sql) - this just persists the EA name the player
+// typed, unlike save-clash/save-chess which follow a verify-player call.
+app.post("/api/users/save-madden", requireAuth, async function (req, res) {
+    const username = req.username;
+    const eaName = req.body.eaName ? String(req.body.eaName).trim() : "";
+
+    if (!eaName) {
+        res.json({
+            success: false,
+            message: "Please enter your EA account name."
+        });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({
+            ea_name: eaName
+        })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE MADDEN ERROR:", result.error);
+
+        res.json({
+            success: false,
+            message: "Could not save EA account name."
+        });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "EA account name saved."
+    });
+});
+
 // Attaches { totalStaked, remainingToStake } to each match's frontend shape
 // by summing match_stakes in one grouped query rather than one query per
 // match. Only meaningful for staking_enabled matches; harmless no-op amount
@@ -2556,7 +2666,7 @@ app.get("/api/matches", async function (req, res) {
     let query = supabase
         .from("matches")
         .select(
-            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at, match_type, scheduled_time, staking_enabled, creator_stake_amount, stake_resolved_at, creator_fallback_amount"
+            "id, game, mode, entry_fee, creator_username, creator_tag, creator_friend_link, opponent_username, opponent_tag, opponent_friend_link, status, created_at, expires_at, verify_expires_at, winner_username, winner_tag, loser_username, loser_tag, verified_at, match_type, scheduled_time, staking_enabled, creator_stake_amount, stake_resolved_at, creator_fallback_amount, platform, skill_difficulty"
         )
         .in("status", ["Waiting for opponent", "Match ready"]);
 
@@ -2593,18 +2703,33 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     const entryFee = Number(req.body.entryFee);
     const game = normalizeGame(req.body.game);
     const isChess = game === "Chess.com";
+    const isMadden = game === "Madden NFL";
 
     const creatorHandle = formatPlayerHandle(game, playerTag);
     const friendLink = isChess
         ? buildChessProfileLink(playerTag)
-        : req.body.friendLink;
+        : (isMadden ? null : req.body.friendLink);
 
-    const mode = isChess ? "10 Min Rapid" : "1v1 Friendly Battle";
+    const mode = isChess ? "10 Min Rapid" : (isMadden ? "Madden NFL 1v1" : "1v1 Friendly Battle");
 
-    if (!username || !playerTag || !friendLink || !(entryFee > 0)) {
+    // Madden has no separate "friend link" concept (see deviation #1 in
+    // 2026-08-16-add-madden.sql) - the EA name alone (creatorHandle/
+    // playerTag) is enough to post a match, so friendLink isn't required.
+    if (!username || !playerTag || (!isMadden && !friendLink) || !(entryFee > 0)) {
         res.json({
             success: false,
             message: "Missing match information."
+        });
+        return;
+    }
+
+    const platform = isMadden ? req.body.platform : null;
+    const skillDifficulty = isMadden ? req.body.skillDifficulty : null;
+
+    if (isMadden && (!["ps5_xbox", "pc"].includes(platform) || !["rookie", "pro", "all_pro", "all_madden"].includes(skillDifficulty))) {
+        res.json({
+            success: false,
+            message: "Platform and skill difficulty are required for Madden matches."
         });
         return;
     }
@@ -2688,7 +2813,11 @@ app.post("/api/matches", requireAuth, async function (req, res) {
             creator_stake_amount: creatorStakeAmount,
 
             stake_resolved_at: null,
-            creator_fallback_amount: null
+            creator_fallback_amount: null,
+
+            platform: platform,
+            skill_difficulty: skillDifficulty,
+            verification_method: isMadden ? "manual_report" : "api"
         })
         .select()
         .single();
@@ -3375,11 +3504,12 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
 
     const game = foundMatch.game || "Clash Royale";
     const isChess = game === "Chess.com";
+    const isMadden = game === "Madden NFL";
 
     const opponentHandle = formatPlayerHandle(game, playerTag);
     const friendLink = isChess
         ? buildChessProfileLink(playerTag)
-        : req.body.friendLink;
+        : (isMadden ? null : req.body.friendLink);
 
     if (foundMatch.status !== "Waiting for opponent") {
         res.json({
@@ -3397,10 +3527,22 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
-    if (!friendLink) {
+    if (!isMadden && !friendLink) {
         res.json({
             success: false,
             message: "Missing account link."
+        });
+        return;
+    }
+
+    // Madden matches are locked to one platform at creation (see
+    // 2026-08-16-add-madden.sql) - a joiner must report the same platform
+    // they'll actually play on so cross-platform pairings can never form,
+    // even before the full join flow (team select / rules ack) exists.
+    if (isMadden && req.body.platform !== foundMatch.platform) {
+        res.json({
+            success: false,
+            message: "This match requires the " + foundMatch.platform + " platform."
         });
         return;
     }
@@ -3460,6 +3602,631 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         match: dbMatchToFrontend(update.data)
     });
 });
+
+// Team selection and the setup-rules acknowledgment happen after a Madden
+// match is joined, not at creation (see chat) - both post-join setup
+// endpoints below share this fetch+guard shape: load the match, confirm
+// it's a Madden match with an opponent already seated, confirm the
+// requester is actually one of the two players.
+async function loadMaddenSetupMatch(req, res) {
+    const matchId = Number(req.params.id);
+
+    const found = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return null;
+    }
+
+    const match = found.data;
+
+    if (match.game !== "Madden NFL") {
+        res.json({ success: false, message: "Not available for this game." });
+        return null;
+    }
+
+    if (match.status !== "Match ready") {
+        res.json({ success: false, message: "This match doesn't have both players yet." });
+        return null;
+    }
+
+    // Scheduled matches can be joined well ahead of time (that's the whole
+    // point of staking against a future match) - rules ack / team select
+    // only becomes available once the scheduled time actually hits, not
+    // the moment an opponent joins (see chat). Instant matches have no
+    // scheduled_time, so this is a no-op for them.
+    if (match.match_type === "scheduled" && Number(match.scheduled_time) > Date.now()) {
+        res.json({ success: false, message: "This match hasn't started yet." });
+        return null;
+    }
+
+    return match;
+}
+
+// If this update just completed both conditions (rules acknowledged AND
+// both teams picked), stamp setup_ready_at - guarded by .is(...) so a
+// second near-simultaneous request from the other player can't stamp it
+// twice.
+async function markMaddenSetupReadyIfComplete(match) {
+    if (!isMaddenSetupComplete(match) || match.setup_ready_at) {
+        return match;
+    }
+
+    const result = await supabase
+        .from("matches")
+        .update({ setup_ready_at: Date.now() })
+        .eq("id", match.id)
+        .is("setup_ready_at", null)
+        .select()
+        .single();
+
+    return result.data || match;
+}
+
+app.post("/api/matches/:id/acknowledge-rules", requireAuth, async function (req, res) {
+    const match = await loadMaddenSetupMatch(req, res);
+    if (!match) return;
+
+    if (req.username !== match.creator_username) {
+        res.json({
+            success: false,
+            message: "Only the match creator acknowledges the setup rules."
+        });
+        return;
+    }
+
+    let updatedMatch = match;
+
+    if (!match.rules_acknowledged_at) {
+        const update = await supabase
+            .from("matches")
+            .update({ rules_acknowledged_at: Date.now() })
+            .eq("id", match.id)
+            .select()
+            .single();
+
+        if (update.error || !update.data) {
+            console.log("ACKNOWLEDGE RULES ERROR:", update.error);
+
+            res.json({ success: false, message: "Could not save rules acknowledgment." });
+            return;
+        }
+
+        updatedMatch = update.data;
+    }
+
+    updatedMatch = await markMaddenSetupReadyIfComplete(updatedMatch);
+
+    res.json({
+        success: true,
+        match: dbMatchToFrontend(updatedMatch),
+        setupReady: !!updatedMatch.setup_ready_at
+    });
+});
+
+app.post("/api/matches/:id/team-selection", requireAuth, async function (req, res) {
+    const match = await loadMaddenSetupMatch(req, res);
+    if (!match) return;
+
+    const isCreator = req.username === match.creator_username;
+    const isOpponent = req.username === match.opponent_username;
+
+    if (!isCreator && !isOpponent) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    const team = req.body.team;
+
+    if (!MADDEN_TEAMS.includes(team)) {
+        res.json({ success: false, message: "Pick a valid team." });
+        return;
+    }
+
+    const otherTeam = isCreator ? match.opponent_team_selection : match.creator_team_selection;
+
+    if (otherTeam && otherTeam === team) {
+        res.json({ success: false, message: "Your opponent already picked that team." });
+        return;
+    }
+
+    const column = isCreator ? "creator_team_selection" : "opponent_team_selection";
+
+    const update = await supabase
+        .from("matches")
+        .update({ [column]: team })
+        .eq("id", match.id)
+        .select()
+        .single();
+
+    if (update.error || !update.data) {
+        console.log("TEAM SELECTION ERROR:", update.error);
+
+        res.json({ success: false, message: "Could not save your team selection." });
+        return;
+    }
+
+    const updatedMatch = await markMaddenSetupReadyIfComplete(update.data);
+
+    res.json({
+        success: true,
+        match: dbMatchToFrontend(updatedMatch),
+        setupReady: !!updatedMatch.setup_ready_at
+    });
+});
+
+// Append-only audit trail for one match_verifications row (see
+// 2026-08-17-add-match-verification-events.sql) - who reported what, what
+// the bot extracted, who resolved it and when, and any admin penalty.
+// Deliberately never throws out to the caller, same reasoning as
+// recordStakingPayoutBreakdown: this is bookkeeping, not something that
+// should block a report/upload/resolution from completing.
+async function logMatchVerificationEvent(matchVerificationId, eventType, options) {
+    const opts = options || {};
+
+    try {
+        const insertResult = await supabase
+            .from("match_verification_events")
+            .insert({
+                match_verification_id: matchVerificationId,
+                event_type: eventType,
+                actor_username: opts.actorUsername || null,
+                winner_username: opts.winnerUsername || null,
+                resolution_method: opts.resolutionMethod || null,
+                details: opts.details || null,
+                created_at: Date.now()
+            });
+
+        if (insertResult.error) {
+            console.log("MATCH VERIFICATION EVENT INSERT ERROR:", matchVerificationId, eventType, insertResult.error);
+        }
+    } catch (error) {
+        console.log("MATCH VERIFICATION EVENT ERROR:", matchVerificationId, eventType, error.message);
+    }
+}
+
+// Completes a Madden match once a winner is known with certainty (via
+// player agreement here; via the bot/admin review path later) - mirrors
+// the Clash/Chess completion recipe in POST /api/matches/:id/verify
+// (matches row -> Completed, a match_results row for stats/leaderboard,
+// payout, staking breakdown, XP) so every downstream reader of "a match
+// completed" keeps working the same regardless of verification_method.
+// external_match_id has no real external record to dedupe against for
+// Madden, so a synthetic-but-unique "madden-match-<id>" fills that column
+// instead, satisfying its UNIQUE constraint without colliding with real
+// Clash battle ids / Chess game uuids.
+async function completeMaddenMatch(match, winnerUsername) {
+    const isCreatorWinner = winnerUsername === match.creator_username;
+    const loserUsername = isCreatorWinner ? match.opponent_username : match.creator_username;
+    const winnerTag = isCreatorWinner ? match.creator_tag : match.opponent_tag;
+    const loserTag = isCreatorWinner ? match.opponent_tag : match.creator_tag;
+
+    const completed = await supabase
+        .from("matches")
+        .update({
+            status: "Completed",
+            winner_username: winnerUsername,
+            winner_tag: winnerTag,
+            loser_username: loserUsername,
+            loser_tag: loserTag,
+            verified_at: Date.now()
+        })
+        .eq("id", match.id)
+        .eq("status", "Match ready")
+        .select()
+        .single();
+
+    if (completed.error || !completed.data) {
+        return null;
+    }
+
+    const resultInsert = await supabase
+        .from("match_results")
+        .insert({
+            match_id: match.id,
+            external_match_id: "madden-match-" + match.id,
+            winner_username: winnerUsername,
+            winner_tag: winnerTag,
+            loser_username: loserUsername,
+            loser_tag: loserTag
+        });
+
+    if (resultInsert.error) {
+        console.log("MADDEN MATCH RESULT INSERT ERROR:", resultInsert.error);
+    }
+
+    const totalWinnings = Number(completed.data.entry_fee) * 2;
+    const payout = await adjustBalance(winnerUsername, totalWinnings);
+
+    if (!payout.success) {
+        console.log("MADDEN MATCH PAYOUT ERROR:", winnerUsername, payout.message);
+    }
+
+    await recordStakingPayoutBreakdown(completed.data, winnerUsername, totalWinnings);
+
+    await awardXpToUser(winnerUsername, getMatchXpForResult("win"));
+    await awardXpToUser(loserUsername, getMatchXpForResult("loss"));
+
+    return completed.data;
+}
+
+app.post("/api/matches/:id/report-result", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+    const reportedResult = req.body.result;
+
+    if (reportedResult !== "win" && reportedResult !== "loss") {
+        res.json({ success: false, message: "Invalid result." });
+        return;
+    }
+
+    const found = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.game !== "Madden NFL") {
+        res.json({ success: false, message: "Not available for this game." });
+        return;
+    }
+
+    const isCreator = username === match.creator_username;
+    const isOpponent = username === match.opponent_username;
+
+    if (!isCreator && !isOpponent) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    if (!match.setup_ready_at) {
+        res.json({ success: false, message: "Match setup isn't complete yet." });
+        return;
+    }
+
+    if (match.status === "Completed") {
+        res.json({
+            success: true,
+            bothReported: true,
+            resolved: true,
+            winnerUsername: match.winner_username,
+            match: dbMatchToFrontend(match)
+        });
+        return;
+    }
+
+    const existingReport = await supabase
+        .from("match_result_reports")
+        .select("*")
+        .eq("match_id", matchId)
+        .eq("player_username", username)
+        .maybeSingle();
+
+    if (existingReport.data) {
+        await supabase
+            .from("match_result_reports")
+            .update({ reported_result: reportedResult })
+            .eq("id", existingReport.data.id);
+    } else {
+        await supabase
+            .from("match_result_reports")
+            .insert({
+                match_id: matchId,
+                player_username: username,
+                reported_result: reportedResult,
+                created_at: Date.now()
+            });
+    }
+
+    // Lazily create the one verification row for this match, on whichever
+    // report happens to land first.
+    const existingVerification = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+    let verificationId = existingVerification.data ? existingVerification.data.id : null;
+
+    if (!existingVerification.data) {
+        const verificationInsert = await supabase
+            .from("match_verifications")
+            .insert({ match_id: matchId, status: "pending", created_at: Date.now() })
+            .select()
+            .single();
+
+        verificationId = verificationInsert.data ? verificationInsert.data.id : null;
+    }
+
+    if (verificationId) {
+        await logMatchVerificationEvent(verificationId, "result_reported", {
+            actorUsername: username,
+            details: "reported " + reportedResult
+        });
+    }
+
+    const reportsResult = await supabase
+        .from("match_result_reports")
+        .select("*")
+        .eq("match_id", matchId);
+
+    const reports = reportsResult.data || [];
+    const creatorReport = reports.find(function (r) { return r.player_username === match.creator_username; });
+    const opponentReport = reports.find(function (r) { return r.player_username === match.opponent_username; });
+
+    if (!creatorReport || !opponentReport) {
+        res.json({ success: true, bothReported: false, message: "Result reported. Waiting for your opponent." });
+        return;
+    }
+
+    const agree =
+        (creatorReport.reported_result === "win" && opponentReport.reported_result === "loss") ||
+        (creatorReport.reported_result === "loss" && opponentReport.reported_result === "win");
+
+    if (!agree) {
+        res.json({
+            success: true,
+            bothReported: true,
+            resolved: false,
+            message: "Your reports don't match. Both players need to upload a screenshot."
+        });
+        return;
+    }
+
+    const winnerUsername = creatorReport.reported_result === "win" ? match.creator_username : match.opponent_username;
+
+    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+
+    await supabase
+        .from("match_verifications")
+        .update({
+            status: "auto_resolved",
+            resolution_method: "agreement",
+            winner_username: winnerUsername,
+            resolved_at: Date.now()
+        })
+        .eq("match_id", matchId);
+
+    if (verificationId) {
+        await logMatchVerificationEvent(verificationId, "resolved", {
+            winnerUsername: winnerUsername,
+            resolutionMethod: "agreement",
+            details: "both players' self-reported results agreed"
+        });
+    }
+
+    res.json({
+        success: true,
+        bothReported: true,
+        resolved: true,
+        winnerUsername: winnerUsername,
+        match: dbMatchToFrontend(completedMatch || match)
+    });
+});
+
+app.post("/api/matches/:id/screenshot", requireAuth, function (req, res, next) {
+    screenshotUpload.single("screenshot")(req, res, function (err) {
+        if (err) {
+            res.json({ success: false, message: err.message || "Could not upload screenshot." });
+            return;
+        }
+
+        next();
+    });
+}, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+
+    const found = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.game !== "Madden NFL") {
+        res.json({ success: false, message: "Not available for this game." });
+        return;
+    }
+
+    const isCreator = username === match.creator_username;
+    const isOpponent = username === match.opponent_username;
+
+    if (!isCreator && !isOpponent) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    if (!req.file) {
+        res.json({ success: false, message: "Please choose a screenshot to upload." });
+        return;
+    }
+
+    const verificationResult = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+    if (!verificationResult.data) {
+        res.json({ success: false, message: "No verification in progress for this match." });
+        return;
+    }
+
+    const verification = verificationResult.data;
+
+    if (verification.status !== "pending") {
+        res.json({ success: true, message: "Screenshot already handled.", verificationStatus: verification.status });
+        return;
+    }
+
+    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = "match-" + matchId + "-" + username + "-" + Date.now() + "-" + safeName;
+
+    const uploadResult = await supabase.storage
+        .from("match-screenshots")
+        .upload(storagePath, req.file.buffer, { contentType: req.file.mimetype });
+
+    if (uploadResult.error) {
+        console.log("SCREENSHOT UPLOAD ERROR:", uploadResult.error);
+
+        res.json({ success: false, message: "Could not upload screenshot." });
+        return;
+    }
+
+    const existingShot = await supabase
+        .from("match_screenshots")
+        .select("*")
+        .eq("match_verification_id", verification.id)
+        .eq("player_username", username)
+        .maybeSingle();
+
+    if (existingShot.data) {
+        await supabase
+            .from("match_screenshots")
+            .update({
+                storage_path: storagePath,
+                bot_read_status: "not_processed",
+                created_at: Date.now()
+            })
+            .eq("id", existingShot.data.id);
+    } else {
+        await supabase
+            .from("match_screenshots")
+            .insert({
+                match_verification_id: verification.id,
+                player_username: username,
+                storage_path: storagePath,
+                created_at: Date.now()
+            });
+    }
+
+    await logMatchVerificationEvent(verification.id, "screenshot_uploaded", {
+        actorUsername: username,
+        details: existingShot.data ? "re-uploaded screenshot" : "uploaded screenshot"
+    });
+
+    const allShotsResult = await supabase
+        .from("match_screenshots")
+        .select("player_username")
+        .eq("match_verification_id", verification.id);
+
+    const uploadedUsernames = (allShotsResult.data || []).map(function (s) { return s.player_username; });
+    const bothUploaded = uploadedUsernames.includes(match.creator_username) && uploadedUsernames.includes(match.opponent_username);
+
+    let botResolved = false;
+
+    if (bothUploaded) {
+        await supabase
+            .from("match_verifications")
+            .update({ status: "needs_review", queue_tag: "needs_review" })
+            .eq("id", verification.id)
+            .eq("status", "pending");
+
+        try {
+            const botResult = await runMaddenScreenshotVerification(verification.id);
+
+            if (botResult.resolved) {
+                await completeMaddenMatch(match, botResult.winnerUsername);
+                botResolved = true;
+            }
+        } catch (error) {
+            console.log("MADDEN SCREENSHOT VERIFICATION ERROR:", verification.id, error.message);
+            // Left in needs_review - an admin resolves it manually if the bot pass fails.
+        }
+    }
+
+    res.json({
+        success: true,
+        message: botResolved
+            ? "Both screenshots received. Your match has been resolved."
+            : bothUploaded
+                ? "Both screenshots received. Your match is under review."
+                : "Screenshot uploaded. Waiting on your opponent.",
+        bothUploaded: bothUploaded,
+        resolved: botResolved
+    });
+});
+
+app.get("/api/matches/:id/result-status", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+
+    const found = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.game !== "Madden NFL") {
+        res.json({ success: false, message: "Not available for this game." });
+        return;
+    }
+
+    const isCreator = username === match.creator_username;
+    const isOpponent = username === match.opponent_username;
+
+    if (!isCreator && !isOpponent) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    const reportsResult = await supabase
+        .from("match_result_reports")
+        .select("*")
+        .eq("match_id", matchId);
+
+    const reports = reportsResult.data || [];
+    const myReport = reports.find(function (r) { return r.player_username === username; });
+    const theirReport = reports.find(function (r) { return r.player_username !== username; });
+
+    const verificationResult = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("match_id", matchId)
+        .maybeSingle();
+
+    const verification = verificationResult.data || null;
+
+    let myScreenshotUploaded = false;
+    let theirScreenshotUploaded = false;
+
+    if (verification) {
+        const shotsResult = await supabase
+            .from("match_screenshots")
+            .select("player_username")
+            .eq("match_verification_id", verification.id);
+
+        const shots = shotsResult.data || [];
+        myScreenshotUploaded = shots.some(function (s) { return s.player_username === username; });
+        theirScreenshotUploaded = shots.some(function (s) { return s.player_username !== username; });
+    }
+
+    res.json({
+        success: true,
+        matchStatus: match.status,
+        setupReadyAt: match.setup_ready_at,
+        winnerUsername: match.winner_username,
+        myReport: myReport ? myReport.reported_result : null,
+        theirReportSubmitted: !!theirReport,
+        verificationStatus: verification ? verification.status : null,
+        myScreenshotUploaded: myScreenshotUploaded,
+        theirScreenshotUploaded: theirScreenshotUploaded
+    });
+});
+
 app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
     const matchId = Number(req.params.id);
     const username = req.username;
@@ -5047,7 +5814,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     const result = await supabase
         .from("users")
         .select(
-            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, clash_tag, clash_name, clash_friend_link, clash_trophies, clash_exp_level, clash_verified, clash_friend_link_updated_at"
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, clash_tag, clash_name, clash_friend_link, clash_trophies, clash_exp_level, clash_verified, clash_friend_link_updated_at, ea_name"
         )
         .eq("username", username)
         .maybeSingle();
@@ -5168,6 +5935,8 @@ app.get("/api/users/:username/profile", async function (req, res) {
     clash_exp_level: user.clash_exp_level || null,
     clash_verified: user.clash_verified || false,
     clash_friend_link_updated_at: user.clash_friend_link_updated_at || null,
+
+    ea_name: user.ea_name || null,
 
     profile_completed: user.profile_completed || false,
 
@@ -6532,6 +7301,48 @@ app.post("/api/disputes", requireAuth, function (req, res, next) {
         return;
     }
 
+    // A dispute always overrides whatever match_verifications already says
+    // for a Madden match - agreement, bot auto-resolve, or nothing yet -
+    // by flipping it to status='disputed'/queue_tag='dispute'. This is a
+    // flag for admin review only: it does NOT touch matches.status/
+    // winner_username or reverse any payout that already happened. Actually
+    // refunding or re-awarding, if warranted, stays entirely inside the
+    // existing POST /api/admin/disputes/:id/resolve flow below - same as
+    // every other game's disputes.
+    if (matchType === "match" && disputeMatch.row.game === "Madden NFL") {
+        const existingVerification = await supabase
+            .from("match_verifications")
+            .select("id")
+            .eq("match_id", matchId)
+            .maybeSingle();
+
+        let disputedVerificationId;
+
+        if (existingVerification.data) {
+            disputedVerificationId = existingVerification.data.id;
+
+            await supabase
+                .from("match_verifications")
+                .update({ status: "disputed", queue_tag: "dispute" })
+                .eq("id", disputedVerificationId);
+        } else {
+            const verificationInsert = await supabase
+                .from("match_verifications")
+                .insert({ match_id: matchId, status: "disputed", queue_tag: "dispute", created_at: Date.now() })
+                .select()
+                .single();
+
+            disputedVerificationId = verificationInsert.data ? verificationInsert.data.id : null;
+        }
+
+        if (disputedVerificationId) {
+            await logMatchVerificationEvent(disputedVerificationId, "disputed", {
+                actorUsername: req.username,
+                details: reason
+            });
+        }
+    }
+
     res.json({
         success: true,
         message: "Dispute submitted. Our team will review it.",
@@ -6642,12 +7453,56 @@ app.get("/api/admin/disputes/:id", requireAdminSession, async function (req, res
         }
     }
 
+    // Madden context an admin would otherwise have to dig up across
+    // report-result.html/match-room.html manually - team picks, rules ack,
+    // and any screenshots already uploaded for the bot pass - surfaced
+    // here so this one screen has the full picture. No-op for every other
+    // game (disputeMatch.row.game is never "Madden NFL" for them).
+    let maddenVerification = null;
+    let maddenScreenshots = [];
+
+    if (disputeMatch && disputeMatch.row.game === "Madden NFL") {
+        const verificationResult = await supabase
+            .from("match_verifications")
+            .select("*")
+            .eq("match_id", dispute.match_id)
+            .maybeSingle();
+
+        maddenVerification = verificationResult.data || null;
+
+        if (maddenVerification) {
+            const screenshotsResult = await supabase
+                .from("match_screenshots")
+                .select("*")
+                .eq("match_verification_id", maddenVerification.id);
+
+            for (const shot of screenshotsResult.data || []) {
+                const signedShot = await supabase.storage
+                    .from("match-screenshots")
+                    .createSignedUrl(shot.storage_path, 300);
+
+                maddenScreenshots.push({
+                    playerUsername: shot.player_username,
+                    botReadStatus: shot.bot_read_status,
+                    botExtractedTeam1: shot.bot_extracted_team_1,
+                    botExtractedScore1: shot.bot_extracted_score_1,
+                    botExtractedTeam2: shot.bot_extracted_team_2,
+                    botExtractedScore2: shot.bot_extracted_score_2,
+                    botConfidenceNotes: shot.bot_confidence_notes,
+                    url: (!signedShot.error && signedShot.data) ? signedShot.data.signedUrl : null
+                });
+            }
+        }
+    }
+
     res.json({
         success: true,
         dispute: dispute,
         match: disputeMatch ? disputeMatch.row : null,
         entryFee: disputeMatch ? disputeMatch.entryFee : 0,
-        evidenceUrls: evidenceUrls
+        evidenceUrls: evidenceUrls,
+        maddenVerification: maddenVerification,
+        maddenScreenshots: maddenScreenshots
     });
 });
 
@@ -6755,6 +7610,500 @@ app.post("/api/admin/disputes/:id/resolve", requireAdminSession, async function 
         success: true,
         message: "Dispute resolved."
     });
+});
+
+// Shared by both new admin tabs below - assembles everything an admin
+// needs to see about one match_verifications row without hopping screens:
+// the underlying match, its self-reported results, and any uploaded
+// screenshots (with the bot's own extraction + a signed URL). Deliberately
+// keyed off match_verifications only, never a game name - this is meant to
+// serve Madden today and any future non-API "manual_report" game the same
+// way (see chat).
+async function loadMatchVerificationContext(verification) {
+    const matchResult = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", verification.match_id)
+        .maybeSingle();
+
+    const match = matchResult.data || null;
+
+    const reportsResult = await supabase
+        .from("match_result_reports")
+        .select("*")
+        .eq("match_id", verification.match_id);
+
+    const screenshotsResult = await supabase
+        .from("match_screenshots")
+        .select("*")
+        .eq("match_verification_id", verification.id);
+
+    const screenshots = [];
+
+    for (const shot of screenshotsResult.data || []) {
+        const signed = await supabase.storage
+            .from("match-screenshots")
+            .createSignedUrl(shot.storage_path, 300);
+
+        screenshots.push({
+            playerUsername: shot.player_username,
+            botReadStatus: shot.bot_read_status,
+            botExtractedTeam1: shot.bot_extracted_team_1,
+            botExtractedScore1: shot.bot_extracted_score_1,
+            botExtractedTeam2: shot.bot_extracted_team_2,
+            botExtractedScore2: shot.bot_extracted_score_2,
+            botConfidenceNotes: shot.bot_confidence_notes,
+            url: (!signed.error && signed.data) ? signed.data.signedUrl : null
+        });
+    }
+
+    // Audit trail (see chat / 2026-08-17-add-match-verification-events.sql) -
+    // oldest first, so it reads top-to-bottom as a timeline.
+    const eventsResult = await supabase
+        .from("match_verification_events")
+        .select("*")
+        .eq("match_verification_id", verification.id)
+        .order("created_at", { ascending: true });
+
+    const events = (eventsResult.data || []).map(function (e) {
+        return {
+            eventType: e.event_type,
+            actorUsername: e.actor_username,
+            winnerUsername: e.winner_username,
+            resolutionMethod: e.resolution_method,
+            details: e.details,
+            createdAt: e.created_at
+        };
+    });
+
+    return {
+        match: match,
+        reports: (reportsResult.data || []).map(function (r) {
+            return { playerUsername: r.player_username, reportedResult: r.reported_result };
+        }),
+        screenshots: screenshots,
+        events: events
+    };
+}
+
+// "Game Verification" - the routine queue (see chat): the bot couldn't
+// auto-resolve (screenshots disagreed / low confidence / unreadable), no
+// accusation involved. One call returns full detail for every open item so
+// the whole list renders at once - no click-through-to-detail step, since
+// the point of this tab is to move fast.
+app.get("/api/admin/game-verifications", requireAdminSession, async function (req, res) {
+    const result = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("queue_tag", "needs_review")
+        .order("created_at", { ascending: true });
+
+    if (result.error) {
+        res.json({ success: false, message: "Could not load game verifications." });
+        return;
+    }
+
+    const items = [];
+
+    for (const verification of result.data || []) {
+        const context = await loadMatchVerificationContext(verification);
+        items.push({ verification: verification, match: context.match, reports: context.reports, screenshots: context.screenshots, events: context.events });
+    }
+
+    res.json({ success: true, items: items });
+});
+
+// "Disputes & Cheating" - accusation-driven, filed through the existing
+// dispute system (see chat). Lean list + separate detail fetch, same
+// master-detail shape as the existing generic Disputes tab, since this one
+// is meant to read as "investigation needed" rather than a quick-pick list.
+app.get("/api/admin/manual-report-disputes", requireAdminSession, async function (req, res) {
+    const result = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("queue_tag", "dispute")
+        .order("created_at", { ascending: true });
+
+    if (result.error) {
+        res.json({ success: false, message: "Could not load disputes." });
+        return;
+    }
+
+    res.json({ success: true, verifications: result.data || [] });
+});
+
+app.get("/api/admin/manual-report-disputes/:id", requireAdminSession, async function (req, res) {
+    const verificationId = Number(req.params.id);
+
+    const verificationResult = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("id", verificationId)
+        .maybeSingle();
+
+    if (!verificationResult.data) {
+        res.json({ success: false, message: "Verification record not found." });
+        return;
+    }
+
+    const verification = verificationResult.data;
+    const context = await loadMatchVerificationContext(verification);
+
+    // The dispute(s) filed against this match through the existing system
+    // (POST /api/disputes) - not linked to match_verifications by any FK,
+    // only by match_id/match_type, same as loadDisputeMatch elsewhere.
+    let disputes = [];
+
+    if (context.match) {
+        const disputesResult = await supabase
+            .from("disputes")
+            .select("*")
+            .eq("match_type", "match")
+            .eq("match_id", verification.match_id)
+            .order("created_at", { ascending: false });
+
+        disputes = disputesResult.data || [];
+
+        for (const dispute of disputes) {
+            const evidenceUrls = [];
+
+            for (const path of dispute.evidence_paths || []) {
+                const signed = await supabase.storage
+                    .from("dispute-evidence")
+                    .createSignedUrl(path, 300);
+
+                if (!signed.error && signed.data) {
+                    evidenceUrls.push(signed.data.signedUrl);
+                }
+            }
+
+            dispute.evidenceUrls = evidenceUrls;
+        }
+    }
+
+    res.json({
+        success: true,
+        verification: verification,
+        match: context.match,
+        reports: context.reports,
+        screenshots: context.screenshots,
+        events: context.events,
+        disputes: disputes
+    });
+});
+
+// Shared by both tabs above - "select winner" means the same thing
+// regardless of which queue the item came from. Reuses completeMaddenMatch
+// (the exact same completion recipe the bot/agreement paths already use -
+// matches row -> Completed, match_results row, payout, staking breakdown,
+// XP), so an admin pick behaves identically to every other resolution
+// method for anything downstream that reads a completed match.
+app.post("/api/admin/match-verifications/:id/resolve", requireAdminSession, async function (req, res) {
+    const verificationId = Number(req.params.id);
+    const winnerUsername = req.body.winnerUsername;
+
+    const verificationResult = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("id", verificationId)
+        .maybeSingle();
+
+    if (!verificationResult.data) {
+        res.json({ success: false, message: "Verification record not found." });
+        return;
+    }
+
+    const verification = verificationResult.data;
+
+    if (verification.status === "resolved_by_admin" || verification.status === "auto_resolved") {
+        res.json({ success: false, message: "This match has already been resolved." });
+        return;
+    }
+
+    const matchResult = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", verification.match_id)
+        .maybeSingle();
+
+    if (!matchResult.data) {
+        res.json({ success: false, message: "Underlying match not found." });
+        return;
+    }
+
+    const match = matchResult.data;
+
+    if (winnerUsername !== match.creator_username && winnerUsername !== match.opponent_username) {
+        res.json({ success: false, message: "Winner must be one of the two players in this match." });
+        return;
+    }
+
+    // completeMaddenMatch only updates a match whose status is still
+    // "Match ready" - if it's already "Completed" (a payout already went
+    // out, e.g. before this dispute was filed), this deliberately does NOT
+    // try to reverse it. Reversing an already-paid-out match is real money
+    // movement this admin action was never built to do safely - use the
+    // existing Disputes tab's refund/award/manual tools for that instead.
+    if (match.status === "Completed") {
+        res.json({
+            success: false,
+            message: "This match was already paid out before this review. Use the Disputes tab's refund/award/manual tools to correct it, rather than selecting a winner here."
+        });
+        return;
+    }
+
+    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+
+    if (!completedMatch) {
+        res.json({ success: false, message: "Could not resolve this match - it may have changed state. Reload and try again." });
+        return;
+    }
+
+    await supabase
+        .from("match_verifications")
+        .update({
+            status: "resolved_by_admin",
+            resolution_method: "admin",
+            resolved_by_admin_username: req.username,
+            resolved_at: Date.now(),
+            winner_username: winnerUsername,
+            queue_tag: null
+        })
+        .eq("id", verificationId);
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "resolve_match_verification",
+            target_username: winnerUsername,
+            amount: Number(match.entry_fee) * 2,
+            notes: "match_verification #" + verificationId + " (match #" + match.id + ")",
+            created_at: Date.now()
+        });
+
+    await logMatchVerificationEvent(verificationId, "resolved", {
+        actorUsername: req.username,
+        winnerUsername: winnerUsername,
+        resolutionMethod: "admin",
+        details: "admin selected winner"
+    });
+
+    res.json({ success: true, message: "Match resolved." });
+});
+
+// Combined "forfeiture + ban" penalty (see chat) - for the Disputes &
+// Cheating queue specifically, when an admin has confirmed a rules
+// violation (e.g. the creator never set up match settings correctly) and
+// wants to both forfeit the match to the other player AND ban the
+// offending account in one action, rather than two separate clicks that
+// might not both happen.
+//
+// Deliberately invents nothing new for either half: "forfeit" reuses the
+// exact same completeMaddenMatch payout recipe every other resolution path
+// in this file uses (agreement/bot/plain admin resolve above all call it -
+// selecting the non-offending player as winner IS what a forfeiture is,
+// there is no separate forfeiture-specific money movement anywhere on this
+// platform to reuse instead), and "ban" reuses banUserAccount, the exact
+// same function POST /api/admin/users/:username/ban calls. No new
+// forfeiture or ban mechanism is introduced here - just composing the two
+// that already exist into one admin action, with one shared reason and one
+// audit trail entry tying them together.
+app.post("/api/admin/match-verifications/:id/forfeit-and-ban", requireAdminSession, async function (req, res) {
+    const verificationId = Number(req.params.id);
+    const offendingUsername = req.body.offendingUsername;
+    const reason = (req.body.reason || "").trim();
+
+    if (!reason) {
+        res.json({ success: false, message: "A reason is required to forfeit and ban." });
+        return;
+    }
+
+    const verificationResult = await supabase
+        .from("match_verifications")
+        .select("*")
+        .eq("id", verificationId)
+        .maybeSingle();
+
+    if (!verificationResult.data) {
+        res.json({ success: false, message: "Verification record not found." });
+        return;
+    }
+
+    const verification = verificationResult.data;
+
+    if (verification.status === "resolved_by_admin" || verification.status === "auto_resolved") {
+        res.json({ success: false, message: "This match has already been resolved." });
+        return;
+    }
+
+    const matchResult = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", verification.match_id)
+        .maybeSingle();
+
+    if (!matchResult.data) {
+        res.json({ success: false, message: "Underlying match not found." });
+        return;
+    }
+
+    const match = matchResult.data;
+
+    if (offendingUsername !== match.creator_username && offendingUsername !== match.opponent_username) {
+        res.json({ success: false, message: "Offending player must be one of the two players in this match." });
+        return;
+    }
+
+    // Same non-reversal safety guard as the plain resolve endpoint above -
+    // an already-paid-out match needs the Disputes tab's refund/award/
+    // manual tools, not this action.
+    if (match.status === "Completed") {
+        res.json({
+            success: false,
+            message: "This match was already paid out before this review. Use the Disputes tab's refund/award/manual tools to correct it, rather than forfeiting it here."
+        });
+        return;
+    }
+
+    const winnerUsername = offendingUsername === match.creator_username
+        ? match.opponent_username
+        : match.creator_username;
+
+    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+
+    if (!completedMatch) {
+        res.json({ success: false, message: "Could not resolve this match - it may have changed state. Reload and try again." });
+        return;
+    }
+
+    await supabase
+        .from("match_verifications")
+        .update({
+            status: "resolved_by_admin",
+            resolution_method: "admin",
+            resolved_by_admin_username: req.username,
+            resolved_at: Date.now(),
+            winner_username: winnerUsername,
+            queue_tag: null
+        })
+        .eq("id", verificationId);
+
+    const banResult = await banUserAccount(offendingUsername, reason, req.username);
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "resolve_match_verification",
+            target_username: winnerUsername,
+            amount: Number(match.entry_fee) * 2,
+            notes: "forfeit_and_ban: match_verification #" + verificationId + " (match #" + match.id + ") - " + reason,
+            created_at: Date.now()
+        });
+
+    await logMatchVerificationEvent(verificationId, "penalty_applied", {
+        actorUsername: req.username,
+        winnerUsername: winnerUsername,
+        resolutionMethod: "admin",
+        details: offendingUsername + " forfeited and banned - " + reason +
+            (banResult.success ? "" : " (ban failed: " + banResult.message + ")")
+    });
+
+    res.json({
+        success: true,
+        message: banResult.success
+            ? "Match forfeited to " + winnerUsername + " and " + offendingUsername + " has been banned."
+            : "Match forfeited to " + winnerUsername + ", but the ban failed: " + banResult.message
+    });
+});
+
+// Minimal ban primitive (see chat - nothing like this existed before this
+// ticket). Mirrors the users.is_active deactivation pattern already
+// enforced in requireAuth/POST /api/login, just admin-triggered instead of
+// self-service.
+//
+// Factored out of POST /api/admin/users/:username/ban so the Madden
+// forfeit-and-ban penalty (below) reuses this exact ban mechanism instead
+// of a second, parallel one - "route it through existing ban logic" (see
+// chat) means this function, not a copy of its body.
+async function banUserAccount(targetUsername, reason, adminUsername) {
+    const result = await supabase
+        .from("users")
+        .update({
+            is_banned: true,
+            ban_reason: reason,
+            banned_at: Date.now(),
+            banned_by_admin_username: adminUsername
+        })
+        .eq("username", targetUsername)
+        .select()
+        .single();
+
+    if (result.error || !result.data) {
+        return { success: false, message: "Could not ban this user." };
+    }
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: adminUsername,
+            action_type: "ban_user",
+            target_username: targetUsername,
+            amount: 0,
+            notes: reason,
+            created_at: Date.now()
+        });
+
+    return { success: true, message: targetUsername + " has been banned." };
+}
+
+app.post("/api/admin/users/:username/ban", requireAdminSession, async function (req, res) {
+    const targetUsername = req.params.username;
+    const reason = (req.body.reason || "").trim();
+
+    if (!reason) {
+        res.json({ success: false, message: "A ban reason is required." });
+        return;
+    }
+
+    const result = await banUserAccount(targetUsername, reason, req.username);
+
+    res.json(result);
+});
+
+app.post("/api/admin/users/:username/unban", requireAdminSession, async function (req, res) {
+    const targetUsername = req.params.username;
+
+    const result = await supabase
+        .from("users")
+        .update({
+            is_banned: false,
+            ban_reason: null,
+            banned_at: null,
+            banned_by_admin_username: null
+        })
+        .eq("username", targetUsername)
+        .select()
+        .single();
+
+    if (result.error || !result.data) {
+        res.json({ success: false, message: "Could not unban this user." });
+        return;
+    }
+
+    await supabase
+        .from("admin_actions")
+        .insert({
+            admin_username: req.username,
+            action_type: "unban_user",
+            target_username: targetUsername,
+            amount: 0,
+            notes: "",
+            created_at: Date.now()
+        });
+
+    res.json({ success: true, message: targetUsername + " has been unbanned." });
 });
 
 app.get("/api/admin/users/search", requireAdminSession, async function (req, res) {

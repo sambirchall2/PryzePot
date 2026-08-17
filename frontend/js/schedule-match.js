@@ -28,7 +28,8 @@ const entryFee = Number(localStorage.getItem("entryFee")) || 0;
 
 const GAME_LABELS = {
     clash: "Clash Royale",
-    chess: "Chess.com"
+    chess: "Chess.com",
+    madden: "Madden NFL"
 };
 
 if (!createGame) {
@@ -311,6 +312,11 @@ if (confirmBtn) {
         if (createGame === "chess") {
             payload.game = "Chess.com";
             payload.playerTag = getChessUsername();
+        } else if (createGame === "madden") {
+            payload.game = "Madden NFL";
+            payload.playerTag = localStorage.getItem("maddenEaName");
+            payload.platform = localStorage.getItem("maddenPlatform");
+            payload.skillDifficulty = localStorage.getItem("maddenSkillDifficulty");
         } else {
             payload.playerTag = localStorage.getItem("clashPlayerTag");
             payload.friendLink = getClashFriendLink();
