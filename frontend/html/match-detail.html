@@ -64,7 +64,35 @@
             <section id="stakingSection" class="detail-card hidden">
                 <h2>Staking</h2>
 
-                <div class="stake-breakdown">
+                <div id="offerActionWrap" class="stake-form-wrap hidden">
+                    <label class="stake-amount-label" for="offerActionAmountInput" id="offerActionAmountLabel"></label>
+
+                    <div class="stake-amount-row">
+                        <div class="stake-amount-input-wrap">
+                            <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                            <input
+                                type="number"
+                                id="offerActionAmountInput"
+                                class="stake-amount-input"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="0.00"
+                                inputmode="decimal"
+                            >
+                        </div>
+
+                        <span id="offerActionPercentLabel" class="stake-percent-label"></span>
+                    </div>
+
+                    <p id="offerActionError" class="stake-error hidden"></p>
+                    <p id="offerActionRemainingLine" class="stake-remaining-line"></p>
+
+                    <button id="offerActionBtn" class="main-btn" disabled>
+                        OFFER ACTION
+                    </button>
+                </div>
+
+                <div id="stakeBreakdownWrap" class="stake-breakdown hidden">
                     <div class="stake-breakdown-row">
                         <span>Total Entry Fee</span>
                         <strong id="stakeTotalEntry"></strong>
@@ -190,20 +218,23 @@
                 <h2>Join This Tournament</h2>
                 <p>Take an open slot in this bracket.</p>
 
-                <label class="stake-toggle-row" for="tJoinStakeToggle">
-                    <input type="checkbox" id="tJoinStakeToggle">
-                    <span>Enable staking for your entry</span>
-                </label>
+                <button id="tJoinBtn" class="main-btn">
+                    CONFIRM &amp; JOIN
+                </button>
+            </section>
 
-                <div id="tJoinStakeSection" class="join-stake-section">
-                    <label class="stake-amount-label" id="tJoinStakeAmountLabel"></label>
+            <section id="tStakingSection" class="detail-card hidden">
+                <h2>Staking</h2>
+
+                <div id="tOfferActionWrap" class="stake-form-wrap hidden">
+                    <label class="stake-amount-label" id="tOfferActionAmountLabel"></label>
 
                     <div class="stake-amount-row">
                         <div class="stake-amount-input-wrap">
                             <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
                             <input
                                 type="number"
-                                id="tJoinStakeAmountInput"
+                                id="tOfferActionAmountInput"
                                 class="stake-amount-input"
                                 min="0.01"
                                 step="0.01"
@@ -212,19 +243,16 @@
                             >
                         </div>
 
-                        <span id="tJoinStakePercentLabel" class="stake-percent-label"></span>
+                        <span id="tOfferActionPercentLabel" class="stake-percent-label"></span>
                     </div>
 
-                    <p id="tJoinStakeError" class="stake-error hidden"></p>
+                    <p id="tOfferActionError" class="stake-error hidden"></p>
+
+                    <button id="tOfferActionBtn" class="main-btn" disabled>
+                        OFFER ACTION
+                    </button>
                 </div>
 
-                <button id="tJoinBtn" class="main-btn">
-                    CONFIRM &amp; JOIN
-                </button>
-            </section>
-
-            <section id="tStakingSection" class="detail-card hidden">
-                <h2>Staking</h2>
                 <div id="tStakingList" class="tournament-staking-list"></div>
             </section>
 

@@ -63,10 +63,12 @@ function showReadyPopup(match, isCreator) {
 
 if (readyPopupCloseBtn) {
     readyPopupCloseBtn.addEventListener("click", function () {
-        // Once setup is ready both players move on to reporting how the
-        // match went (see chat) - currentMatchId is already set by
-        // whichever step got them here (join, or the launch redirect).
-        window.location.href = "report-result.html";
+        // Setup being ready no longer sends both players straight to
+        // reporting how the match went - it returns to match-room.html's
+        // Final Check screen (team picks, EA names, staking, Begin Match)
+        // and THAT page is what eventually sends them on to
+        // report-result.html, once both hit Ready (see chat).
+        window.location.href = "match-room.html";
     });
 }
 

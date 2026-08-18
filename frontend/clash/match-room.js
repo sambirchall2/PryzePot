@@ -14,6 +14,169 @@ const instructionsCard = document.getElementById("instructionsCard");
 const openClashBtn = document.getElementById("openClashBtn");
 const verifyBtn = document.getElementById("verifyBtn");
 
+const offerActionCard = document.getElementById("offerActionCard");
+const offerActionStatusLine = document.getElementById("offerActionStatusLine");
+const offerActionWrap = document.getElementById("offerActionWrap");
+const offerActionAmountLabel = document.getElementById("offerActionAmountLabel");
+const offerActionAmountInput = document.getElementById("offerActionAmountInput");
+const offerActionPercentLabel = document.getElementById("offerActionPercentLabel");
+const offerActionError = document.getElementById("offerActionError");
+const offerActionBtn = document.getElementById("offerActionBtn");
+
+const readyCard = document.getElementById("readyCard");
+const readyStatusLine = document.getElementById("readyStatusLine");
+const readyBtn = document.getElementById("readyBtn");
+
+function formatPercent(percent) {
+    const rounded = Math.round(percent * 10) / 10;
+    return (Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)) + "%";
+}
+
+function getOfferActionError(match) {
+    const raw = offerActionAmountInput.value;
+
+    if (raw === "") return "Enter a stake amount.";
+
+    const amount = Number(raw);
+    const entryFee = Number(match.entryFee);
+
+    if (isNaN(amount)) return "Enter a valid Vault Credits amount.";
+    if (amount <= 0) return "Stake must be more than 0 Vault Credits.";
+    if (amount > entryFee) return "Stake can't exceed " + entryFee.toFixed(2) + " Vault Credits.";
+    if (amount < entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + (entryFee * 0.25).toFixed(2) + " Vault Credits.";
+
+    return "";
+}
+
+function refreshOfferActionUI(match) {
+    const raw = offerActionAmountInput.value;
+    const error = raw === "" ? "" : getOfferActionError(match);
+
+    offerActionError.textContent = error;
+    offerActionError.classList.toggle("hidden", !error);
+
+    const validAmount = raw !== "" && error === "";
+    offerActionBtn.disabled = !validAmount;
+
+    if (offerActionPercentLabel) {
+        const displayAmount = validAmount ? Number(raw) : 0;
+        const percent = Number(match.entryFee) > 0 ? (displayAmount / Number(match.entryFee)) * 100 : 0;
+        offerActionPercentLabel.textContent = displayAmount.toFixed(2) + " (" + formatPercent(percent) + ")";
+    }
+}
+
+function updateOfferActionSection(match) {
+    const isCreator = currentUsername === match.creatorUsername;
+    const canOffer = isCreator && !match.matchStartedAt &&
+        ["Waiting for opponent", "Match ready"].includes(match.status);
+
+    if (!isCreator) {
+        offerActionCard.classList.add("hidden");
+        return;
+    }
+
+    offerActionCard.classList.remove("hidden");
+
+    if (match.stakingEnabled) {
+        offerActionStatusLine.textContent = "You've offered action on this match - others can stake on it.";
+        offerActionWrap.classList.add("hidden");
+        return;
+    }
+
+    if (!canOffer) {
+        offerActionStatusLine.textContent = "Staking is closed for this match.";
+        offerActionWrap.classList.add("hidden");
+        return;
+    }
+
+    offerActionStatusLine.textContent = "";
+    offerActionWrap.classList.remove("hidden");
+    offerActionAmountLabel.innerHTML =
+        "How much of your <img class=\"coin-icon\" src=\"../assets/p-coin-small.png\">" +
+        Number(match.entryFee).toFixed(2) + " entry are you putting up?";
+    refreshOfferActionUI(match);
+}
+
+offerActionAmountInput.addEventListener("input", function () {
+    if (currentMatch) refreshOfferActionUI(currentMatch);
+});
+
+offerActionBtn.addEventListener("click", function () {
+    if (offerActionBtn.disabled) return;
+
+    offerActionBtn.disabled = true;
+    offerActionBtn.textContent = "OFFERING...";
+
+    apiFetch("/api/matches/" + currentMatchId + "/offer-action", {
+        method: "POST",
+        body: JSON.stringify({ amount: Number(offerActionAmountInput.value) })
+    })
+        .then(function (data) {
+            if (!data.success) {
+                showToast(data.message || "Could not offer action.", "error");
+                offerActionBtn.disabled = false;
+                offerActionBtn.textContent = "OFFER ACTION";
+                return;
+            }
+
+            showToast("Action offered - others can now stake on your entry.", "success");
+            loadMatchRoom();
+        })
+        .catch(function (error) {
+            console.log("OFFER ACTION ERROR:", error);
+            showToast("Could not offer action. Make sure your backend server is running.", "error");
+            offerActionBtn.disabled = false;
+            offerActionBtn.textContent = "OFFER ACTION";
+        });
+});
+
+function updateReadySection(match) {
+    if (!match.opponentUsername || match.status !== "Match ready") {
+        readyCard.classList.add("hidden");
+        return;
+    }
+
+    if (match.matchStartedAt) {
+        readyCard.classList.add("hidden");
+        return;
+    }
+
+    readyCard.classList.remove("hidden");
+
+    const isCreator = currentUsername === match.creatorUsername;
+    const myReady = isCreator ? match.creatorReadyAt : match.opponentReadyAt;
+    const otherReady = isCreator ? match.opponentReadyAt : match.creatorReadyAt;
+
+    readyBtn.textContent = myReady ? "UNREADY" : "READY";
+    readyStatusLine.textContent = otherReady
+        ? "Your opponent is ready - waiting on you."
+        : "Waiting on both players to hit ready.";
+}
+
+readyBtn.addEventListener("click", function () {
+    if (!currentMatchId) return;
+
+    readyBtn.disabled = true;
+
+    apiFetch("/api/matches/" + currentMatchId + "/ready", { method: "POST" })
+        .then(function (data) {
+            readyBtn.disabled = false;
+
+            if (!data.success) {
+                showToast(data.message || "Could not update ready status.", "error");
+                return;
+            }
+
+            currentMatch = data.match;
+            updateRoomState(currentMatch);
+        })
+        .catch(function (error) {
+            console.log("READY ERROR:", error);
+            readyBtn.disabled = false;
+            showToast("Could not update ready status. Make sure your backend server is running.", "error");
+        });
+});
+
 const currentMatchId = localStorage.getItem("currentMatchId");
 const currentUsername = localStorage.getItem("username");
 
@@ -143,8 +306,13 @@ if (lastPlayerTwoUsername !== match.opponentUsername) {
         openClashBtn.disabled = false;
         openClashBtn.textContent = "ADD OPPONENT IN CLASH";
 
-        verifyBtn.disabled = false;
-        verifyBtn.textContent = "VERIFY MATCH";
+        if (match.matchStartedAt) {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = "VERIFY MATCH";
+        } else {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = "BOTH PLAYERS MUST BE READY";
+        }
     } else {
         statusBadge.textContent = "Searching For Opponent";
         statusBadge.classList.add("waiting");
@@ -162,6 +330,8 @@ if (lastPlayerTwoUsername !== match.opponentUsername) {
         verifyBtn.textContent = "WAITING FOR OPPONENT";
     }
 
+    updateOfferActionSection(match);
+    updateReadySection(match);
     updateTimer();
 }
 

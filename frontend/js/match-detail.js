@@ -24,6 +24,16 @@ const cancelSection = document.getElementById("cancelSection");
 const cancelMatchBtn = document.getElementById("cancelMatchBtn");
 
 const stakingSection = document.getElementById("stakingSection");
+
+const offerActionWrap = document.getElementById("offerActionWrap");
+const offerActionAmountLabel = document.getElementById("offerActionAmountLabel");
+const offerActionAmountInput = document.getElementById("offerActionAmountInput");
+const offerActionPercentLabel = document.getElementById("offerActionPercentLabel");
+const offerActionError = document.getElementById("offerActionError");
+const offerActionRemainingLine = document.getElementById("offerActionRemainingLine");
+const offerActionBtn = document.getElementById("offerActionBtn");
+
+const stakeBreakdownWrap = document.getElementById("stakeBreakdownWrap");
 const stakeTotalEntry = document.getElementById("stakeTotalEntry");
 const stakeCreatorLabel = document.getElementById("stakeCreatorLabel");
 const stakeCreatorAmount = document.getElementById("stakeCreatorAmount");
@@ -128,6 +138,7 @@ function normalizeRealMatch(data) {
             return { username: stake.username, amount: Number(stake.amount), status: stake.status || "held" };
         }),
         fallbackResolved: !!match.stakeResolvedAt,
+        matchStartedAt: match.matchStartedAt,
         status: match.status,
         winnerUsername: match.winnerUsername,
         payouts: (data.payouts || []).map(function (payout) {
@@ -458,6 +469,111 @@ function refreshStakingForm() {
     if (detailConfirmStakeBtn) detailConfirmStakeBtn.disabled = !validAmount;
 }
 
+// Staking is no longer configured at creation time - it's offered
+// afterward, by the creator, any time before the match begins (see
+// POST /api/matches/:id/ready, which stamps matchStartedAt and closes this
+// window for good). This renders the "OFFER ACTION" form when nobody has
+// offered yet; refreshOfferActionUI (below) drives its validation/percent
+// display.
+function renderOfferActionSection() {
+    if (!offerActionWrap) return false;
+
+    const isCreator = currentUsername === currentMatch.creatorUsername;
+    const canOffer = isCreator && !currentMatch.matchStartedAt &&
+        ["Waiting for opponent", "Match ready"].includes(currentMatch.status);
+
+    if (!canOffer) {
+        offerActionWrap.classList.add("hidden");
+        return false;
+    }
+
+    offerActionWrap.classList.remove("hidden");
+    offerActionAmountLabel.innerHTML =
+        "How much of your " + coinHtml(currentMatch.entryFee) + " entry are you putting up?";
+    refreshOfferActionUI();
+    return true;
+}
+
+function getOfferActionError() {
+    const raw = offerActionAmountInput.value;
+
+    if (raw === "") return "Enter a stake amount.";
+
+    const amount = Number(raw);
+
+    if (isNaN(amount)) return "Enter a valid Vault Credits amount.";
+    if (amount <= 0) return "Stake must be more than 0 Vault Credits.";
+    if (amount > currentMatch.entryFee) return "Stake can't exceed " + currentMatch.entryFee.toFixed(2) + " Vault Credits.";
+    if (amount < currentMatch.entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + (currentMatch.entryFee * 0.25).toFixed(2) + " Vault Credits.";
+
+    return "";
+}
+
+function refreshOfferActionUI() {
+    const raw = offerActionAmountInput.value;
+    const error = raw === "" ? "" : getOfferActionError();
+
+    if (offerActionError) {
+        offerActionError.textContent = error;
+        offerActionError.classList.toggle("hidden", !error);
+    }
+
+    const validAmount = raw !== "" && error === "";
+    const displayAmount = validAmount ? Number(raw) : 0;
+    const percent = pctOfEntry(displayAmount);
+    const remaining = Math.max(currentMatch.entryFee - displayAmount, 0);
+
+    if (offerActionPercentLabel) {
+        offerActionPercentLabel.textContent = displayAmount.toFixed(2) + " (" + formatPercent(percent) + ")";
+    }
+
+    if (offerActionRemainingLine) {
+        offerActionRemainingLine.innerHTML =
+            coinHtml(displayAmount) + " of your " + coinHtml(currentMatch.entryFee) + " entry — " +
+            coinHtml(remaining) + " will be open for others to stake";
+    }
+
+    if (offerActionBtn) offerActionBtn.disabled = !validAmount;
+}
+
+if (offerActionAmountInput) {
+    offerActionAmountInput.addEventListener("input", refreshOfferActionUI);
+}
+
+if (offerActionBtn) {
+    offerActionBtn.addEventListener("click", function () {
+        if (offerActionBtn.disabled) return;
+
+        offerActionBtn.disabled = true;
+        offerActionBtn.textContent = "OFFERING...";
+
+        apiFetch("/api/matches/" + matchId + "/offer-action", {
+            method: "POST",
+            body: JSON.stringify({ amount: Number(offerActionAmountInput.value) })
+        })
+            .then(function (data) {
+                if (!data.success) {
+                    showToast(data.message || "Could not offer action.", "error");
+
+                    offerActionBtn.disabled = false;
+                    offerActionBtn.textContent = "OFFER ACTION";
+                    return;
+                }
+
+                showToast("Action offered - others can now stake on your entry.", "success");
+                loadMatch();
+            })
+            .catch(function (error) {
+                console.log("OFFER ACTION ERROR:", error);
+
+                showToast("Could not offer action. Make sure your backend server is running.", "error");
+
+                offerActionBtn.disabled = false;
+                offerActionBtn.textContent = "OFFER ACTION";
+            });
+    });
+}
+
 function renderStakingSection() {
     if (!stakingSection) return;
 
@@ -465,11 +581,22 @@ function renderStakingSection() {
     // takes over showing who owned what share and what they were owed -
     // there's no more staking to do, and the "still open to stake" framing
     // no longer makes sense.
-    if (!currentMatch.stakingEnabled || currentMatch.status === "Completed") {
+    if (currentMatch.status === "Completed") {
         stakingSection.classList.add("hidden");
         return;
     }
 
+    if (!currentMatch.stakingEnabled) {
+        const showingOffer = renderOfferActionSection();
+        if (stakeBreakdownWrap) stakeBreakdownWrap.classList.add("hidden");
+        stakeFormWrap.classList.add("hidden");
+        stakeResolvedNote.classList.add("hidden");
+        stakingSection.classList.toggle("hidden", !showingOffer);
+        return;
+    }
+
+    if (offerActionWrap) offerActionWrap.classList.add("hidden");
+    if (stakeBreakdownWrap) stakeBreakdownWrap.classList.remove("hidden");
     stakingSection.classList.remove("hidden");
 
     const b = getStakeBreakdown(currentMatch);

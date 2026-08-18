@@ -27,51 +27,6 @@
         </div>
 
         <section class="schedule-section">
-
-            <label class="stake-toggle-row" for="stakeToggle">
-                <input type="checkbox" id="stakeToggle">
-                <span>Enable staking for this match</span>
-            </label>
-
-            <div id="stakeSection" class="stake-section">
-
-                <label class="stake-amount-label" for="stakeAmountInput">
-                    How much of your <span id="stakeEntryFeeLabel" class="stake-entry-fee-label"></span> entry are you putting up?
-                </label>
-
-                <div class="stake-amount-row">
-                    <div class="stake-amount-input-wrap">
-                        <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
-                        <input
-                            type="number"
-                            id="stakeAmountInput"
-                            class="stake-amount-input"
-                            min="0.01"
-                            step="0.01"
-                            placeholder="0.00"
-                            inputmode="decimal"
-                        >
-                    </div>
-
-                    <span id="stakePercentLabel" class="stake-percent-label">0 (0%)</span>
-                </div>
-
-                <p id="stakeError" class="stake-error hidden"></p>
-
-                <p id="stakeRemainingLine" class="stake-remaining-line"></p>
-
-                <div id="stakeDisclaimer" class="stake-disclaimer hidden">
-                    <span class="stake-disclaimer-icon">⚠</span>
-                    <span>
-                        If the remaining <strong id="stakeDisclaimerAmount"></strong> isn't staked by other players before the match starts, you're responsible for covering the full entry fee yourself.
-                    </span>
-                </div>
-
-            </div>
-
-        </section>
-
-        <section class="schedule-section">
             <label class="schedule-datetime-label">When do you want to play?</label>
 
             <div class="datetime-field">

@@ -17,6 +17,10 @@ const verifyMatchBtn = document.getElementById("verifyMatchBtn");
 const advanceModal = document.getElementById("advanceModal");
 const advanceContinueBtn = document.getElementById("advanceContinueBtn");
 
+const readyCard = document.getElementById("readyCard");
+const readyStatusLine = document.getElementById("readyStatusLine");
+const readyBtn = document.getElementById("readyBtn");
+
 const currentTournamentId = localStorage.getItem("currentTournamentId");
 const currentTournamentMatchId = localStorage.getItem("currentTournamentMatchId");
 const username = localStorage.getItem("username");
@@ -214,11 +218,49 @@ async function renderTournamentMatch(match, tournamentSize) {
     if (match.status === "Completed") {
         verifyMatchBtn.textContent = "MATCH COMPLETE";
         verifyMatchBtn.disabled = true;
+        readyCard.classList.add("hidden");
+    } else if (!match.started_at) {
+        verifyMatchBtn.textContent = "BOTH PLAYERS MUST BE READY";
+        verifyMatchBtn.disabled = true;
+        readyCard.classList.remove("hidden");
+
+        const isPlayerOne = username === match.player_one;
+        const myReady = isPlayerOne ? match.player_one_ready_at : match.player_two_ready_at;
+        const otherReady = isPlayerOne ? match.player_two_ready_at : match.player_one_ready_at;
+
+        readyBtn.textContent = myReady ? "UNREADY" : "READY";
+        readyStatusLine.textContent = otherReady
+            ? "Your opponent is ready - waiting on you."
+            : "Waiting on both players to hit ready.";
     } else {
         verifyMatchBtn.textContent = "VERIFY MATCH";
         verifyMatchBtn.disabled = false;
+        readyCard.classList.add("hidden");
     }
 }
+
+readyBtn.addEventListener("click", function () {
+    if (!currentTournamentMatchId) return;
+
+    readyBtn.disabled = true;
+
+    apiFetch("/api/tournament-matches/" + currentTournamentMatchId + "/ready", { method: "POST" })
+        .then(function (data) {
+            readyBtn.disabled = false;
+
+            if (!data.success) {
+                alert(data.message || "Could not update ready status.");
+                return;
+            }
+
+            loadTournamentMatch();
+        })
+        .catch(function (error) {
+            console.log("TOURNAMENT MATCH READY ERROR:", error);
+            readyBtn.disabled = false;
+            alert("Could not update ready status.");
+        });
+});
 
 function loadTournamentMatch() {
     apiFetch("/api/tournaments/" + currentTournamentId)

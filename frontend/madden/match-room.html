@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="match-room.css">
     <link rel="stylesheet" href="../css/profile-system.css">
     <link rel="stylesheet" href="../css/coin-icon.css">
+    <link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/schedule-match.css">
 </head>
 
 <body>
@@ -77,9 +79,68 @@
         WAITING FOR OPPONENT
     </button>
 
+    <section id="finalCheckCard" class="instructions-card hidden">
+
+        <h2>Final Check</h2>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Your Team</span>
+                <strong id="myTeamDisplay">—</strong>
+            </div>
+            <div class="info-pill">
+                <span>Opponent's Team</span>
+                <strong id="opponentTeamDisplay">—</strong>
+            </div>
+        </div>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Your EA Name</span>
+                <strong id="myEaNameDisplay">—</strong>
+            </div>
+            <div class="info-pill">
+                <span>Opponent's EA Name</span>
+                <strong id="opponentEaNameDisplay">—</strong>
+            </div>
+        </div>
+
+        <div id="offerActionCard">
+            <h2>Staking</h2>
+            <p id="offerActionStatusLine"></p>
+
+            <div id="offerActionWrap" class="stake-form-wrap hidden">
+                <label class="stake-amount-label" for="offerActionAmountInput" id="offerActionAmountLabel"></label>
+
+                <div class="stake-amount-row">
+                    <div class="stake-amount-input-wrap">
+                        <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                        <input type="number" id="offerActionAmountInput" class="stake-amount-input" min="0.01" step="0.01" placeholder="0.00" inputmode="decimal">
+                    </div>
+                    <span id="offerActionPercentLabel" class="stake-percent-label"></span>
+                </div>
+
+                <p id="offerActionError" class="stake-error hidden"></p>
+
+                <button id="offerActionBtn" class="secondary-btn" disabled>OFFER ACTION</button>
+            </div>
+        </div>
+
+        <h2>Begin Match</h2>
+        <p>
+            Only hit ready once the rules are set up correctly, you've both found each
+            other in Madden using the EA names above, and you're both actually ready to
+            start the game. If that isn't the case yet, don't hit ready.
+        </p>
+        <p id="readyStatusLine"></p>
+        <button id="readyBtn" class="main-btn">READY</button>
+
+    </section>
+
 </main>
 
 <script src="../js/api.js"></script>
+<script src="../js/toast.js"></script>
 <script src="../js/profile-system.js"></script>
 <script src="match-room.js"></script>
 

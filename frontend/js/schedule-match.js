@@ -4,16 +4,6 @@ const subtitle = document.getElementById("subtitle");
 const tournamentContext = document.getElementById("tournamentContext");
 const tournamentContextValue = document.getElementById("tournamentContextValue");
 
-const stakeToggle = document.getElementById("stakeToggle");
-const stakeSection = document.getElementById("stakeSection");
-const stakeEntryFeeLabel = document.getElementById("stakeEntryFeeLabel");
-const stakeAmountInput = document.getElementById("stakeAmountInput");
-const stakePercentLabel = document.getElementById("stakePercentLabel");
-const stakeError = document.getElementById("stakeError");
-const stakeRemainingLine = document.getElementById("stakeRemainingLine");
-const stakeDisclaimer = document.getElementById("stakeDisclaimer");
-const stakeDisclaimerAmount = document.getElementById("stakeDisclaimerAmount");
-
 const scheduleDate = document.getElementById("scheduleDate");
 const scheduleHour = document.getElementById("scheduleHour");
 const scheduleMinute = document.getElementById("scheduleMinute");
@@ -54,85 +44,6 @@ if (subtitle) {
 if (isTournament && tournamentContext && tournamentContextValue) {
     tournamentContextValue.textContent = tournamentSize + " Players";
     tournamentContext.classList.remove("hidden");
-}
-
-if (stakeEntryFeeLabel) {
-    stakeEntryFeeLabel.innerHTML = coinHtml(entryFee) + " Vault Credits";
-}
-
-function coinHtml(amount) {
-    return '<img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">' +
-        Number(amount || 0).toFixed(2);
-}
-
-function formatPercent(percent) {
-    const rounded = Math.round(percent * 10) / 10;
-    const text = Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
-
-    return text + "%";
-}
-
-function getStakeAmount() {
-    const raw = stakeAmountInput.value;
-
-    if (raw === "") return null;
-
-    const amount = Number(raw);
-
-    return isNaN(amount) ? null : amount;
-}
-
-function getStakeError() {
-    const raw = stakeAmountInput.value;
-
-    if (raw === "") return "Enter a stake amount.";
-
-    const amount = Number(raw);
-
-    if (isNaN(amount)) return "Enter a valid Vault Credits amount.";
-    if (amount <= 0) return "Stake must be more than 0 Vault Credits.";
-    if (amount > entryFee) return "Stake can't exceed " + entryFee.toFixed(2) + " Vault Credits.";
-    if (amount < entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + (entryFee * 0.25).toFixed(2) + " Vault Credits.";
-
-    return "";
-}
-
-function isStakeValid() {
-    return stakeToggle.checked && getStakeError() === "";
-}
-
-function refreshStakeUI() {
-    const raw = stakeAmountInput.value;
-    const error = raw === "" ? "" : getStakeError();
-
-    if (stakeError) {
-        stakeError.textContent = error;
-        stakeError.classList.toggle("hidden", !error);
-    }
-
-    const validAmount = raw !== "" && error === "";
-    const displayAmount = validAmount ? Number(raw) : 0;
-    const percent = entryFee > 0 ? (displayAmount / entryFee) * 100 : 0;
-    const remaining = Math.max(entryFee - displayAmount, 0);
-
-    if (stakePercentLabel) {
-        stakePercentLabel.textContent = displayAmount.toFixed(2) + " (" + formatPercent(percent) + ")";
-    }
-
-    if (stakeRemainingLine) {
-        stakeRemainingLine.innerHTML =
-            coinHtml(displayAmount) + " of your " + coinHtml(entryFee) + " entry — " +
-            coinHtml(remaining) + " will be open for others to stake";
-    }
-
-    const showDisclaimer = validAmount && displayAmount < entryFee;
-
-    if (stakeDisclaimer && stakeDisclaimerAmount) {
-        stakeDisclaimerAmount.innerHTML = coinHtml(remaining);
-        stakeDisclaimer.classList.toggle("hidden", !showDisclaimer);
-    }
-
-    refreshConfirmState();
 }
 
 function toDateInputValue(date) {
@@ -179,14 +90,7 @@ function refreshDateTimeUI() {
         scheduleDateTimeError.classList.toggle("hidden", !isPast);
     }
 
-    refreshConfirmState();
-}
-
-function refreshConfirmState() {
-    const dateOk = isDateTimeValid();
-    const stakeOk = !stakeToggle.checked || isStakeValid();
-
-    confirmBtn.disabled = !(dateOk && stakeOk);
+    confirmBtn.disabled = !isDateTimeValid();
 }
 
 // Rounds up to the next 15-minute mark. Epoch-ms rounding stays aligned
@@ -224,22 +128,6 @@ if (backBtn) {
     });
 }
 
-if (stakeToggle) {
-    stakeToggle.addEventListener("change", function () {
-        stakeSection.classList.toggle("expanded", stakeToggle.checked);
-
-        if (!stakeToggle.checked) {
-            stakeAmountInput.value = "";
-        }
-
-        refreshStakeUI();
-    });
-}
-
-if (stakeAmountInput) {
-    stakeAmountInput.addEventListener("input", refreshStakeUI);
-}
-
 [scheduleDate, scheduleHour, scheduleMinute, scheduleMeridiem].forEach(function (field) {
     if (field) {
         field.addEventListener("change", refreshDateTimeUI);
@@ -254,16 +142,13 @@ if (confirmBtn) {
         confirmBtn.textContent = "SCHEDULING...";
 
         const scheduledTimeMs = getSelectedDateTime().getTime();
-        const stakeAmount = stakeToggle.checked ? getStakeAmount() : null;
 
         if (isTournament) {
             const tournamentPayload = {
                 tournamentSize: Number(tournamentSize),
                 entryFee: entryFee,
                 tournamentType: "scheduled",
-                scheduledTime: scheduledTimeMs,
-                stakingEnabled: stakeToggle.checked,
-                creatorStakeAmount: stakeAmount
+                scheduledTime: scheduledTimeMs
             };
 
             if (createGame === "chess") {
@@ -305,9 +190,7 @@ if (confirmBtn) {
         const payload = {
             entryFee: entryFee,
             matchType: "scheduled",
-            scheduledTime: scheduledTimeMs,
-            stakingEnabled: stakeToggle.checked,
-            creatorStakeAmount: stakeAmount
+            scheduledTime: scheduledTimeMs
         };
 
         if (createGame === "chess") {
@@ -352,5 +235,4 @@ if (confirmBtn) {
     });
 }
 
-refreshStakeUI();
 refreshDateTimeUI();

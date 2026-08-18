@@ -5,6 +5,7 @@ const prizePoolDisplay = document.getElementById("prizePool");
 const playerList = document.getElementById("playerList");
 const statusCard = document.getElementById("statusCard");
 const cancelTournamentBtn = document.getElementById("cancelTournamentBtn");
+const manageStakingBtn = document.getElementById("manageStakingBtn");
 const bracketSection = document.getElementById("bracketSection");
 const bracketList = document.getElementById("bracketList");
 const roundTabs = document.getElementById("roundTabs");
@@ -934,6 +935,20 @@ async function renderTournamentRoom(
             !canCancel
         );
     }
+
+    // Offering/buying action on a joined entry lives on the shared
+    // match-detail.html staking UI (already built there, type-agnostic) -
+    // this just links a joined player over to it rather than duplicating
+    // that whole form a third time in this file.
+    if (manageStakingBtn) {
+        const hasJoined = players.some(function (player) {
+            return player.username === username;
+        });
+
+        const stakingOpen = tournament.status !== "Completed" && tournament.status !== "Cancelled";
+
+        manageStakingBtn.classList.toggle("hidden", !(hasJoined && stakingOpen));
+    }
 }
 
 async function loadTournamentRoom() {
@@ -1041,6 +1056,13 @@ if (cancelTournamentBtn) {
                 false;
         }
     );
+}
+
+if (manageStakingBtn) {
+    manageStakingBtn.addEventListener("click", function () {
+        window.location.href =
+            "../html/match-detail.html?matchId=" + currentTournamentId + "&type=tournament";
+    });
 }
 
 if (advanceContinueBtn) {

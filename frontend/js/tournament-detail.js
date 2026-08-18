@@ -47,16 +47,17 @@
     const tCancelBtn = document.getElementById("tCancelBtn");
 
     const tJoinSection = document.getElementById("tJoinSection");
-    const tJoinStakeToggle = document.getElementById("tJoinStakeToggle");
-    const tJoinStakeSection = document.getElementById("tJoinStakeSection");
-    const tJoinStakeAmountLabel = document.getElementById("tJoinStakeAmountLabel");
-    const tJoinStakeAmountInput = document.getElementById("tJoinStakeAmountInput");
-    const tJoinStakePercentLabel = document.getElementById("tJoinStakePercentLabel");
-    const tJoinStakeError = document.getElementById("tJoinStakeError");
     const tJoinBtn = document.getElementById("tJoinBtn");
 
     const tStakingSection = document.getElementById("tStakingSection");
     const tStakingList = document.getElementById("tStakingList");
+
+    const tOfferActionWrap = document.getElementById("tOfferActionWrap");
+    const tOfferActionAmountLabel = document.getElementById("tOfferActionAmountLabel");
+    const tOfferActionAmountInput = document.getElementById("tOfferActionAmountInput");
+    const tOfferActionPercentLabel = document.getElementById("tOfferActionPercentLabel");
+    const tOfferActionError = document.getElementById("tOfferActionError");
+    const tOfferActionBtn = document.getElementById("tOfferActionBtn");
 
     const tPayoutSection = document.getElementById("tPayoutSection");
     const tPayoutHeading = document.getElementById("tPayoutHeading");
@@ -301,50 +302,10 @@
         tCancelSection.classList.toggle("hidden", !canCancel);
     }
 
-    function refreshJoinStakeForm() {
-        const entryFee = currentTournament.entryFee;
-        const raw = tJoinStakeAmountInput.value;
-        let error = "";
-
-        if (tJoinStakeToggle.checked) {
-            if (raw === "") {
-                error = "Enter a stake amount.";
-            } else {
-                const amount = Number(raw);
-
-                if (isNaN(amount)) error = "Enter a valid amount.";
-                else if (amount <= 0) error = "Stake must be more than 0.";
-                else if (amount > entryFee) error = "Stake can't exceed " + formatCredits(entryFee) + " Vault Credits.";
-                else if (amount < entryFee * 0.25) error = "You must retain at least 25% of your entry - keep at least " + formatCredits(entryFee * 0.25) + " Vault Credits.";
-            }
-        }
-
-        tJoinStakeError.textContent = error;
-        tJoinStakeError.classList.toggle("hidden", !error);
-
-        const validAmount = !tJoinStakeToggle.checked || (raw !== "" && error === "");
-        const displayAmount = (tJoinStakeToggle.checked && raw !== "" && error === "") ? Number(raw) : 0;
-        const percent = pctOf(displayAmount, entryFee);
-
-        if (tJoinStakePercentLabel) {
-            tJoinStakePercentLabel.textContent = tJoinStakeToggle.checked
-                ? formatCredits(displayAmount) + " = " + formatPercent(percent)
-                : "";
-        }
-
-        tJoinBtn.disabled = !validAmount;
-    }
-
     function renderJoinSection(t) {
         if (!tJoinSection) return;
 
-        const canJoin = canCurrentUserJoin(t);
-        tJoinSection.classList.toggle("hidden", !canJoin);
-
-        if (canJoin) {
-            tJoinStakeAmountLabel.innerHTML = coinHtml(t.entryFee) + " max — this becomes your own entry's stake";
-            refreshJoinStakeForm();
-        }
+        tJoinSection.classList.toggle("hidden", !canCurrentUserJoin(t));
     }
 
     function getParticipantBreakdown(entryFee, record) {
@@ -527,14 +488,116 @@
         return card;
     }
 
+    // Staking is no longer configured at join time - a joined participant
+    // offers action on their own entry afterward, any time before the
+    // tournament's first round starts (t.stakeResolvedAt gets stamped the
+    // instant the bracket is built - see createTournamentBracket in
+    // server.js - closing this window for every participant at once,
+    // unlike 1v1 matches which each close individually via their own
+    // Begin Match ready gate).
+    function renderTournamentOfferActionSection(t) {
+        if (!tOfferActionWrap) return false;
+
+        const hasJoined = t.players.indexOf(tCurrentUsername) !== -1;
+        const alreadyOffered = !!(t.staking[tCurrentUsername] && t.staking[tCurrentUsername].enabled);
+        const canOffer = hasJoined && !alreadyOffered && !t.stakeResolvedAt && t.status !== "Completed";
+
+        if (!canOffer) {
+            tOfferActionWrap.classList.add("hidden");
+            return false;
+        }
+
+        tOfferActionWrap.classList.remove("hidden");
+        tOfferActionAmountLabel.innerHTML =
+            "How much of your " + coinHtml(t.entryFee) + " entry are you putting up?";
+        refreshTournamentOfferActionUI(t);
+        return true;
+    }
+
+    function getTournamentOfferActionError(t) {
+        const raw = tOfferActionAmountInput.value;
+
+        if (raw === "") return "Enter a stake amount.";
+
+        const amount = Number(raw);
+        const entryFee = t.entryFee;
+
+        if (isNaN(amount)) return "Enter a valid amount.";
+        if (amount <= 0) return "Stake must be more than 0.";
+        if (amount > entryFee) return "Stake can't exceed " + formatCredits(entryFee) + " Vault Credits.";
+        if (amount < entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + formatCredits(entryFee * 0.25) + " Vault Credits.";
+
+        return "";
+    }
+
+    function refreshTournamentOfferActionUI(t) {
+        const raw = tOfferActionAmountInput.value;
+        const error = raw === "" ? "" : getTournamentOfferActionError(t);
+
+        tOfferActionError.textContent = error;
+        tOfferActionError.classList.toggle("hidden", !error);
+
+        const validAmount = raw !== "" && error === "";
+        const displayAmount = validAmount ? Number(raw) : 0;
+        const percent = pctOf(displayAmount, t.entryFee);
+
+        if (tOfferActionPercentLabel) {
+            tOfferActionPercentLabel.textContent = formatCredits(displayAmount) + " = " + formatPercent(percent);
+        }
+
+        if (tOfferActionBtn) tOfferActionBtn.disabled = !validAmount;
+    }
+
+    if (tOfferActionAmountInput) {
+        tOfferActionAmountInput.addEventListener("input", function () {
+            refreshTournamentOfferActionUI(currentTournament);
+        });
+    }
+
+    if (tOfferActionBtn) {
+        tOfferActionBtn.addEventListener("click", function () {
+            if (tOfferActionBtn.disabled) return;
+
+            tOfferActionBtn.disabled = true;
+            tOfferActionBtn.textContent = "OFFERING...";
+
+            apiFetch("/api/tournaments/" + tMatchId + "/offer-action", {
+                method: "POST",
+                body: JSON.stringify({ amount: Number(tOfferActionAmountInput.value) })
+            })
+                .then(function (data) {
+                    if (!data.success) {
+                        showToast(data.message || "Could not offer action.", "error");
+
+                        tOfferActionBtn.disabled = false;
+                        tOfferActionBtn.textContent = "OFFER ACTION";
+                        return;
+                    }
+
+                    showToast("Action offered - others can now stake on your entry.", "success");
+                    loadTournament();
+                })
+                .catch(function (error) {
+                    console.log("TOURNAMENT OFFER ACTION ERROR:", error);
+
+                    showToast("Could not offer action. Make sure your backend server is running.", "error");
+
+                    tOfferActionBtn.disabled = false;
+                    tOfferActionBtn.textContent = "OFFER ACTION";
+                });
+        });
+    }
+
     function renderStakingSection(t) {
         if (!tStakingSection || !tStakingList) return;
+
+        const showingOffer = renderTournamentOfferActionSection(t);
 
         const stakingUsernames = Object.keys(t.staking || {}).filter(function (username) {
             return t.staking[username] && t.staking[username].enabled && t.players.indexOf(username) !== -1;
         });
 
-        if (stakingUsernames.length === 0 || t.status === "Completed") {
+        if ((stakingUsernames.length === 0 && !showingOffer) || t.status === "Completed") {
             tStakingSection.classList.add("hidden");
             return;
         }
@@ -634,20 +697,6 @@
         refreshStatus();
     }
 
-    if (tJoinStakeToggle) {
-        tJoinStakeToggle.addEventListener("change", function () {
-            tJoinStakeSection.classList.toggle("expanded", tJoinStakeToggle.checked);
-
-            if (!tJoinStakeToggle.checked) tJoinStakeAmountInput.value = "";
-
-            refreshJoinStakeForm();
-        });
-    }
-
-    if (tJoinStakeAmountInput) {
-        tJoinStakeAmountInput.addEventListener("input", refreshJoinStakeForm);
-    }
-
     if (tJoinBtn) {
         tJoinBtn.addEventListener("click", function () {
             if (tJoinBtn.disabled) return;
@@ -670,16 +719,11 @@
             tJoinBtn.disabled = true;
             tJoinBtn.textContent = "JOINING...";
 
-            const stakingEnabled = tJoinStakeToggle.checked;
-            const stakeAmount = stakingEnabled ? Number(tJoinStakeAmountInput.value) : null;
-
             apiFetch("/api/tournaments/" + tMatchId + "/join", {
                 method: "POST",
                 body: JSON.stringify({
                     playerTag: playerTag,
-                    friendLink: friendLink,
-                    stakingEnabled: stakingEnabled,
-                    stakeAmount: stakeAmount
+                    friendLink: friendLink
                 })
             })
                 .then(function (data) {
@@ -692,10 +736,6 @@
                     }
 
                     showToast("You joined the tournament.", "success");
-
-                    tJoinStakeToggle.checked = false;
-                    tJoinStakeSection.classList.remove("expanded");
-                    tJoinStakeAmountInput.value = "";
 
                     loadTournament();
                 })

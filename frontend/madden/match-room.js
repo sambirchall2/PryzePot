@@ -14,6 +14,148 @@ const playerTwoCard = document.getElementById("playerTwoCard");
 const instructionsCard = document.getElementById("instructionsCard");
 const setupMatchBtn = document.getElementById("setupMatchBtn");
 
+const finalCheckCard = document.getElementById("finalCheckCard");
+const myTeamDisplay = document.getElementById("myTeamDisplay");
+const opponentTeamDisplay = document.getElementById("opponentTeamDisplay");
+const myEaNameDisplay = document.getElementById("myEaNameDisplay");
+const opponentEaNameDisplay = document.getElementById("opponentEaNameDisplay");
+
+const offerActionStatusLine = document.getElementById("offerActionStatusLine");
+const offerActionWrap = document.getElementById("offerActionWrap");
+const offerActionAmountLabel = document.getElementById("offerActionAmountLabel");
+const offerActionAmountInput = document.getElementById("offerActionAmountInput");
+const offerActionPercentLabel = document.getElementById("offerActionPercentLabel");
+const offerActionError = document.getElementById("offerActionError");
+const offerActionBtn = document.getElementById("offerActionBtn");
+
+const readyStatusLine = document.getElementById("readyStatusLine");
+const readyBtn = document.getElementById("readyBtn");
+
+function formatPercent(percent) {
+    const rounded = Math.round(percent * 10) / 10;
+    return (Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)) + "%";
+}
+
+function getOfferActionError(match) {
+    const raw = offerActionAmountInput.value;
+
+    if (raw === "") return "Enter a stake amount.";
+
+    const amount = Number(raw);
+    const entryFee = Number(match.entryFee);
+
+    if (isNaN(amount)) return "Enter a valid Vault Credits amount.";
+    if (amount <= 0) return "Stake must be more than 0 Vault Credits.";
+    if (amount > entryFee) return "Stake can't exceed " + entryFee.toFixed(2) + " Vault Credits.";
+    if (amount < entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + (entryFee * 0.25).toFixed(2) + " Vault Credits.";
+
+    return "";
+}
+
+function refreshOfferActionUI(match) {
+    const raw = offerActionAmountInput.value;
+    const error = raw === "" ? "" : getOfferActionError(match);
+
+    offerActionError.textContent = error;
+    offerActionError.classList.toggle("hidden", !error);
+
+    const validAmount = raw !== "" && error === "";
+    offerActionBtn.disabled = !validAmount;
+
+    if (offerActionPercentLabel) {
+        const displayAmount = validAmount ? Number(raw) : 0;
+        const percent = Number(match.entryFee) > 0 ? (displayAmount / Number(match.entryFee)) * 100 : 0;
+        offerActionPercentLabel.textContent = displayAmount.toFixed(2) + " (" + formatPercent(percent) + ")";
+    }
+}
+
+function updateOfferActionSection(match) {
+    const isCreator = username === match.creatorUsername;
+    const canOffer = isCreator && !match.matchStartedAt;
+
+    if (!isCreator) {
+        offerActionStatusLine.textContent = "";
+        offerActionWrap.classList.add("hidden");
+        return;
+    }
+
+    if (match.stakingEnabled) {
+        offerActionStatusLine.textContent = "You've offered action on this match - others can stake on it.";
+        offerActionWrap.classList.add("hidden");
+        return;
+    }
+
+    if (!canOffer) {
+        offerActionStatusLine.textContent = "Staking is closed for this match.";
+        offerActionWrap.classList.add("hidden");
+        return;
+    }
+
+    offerActionStatusLine.textContent = "";
+    offerActionWrap.classList.remove("hidden");
+    offerActionAmountLabel.innerHTML =
+        "How much of your <img class=\"coin-icon\" src=\"../assets/p-coin-small.png\">" +
+        Number(match.entryFee).toFixed(2) + " entry are you putting up?";
+    refreshOfferActionUI(match);
+}
+
+offerActionAmountInput.addEventListener("input", function () {
+    if (currentMatch) refreshOfferActionUI(currentMatch);
+});
+
+offerActionBtn.addEventListener("click", function () {
+    if (offerActionBtn.disabled) return;
+
+    offerActionBtn.disabled = true;
+    offerActionBtn.textContent = "OFFERING...";
+
+    apiFetch("/api/matches/" + currentMatchId + "/offer-action", {
+        method: "POST",
+        body: JSON.stringify({ amount: Number(offerActionAmountInput.value) })
+    })
+        .then(function (data) {
+            if (!data.success) {
+                showToast(data.message || "Could not offer action.", "error");
+                offerActionBtn.disabled = false;
+                offerActionBtn.textContent = "OFFER ACTION";
+                return;
+            }
+
+            showToast("Action offered - others can now stake on your entry.", "success");
+            loadMatchRoom();
+        })
+        .catch(function (error) {
+            console.log("OFFER ACTION ERROR:", error);
+            showToast("Could not offer action. Make sure your backend server is running.", "error");
+            offerActionBtn.disabled = false;
+            offerActionBtn.textContent = "OFFER ACTION";
+        });
+});
+
+readyBtn.addEventListener("click", function () {
+    if (!currentMatchId) return;
+
+    readyBtn.disabled = true;
+
+    apiFetch("/api/matches/" + currentMatchId + "/ready", { method: "POST" })
+        .then(function (data) {
+            readyBtn.disabled = false;
+
+            if (!data.success) {
+                showToast(data.message || "Could not update ready status.", "error");
+                return;
+            }
+
+            currentMatch = data.match;
+            updateRoomState(currentMatch);
+        })
+        .catch(function (error) {
+            console.log("READY ERROR:", error);
+            readyBtn.disabled = false;
+            showToast("Could not update ready status. Make sure your backend server is running.", "error");
+        });
+});
+
 const username = localStorage.getItem("username");
 const currentMatchId = localStorage.getItem("currentMatchId");
 
@@ -160,12 +302,50 @@ function updateRoomState(match) {
         return;
     }
 
-    // Setup already finished (e.g. they left the room and came back later) -
-    // both roles move on to reporting the result from here.
+    // Once setup is finished (both players picked a team), the match
+    // doesn't jump straight to reporting a result anymore - it comes back
+    // here so both players can double check what team they each picked,
+    // see each other's EA name, offer/see staking, and both hit Ready
+    // before report-result.html unlocks (see chat - this is the "Begin
+    // Match" gate, generic across every game via matchStartedAt).
     if (match.setupReadyAt) {
-        window.location.href = "report-result.html";
+        if (match.matchStartedAt) {
+            window.location.href = "report-result.html";
+            return;
+        }
+
+        instructionsCard.classList.add("hidden");
+        setupMatchBtn.classList.add("hidden");
+        finalCheckCard.classList.remove("hidden");
+
+        statusBadge.textContent = "Setup Complete";
+        statusBadge.classList.remove("waiting");
+        statusBadge.classList.add("ready");
+
+        roomTitle.textContent = "Final Check";
+        roomSubtitle.textContent = "Confirm setup, then both hit Ready to begin.";
+
+        const isCreator = match.creatorUsername === username;
+
+        myTeamDisplay.textContent = (isCreator ? match.creatorTeamSelection : match.opponentTeamSelection) || "—";
+        opponentTeamDisplay.textContent = (isCreator ? match.opponentTeamSelection : match.creatorTeamSelection) || "—";
+        myEaNameDisplay.textContent = (isCreator ? match.creatorTag : match.opponentTag) || "—";
+        opponentEaNameDisplay.textContent = (isCreator ? match.opponentTag : match.creatorTag) || "—";
+
+        const myReady = isCreator ? match.creatorReadyAt : match.opponentReadyAt;
+        const otherReady = isCreator ? match.opponentReadyAt : match.creatorReadyAt;
+
+        readyBtn.textContent = myReady ? "UNREADY" : "READY";
+        readyStatusLine.textContent = otherReady
+            ? "Your opponent is ready - waiting on you."
+            : "Waiting on both players to hit ready.";
+
+        updateOfferActionSection(match);
+        updateTimer();
         return;
     }
+
+    finalCheckCard.classList.add("hidden");
 
     if (match.opponentUsername) {
         statusBadge.textContent = "Opponent Found";

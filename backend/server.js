@@ -592,7 +592,11 @@ function dbMatchToFrontend(match) {
         creatorTeamSelection: match.creator_team_selection,
         opponentTeamSelection: match.opponent_team_selection,
         rulesAcknowledgedAt: match.rules_acknowledged_at,
-        setupReadyAt: match.setup_ready_at
+        setupReadyAt: match.setup_ready_at,
+
+        creatorReadyAt: match.creator_ready_at,
+        opponentReadyAt: match.opponent_ready_at,
+        matchStartedAt: match.match_started_at
     };
 }
 
@@ -1227,58 +1231,67 @@ async function startOrExpireScheduledTournaments() {
 // fallback_amount is computed in the same pass once the tournament's
 // scheduled_time passes, and tournaments.stake_resolved_at is stamped so
 // this never re-processes the same tournament twice.
-async function resolveExpiredTournamentStakes() {
-    const now = Date.now();
+// Shared by the cron job below (scheduled tournaments, keyed off
+// scheduled_time passing) and createTournamentBracket (any tournament type -
+// the only trigger instant tournaments have, since they have no
+// scheduled_time to expire against). A tournament has many bracket
+// matches/rounds, so unlike 1v1 matches there's no per-match "Begin Match"
+// staking-lock moment - this fires once, the instant the bracket is first
+// built (round 1), which is the one point a tournament as a whole begins.
+async function closeTournamentStakingWindow(tournamentId, entryFee) {
+    const playersResult = await supabase
+        .from("tournament_players")
+        .select("username, staking_enabled, own_stake_amount")
+        .eq("tournament_id", tournamentId)
+        .eq("staking_enabled", true);
 
+    const stakedPlayers = playersResult.data || [];
+
+    if (stakedPlayers.length > 0) {
+        const stakesResult = await supabase
+            .from("tournament_stakes")
+            .select("staked_username, amount")
+            .eq("tournament_id", tournamentId);
+
+        const othersByPlayer = {};
+
+        for (const stake of stakesResult.data || []) {
+            othersByPlayer[stake.staked_username] =
+                (othersByPlayer[stake.staked_username] || 0) + Number(stake.amount);
+        }
+
+        const fee = Number(entryFee) || 0;
+
+        for (const player of stakedPlayers) {
+            const othersStaked = othersByPlayer[player.username] || 0;
+            const totalStaked = (Number(player.own_stake_amount) || 0) + othersStaked;
+            const fallbackAmount = Math.max(fee - totalStaked, 0);
+
+            await supabase
+                .from("tournament_players")
+                .update({ fallback_amount: fallbackAmount > 0 ? fallbackAmount : null })
+                .eq("tournament_id", tournamentId)
+                .eq("username", player.username);
+        }
+    }
+
+    await supabase
+        .from("tournaments")
+        .update({ stake_resolved_at: Date.now() })
+        .eq("id", tournamentId)
+        .is("stake_resolved_at", null);
+}
+
+async function resolveExpiredTournamentStakes() {
     const candidates = await supabase
         .from("tournaments")
         .select("id, entry_fee")
         .eq("match_type", "scheduled")
         .is("stake_resolved_at", null)
-        .lt("scheduled_time", now);
+        .lt("scheduled_time", Date.now());
 
     for (const tournament of candidates.data || []) {
-        const playersResult = await supabase
-            .from("tournament_players")
-            .select("username, staking_enabled, own_stake_amount")
-            .eq("tournament_id", tournament.id)
-            .eq("staking_enabled", true);
-
-        const stakedPlayers = playersResult.data || [];
-
-        if (stakedPlayers.length > 0) {
-            const stakesResult = await supabase
-                .from("tournament_stakes")
-                .select("staked_username, amount")
-                .eq("tournament_id", tournament.id);
-
-            const othersByPlayer = {};
-
-            for (const stake of stakesResult.data || []) {
-                othersByPlayer[stake.staked_username] =
-                    (othersByPlayer[stake.staked_username] || 0) + Number(stake.amount);
-            }
-
-            const entryFee = Number(tournament.entry_fee) || 0;
-
-            for (const player of stakedPlayers) {
-                const othersStaked = othersByPlayer[player.username] || 0;
-                const totalStaked = (Number(player.own_stake_amount) || 0) + othersStaked;
-                const fallbackAmount = Math.max(entryFee - totalStaked, 0);
-
-                await supabase
-                    .from("tournament_players")
-                    .update({ fallback_amount: fallbackAmount > 0 ? fallbackAmount : null })
-                    .eq("tournament_id", tournament.id)
-                    .eq("username", player.username);
-            }
-        }
-
-        await supabase
-            .from("tournaments")
-            .update({ stake_resolved_at: now })
-            .eq("id", tournament.id)
-            .is("stake_resolved_at", null);
+        await closeTournamentStakingWindow(tournament.id, tournament.entry_fee);
     }
 }
 
@@ -1354,39 +1367,51 @@ async function expireStaleTournamentMatches() {
 // fee went unstaked and is therefore the creator's responsibility to cover.
 // stake_resolved_at is stamped on every candidate (even fully-staked ones)
 // so this job never re-processes the same match twice.
-async function resolveExpiredStakes() {
-    const now = Date.now();
+// Shared by the cron job below (scheduled matches, keyed off scheduled_time
+// passing) and POST /api/matches/:id/ready (any match type, keyed off both
+// players readying up - the only trigger instant matches have, since they
+// have no scheduled_time to expire against). Computes and stamps the
+// creator_fallback_amount liability record and closes the staking window.
+// Guarded on staking_enabled - a match nobody ever offered action on has
+// nothing to close here (match_started_at alone is enough to block new
+// offer-action calls once the match begins).
+async function closeMatchStakingWindow(match) {
+    if (!match.staking_enabled || match.stake_resolved_at) return;
 
+    const stakesResult = await supabase
+        .from("match_stakes")
+        .select("amount")
+        .eq("match_id", match.id);
+
+    const othersStaked = (stakesResult.data || []).reduce(function (sum, stake) {
+        return sum + Number(stake.amount);
+    }, 0);
+
+    const entryFee = Number(match.entry_fee) || 0;
+    const totalStaked = (Number(match.creator_stake_amount) || 0) + othersStaked;
+    const fallbackAmount = Math.max(entryFee - totalStaked, 0);
+
+    await supabase
+        .from("matches")
+        .update({
+            stake_resolved_at: Date.now(),
+            creator_fallback_amount: fallbackAmount > 0 ? fallbackAmount : null
+        })
+        .eq("id", match.id)
+        .is("stake_resolved_at", null);
+}
+
+async function resolveExpiredStakes() {
     const candidates = await supabase
         .from("matches")
-        .select("id, entry_fee, creator_stake_amount")
+        .select("id, entry_fee, creator_stake_amount, staking_enabled, stake_resolved_at")
         .eq("match_type", "scheduled")
         .eq("staking_enabled", true)
         .is("stake_resolved_at", null)
-        .lt("scheduled_time", now);
+        .lt("scheduled_time", Date.now());
 
     for (const match of candidates.data || []) {
-        const stakesResult = await supabase
-            .from("match_stakes")
-            .select("amount")
-            .eq("match_id", match.id);
-
-        const othersStaked = (stakesResult.data || []).reduce(function (sum, stake) {
-            return sum + Number(stake.amount);
-        }, 0);
-
-        const entryFee = Number(match.entry_fee) || 0;
-        const totalStaked = (Number(match.creator_stake_amount) || 0) + othersStaked;
-        const fallbackAmount = Math.max(entryFee - totalStaked, 0);
-
-        await supabase
-            .from("matches")
-            .update({
-                stake_resolved_at: Date.now(),
-                creator_fallback_amount: fallbackAmount > 0 ? fallbackAmount : null
-            })
-            .eq("id", match.id)
-            .is("stake_resolved_at", null);
+        await closeMatchStakingWindow(match);
     }
 }
 
@@ -1675,6 +1700,22 @@ async function createTournamentBracket(tournamentId) {
 
     if (existingMatches.data && existingMatches.data.length > 0) {
         return;
+    }
+
+    // Round 1 being built is the one moment a tournament as a whole
+    // "begins" - close its staking window here so instant tournaments
+    // (which have no scheduled_time for resolveExpiredTournamentStakes to
+    // key off) still get their fallback-amount liability computed and
+    // stake_resolved_at stamped. Harmless no-op if it was already closed
+    // (e.g. a scheduled tournament whose timer already fired).
+    const tournamentRow = await supabase
+        .from("tournaments")
+        .select("entry_fee, stake_resolved_at")
+        .eq("id", tournamentId)
+        .maybeSingle();
+
+    if (tournamentRow.data && !tournamentRow.data.stake_resolved_at) {
+        await closeTournamentStakingWindow(tournamentId, tournamentRow.data.entry_fee);
     }
 
     const playersResult = await supabase
@@ -2953,30 +2994,10 @@ app.post("/api/matches", requireAuth, async function (req, res) {
         return;
     }
 
-    const stakingEnabled = !!req.body.stakingEnabled;
-    const creatorStakeAmount = stakingEnabled ? Number(req.body.creatorStakeAmount) : null;
-
-    if (stakingEnabled && !(creatorStakeAmount > 0 && creatorStakeAmount <= entryFee)) {
-        res.json({
-            success: false,
-            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
-        });
-        return;
-    }
-
-    // Legal requirement: the creator may never offer more than 75% of
-    // their action to others, i.e. must always retain at least 25% of
-    // their own entry (creatorStakeAmount is the retained portion - see
-    // the schedule-match.js form label "how much of your entry are you
-    // putting up").
-    if (stakingEnabled && creatorStakeAmount < entryFee * 0.25) {
-        res.json({
-            success: false,
-            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
-        });
-        return;
-    }
-
+    // Staking is no longer configurable at creation time - it can only be
+    // offered afterward, once the entry fee is already paid and the match
+    // is actually posted (see POST /api/matches/:id/offer-action). Every
+    // match starts with staking off.
     const debit = await adjustBalance(username, -entryFee, "entry_fee_debit", "match", null);
 
     if (!debit.success) {
@@ -3030,11 +3051,15 @@ app.post("/api/matches", requireAuth, async function (req, res) {
             match_type: matchType,
             scheduled_time: scheduledTime,
 
-            staking_enabled: stakingEnabled,
-            creator_stake_amount: creatorStakeAmount,
+            staking_enabled: false,
+            creator_stake_amount: null,
 
             stake_resolved_at: null,
             creator_fallback_amount: null,
+
+            creator_ready_at: null,
+            opponent_ready_at: null,
+            match_started_at: null,
 
             platform: platform,
             skill_difficulty: skillDifficulty,
@@ -3164,27 +3189,9 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         return;
     }
 
-    const stakingEnabled = !!req.body.stakingEnabled;
+    // Staking is no longer configurable at creation time - see
+    // POST /api/tournaments/:id/offer-action.
     const tournamentEntryFee = Number(entryFee);
-    const creatorStakeAmount = stakingEnabled ? Number(req.body.creatorStakeAmount) : null;
-
-    if (stakingEnabled && !(creatorStakeAmount > 0 && creatorStakeAmount <= tournamentEntryFee)) {
-        res.json({
-            success: false,
-            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
-        });
-        return;
-    }
-
-    // Legal requirement: same 75%-offered / 25%-retained floor as match
-    // staking - see POST /api/matches.
-    if (stakingEnabled && creatorStakeAmount < tournamentEntryFee * 0.25) {
-        res.json({
-            success: false,
-            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
-        });
-        return;
-    }
 
     if (tournamentEntryFee > 0) {
         const debit = await adjustBalance(username, -tournamentEntryFee, "entry_fee_debit", "tournament", null);
@@ -3236,8 +3243,8 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         username: username,
         player_tag: playerHandle,
         friend_link: friendLink,
-        staking_enabled: stakingEnabled,
-        own_stake_amount: creatorStakeAmount
+        staking_enabled: false,
+        own_stake_amount: null
     });
 
     if (playerResult.error) {
@@ -3452,36 +3459,9 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
+    // Staking is no longer configurable at join time - see
+    // POST /api/tournaments/:id/offer-action.
     const tournamentEntryFee = Number(tournament.entry_fee) || 0;
-
-    const stakingEnabled = !!req.body.stakingEnabled && tournament.match_type === "scheduled" && !tournament.stake_resolved_at;
-    const ownStakeAmount = stakingEnabled ? Number(req.body.stakeAmount) : null;
-
-    if (req.body.stakingEnabled && !stakingEnabled) {
-        res.json({
-            success: false,
-            message: "Staking is not open on this tournament."
-        });
-        return;
-    }
-
-    if (stakingEnabled && !(ownStakeAmount > 0 && ownStakeAmount <= tournamentEntryFee)) {
-        res.json({
-            success: false,
-            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
-        });
-        return;
-    }
-
-    // Legal requirement: same 75%-offered / 25%-retained floor as match
-    // staking - see POST /api/matches.
-    if (stakingEnabled && ownStakeAmount < tournamentEntryFee * 0.25) {
-        res.json({
-            success: false,
-            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
-        });
-        return;
-    }
 
     if (tournamentEntryFee > 0) {
         const debit = await adjustBalance(username, -tournamentEntryFee, "entry_fee_debit", "tournament", tournamentId);
@@ -3502,8 +3482,8 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
             username: username,
             player_tag: playerHandle,
             friend_link: friendLink,
-            staking_enabled: stakingEnabled,
-            own_stake_amount: ownStakeAmount
+            staking_enabled: false,
+            own_stake_amount: null
         });
 
     if (playerResult.error) {
@@ -3593,6 +3573,94 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         tournament: updateResult.data
     });
 });
+// Same idea as POST /api/matches/:id/offer-action, but for a joined
+// tournament participant offering a share of their OWN entry (not the
+// tournament creator specifically - any joined player can do this for
+// themselves). Open for any tournament type (instant or scheduled) until
+// the tournament's first round actually starts, which is the one point a
+// tournament as a whole "begins" (see the bracket-generation hook that
+// stamps tournaments.stake_resolved_at) - there's no per-bracket-match
+// "Begin Match" gate for staking, unlike 1v1 matches.
+app.post("/api/tournaments/:id/offer-action", requireAuth, async function (req, res) {
+    const tournamentId = Number(req.params.id);
+    const username = req.username;
+    const amount = Number(req.body.amount);
+
+    const found = await supabase
+        .from("tournaments")
+        .select("*")
+        .eq("id", tournamentId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Tournament not found." });
+        return;
+    }
+
+    const tournament = found.data;
+
+    if (tournament.stake_resolved_at) {
+        res.json({ success: false, message: "This tournament has already begun - staking can no longer be offered." });
+        return;
+    }
+
+    const playerResult = await supabase
+        .from("tournament_players")
+        .select("*")
+        .eq("tournament_id", tournamentId)
+        .eq("username", username)
+        .maybeSingle();
+
+    if (!playerResult.data) {
+        res.json({ success: false, message: "You're not in this tournament." });
+        return;
+    }
+
+    if (playerResult.data.staking_enabled) {
+        res.json({ success: false, message: "You've already offered action on your entry." });
+        return;
+    }
+
+    const entryFee = Number(tournament.entry_fee) || 0;
+
+    if (!(amount > 0 && amount <= entryFee)) {
+        res.json({
+            success: false,
+            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
+        });
+        return;
+    }
+
+    // Legal requirement: same 75%-offered / 25%-retained floor as match
+    // staking - see POST /api/matches/:id/offer-action.
+    if (amount < entryFee * 0.25) {
+        res.json({
+            success: false,
+            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
+        });
+        return;
+    }
+
+    const updateResult = await supabase
+        .from("tournament_players")
+        .update({ staking_enabled: true, own_stake_amount: amount })
+        .eq("tournament_id", tournamentId)
+        .eq("username", username)
+        .eq("staking_enabled", false)
+        .select()
+        .single();
+
+    if (updateResult.error || !updateResult.data) {
+        res.json({ success: false, message: "Could not offer action on your entry." });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Action offered - others can now stake on your entry."
+    });
+});
+
 app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
     const tournamentId = Number(req.params.id);
     const username = req.username;
@@ -3622,14 +3690,6 @@ app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
     }
 
     const tournament = found.data;
-
-    if (tournament.match_type !== "scheduled") {
-        res.json({
-            success: false,
-            message: "Staking is not open on this tournament."
-        });
-        return;
-    }
 
     if (tournament.stake_resolved_at) {
         res.json({
@@ -4004,6 +4064,88 @@ app.post("/api/matches/:id/team-selection", requireAuth, async function (req, re
     });
 });
 
+// "Begin Match" ready toggle - generic across every game (unlike
+// acknowledge-rules/team-selection above, which are Madden-only). Either
+// player toggles their OWN readiness on/off; re-clicking un-readies. The
+// match "begins" (match_started_at stamped) the instant both happen to be
+// ready at once - that also closes the staking window for good via
+// closeMatchStakingWindow, reusing the existing stake_resolved_at field
+// everywhere it's already checked, so nothing downstream needs a second
+// "is staking locked" flag.
+app.post("/api/matches/:id/ready", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+
+    const found = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    const isCreator = username === match.creator_username;
+    const isOpponent = username === match.opponent_username;
+
+    if (!isCreator && !isOpponent) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    if (match.status !== "Match ready") {
+        res.json({ success: false, message: "This match doesn't have both players yet." });
+        return;
+    }
+
+    if (match.match_started_at) {
+        res.json({ success: false, message: "This match has already begun." });
+        return;
+    }
+
+    const column = isCreator ? "creator_ready_at" : "opponent_ready_at";
+    const nextValue = match[column] ? null : Date.now();
+
+    const update = await supabase
+        .from("matches")
+        .update({ [column]: nextValue })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+    if (update.error || !update.data) {
+        res.json({ success: false, message: "Could not update your ready status." });
+        return;
+    }
+
+    let updatedMatch = update.data;
+
+    if (updatedMatch.creator_ready_at && updatedMatch.opponent_ready_at && !updatedMatch.match_started_at) {
+        const startUpdate = await supabase
+            .from("matches")
+            .update({ match_started_at: Date.now() })
+            .eq("id", matchId)
+            .is("match_started_at", null)
+            .select()
+            .single();
+
+        if (startUpdate.data) {
+            updatedMatch = startUpdate.data;
+            await closeMatchStakingWindow(updatedMatch);
+        }
+    }
+
+    res.json({
+        success: true,
+        ready: !!nextValue,
+        match: dbMatchToFrontend(updatedMatch)
+    });
+});
+
 // Append-only audit trail for one match_verifications row (see
 // 2026-08-17-add-match-verification-events.sql) - who reported what, what
 // the bot extracted, who resolved it and when, and any admin penalty.
@@ -4133,6 +4275,11 @@ app.post("/api/matches/:id/report-result", requireAuth, async function (req, res
 
     if (!match.setup_ready_at) {
         res.json({ success: false, message: "Match setup isn't complete yet." });
+        return;
+    }
+
+    if (!match.match_started_at) {
+        res.json({ success: false, message: "Both players need to hit Ready before reporting a result." });
         return;
     }
 
@@ -4472,6 +4619,93 @@ app.get("/api/matches/:id/result-status", requireAuth, async function (req, res)
     });
 });
 
+// Staking is offered AFTER the match is already posted (entry fee already
+// paid at that point - see POST /api/matches) rather than at creation
+// time. Creator-only, one-time (staking_enabled starts false and this is
+// the only route that flips it true), open for any match type (instant or
+// scheduled) up until the match begins - see POST /api/matches/:id/ready,
+// which stamps stake_resolved_at the moment both players are ready and
+// closes this window for good.
+app.post("/api/matches/:id/offer-action", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+    const amount = Number(req.body.amount);
+
+    const found = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.creator_username !== username) {
+        res.json({ success: false, message: "Only the match creator can offer action on this match." });
+        return;
+    }
+
+    if (match.staking_enabled) {
+        res.json({ success: false, message: "You've already offered action on this match." });
+        return;
+    }
+
+    if (match.match_started_at || match.stake_resolved_at) {
+        res.json({ success: false, message: "This match has already begun - staking can no longer be offered." });
+        return;
+    }
+
+    if (!["Waiting for opponent", "Match ready"].includes(match.status)) {
+        res.json({ success: false, message: "This match can no longer accept staking offers." });
+        return;
+    }
+
+    const entryFee = Number(match.entry_fee) || 0;
+
+    if (!(amount > 0 && amount <= entryFee)) {
+        res.json({
+            success: false,
+            message: "Stake amount must be more than 0 and cannot exceed the entry fee."
+        });
+        return;
+    }
+
+    // Legal requirement: the creator may never offer more than 75% of
+    // their action to others, i.e. must always retain at least 25% of
+    // their own entry (amount is the retained portion, same meaning as
+    // creator_stake_amount always had - see POST /api/matches/:id/stakes).
+    if (amount < entryFee * 0.25) {
+        res.json({
+            success: false,
+            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
+        });
+        return;
+    }
+
+    const updateResult = await supabase
+        .from("matches")
+        .update({ staking_enabled: true, creator_stake_amount: amount })
+        .eq("id", matchId)
+        .eq("staking_enabled", false)
+        .select()
+        .single();
+
+    if (updateResult.error || !updateResult.data) {
+        res.json({ success: false, message: "Could not offer action on this match." });
+        return;
+    }
+
+    res.json({
+        success: true,
+        message: "Action offered - others can now stake on this match.",
+        match: dbMatchToFrontend(updateResult.data)
+    });
+});
+
 app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
     const matchId = Number(req.params.id);
     const username = req.username;
@@ -4501,7 +4735,7 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
 
     const match = found.data;
 
-    if (match.match_type !== "scheduled" || !match.staking_enabled) {
+    if (!match.staking_enabled) {
         res.json({
             success: false,
             message: "Staking is not open on this match."
@@ -4588,6 +4822,82 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
         stake: insertResult.data
     });
 });
+// Same shape as POST /api/matches/:id/ready, but for a tournament bracket
+// match: two per-player columns toggled independently, started_at stamped
+// once both are ready. Deliberately does NOT touch any staking field -
+// tournament-level staking locks separately when the tournament's first
+// round starts (see the bracket-generation hook), not per bracket match.
+app.post("/api/tournament-matches/:id/ready", requireAuth, async function (req, res) {
+    const tournamentMatchId = Number(req.params.id);
+    const username = req.username;
+
+    const found = await supabase
+        .from("tournament_matches")
+        .select("*")
+        .eq("id", tournamentMatchId)
+        .maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Tournament match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    const isPlayerOne = username === match.player_one;
+    const isPlayerTwo = username === match.player_two;
+
+    if (!isPlayerOne && !isPlayerTwo) {
+        res.json({ success: false, message: "You're not a player in this match." });
+        return;
+    }
+
+    if (match.status !== "Ready") {
+        res.json({ success: false, message: "This match isn't ready yet." });
+        return;
+    }
+
+    if (match.started_at) {
+        res.json({ success: false, message: "This match has already begun." });
+        return;
+    }
+
+    const column = isPlayerOne ? "player_one_ready_at" : "player_two_ready_at";
+    const nextValue = match[column] ? null : Date.now();
+
+    const update = await supabase
+        .from("tournament_matches")
+        .update({ [column]: nextValue })
+        .eq("id", tournamentMatchId)
+        .select()
+        .single();
+
+    if (update.error || !update.data) {
+        res.json({ success: false, message: "Could not update your ready status." });
+        return;
+    }
+
+    let updatedMatch = update.data;
+
+    if (updatedMatch.player_one_ready_at && updatedMatch.player_two_ready_at && !updatedMatch.started_at) {
+        const startUpdate = await supabase
+            .from("tournament_matches")
+            .update({ started_at: Date.now() })
+            .eq("id", tournamentMatchId)
+            .is("started_at", null)
+            .select()
+            .single();
+
+        if (startUpdate.data) updatedMatch = startUpdate.data;
+    }
+
+    res.json({
+        success: true,
+        ready: !!nextValue,
+        match: updatedMatch
+    });
+});
+
 app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req, res) {
     const tournamentMatchId = Number(req.params.id);
     const requestingUsername = req.username;
@@ -4632,6 +4942,14 @@ app.post("/api/tournament-matches/:id/verify", requireAuth, async function (req,
         res.json({
             success: false,
             message: "Tournament match is not ready for verification."
+        });
+        return;
+    }
+
+    if (!foundMatch.started_at) {
+        res.json({
+            success: false,
+            message: "Both players need to hit Ready before this match can be verified."
         });
         return;
     }
@@ -4883,6 +5201,14 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
         res.json({
             success: false,
             message: "Match is not ready for verification."
+        });
+        return;
+    }
+
+    if (!foundMatch.match_started_at) {
+        res.json({
+            success: false,
+            message: "Both players need to hit Ready before this match can be verified."
         });
         return;
     }
