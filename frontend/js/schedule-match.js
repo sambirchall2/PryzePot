@@ -92,6 +92,7 @@ function getStakeError() {
     if (isNaN(amount)) return "Enter a valid Vault Credits amount.";
     if (amount <= 0) return "Stake must be more than 0 Vault Credits.";
     if (amount > entryFee) return "Stake can't exceed " + entryFee.toFixed(2) + " Vault Credits.";
+    if (amount < entryFee * 0.25) return "You must retain at least 25% of your entry - keep at least " + (entryFee * 0.25).toFixed(2) + " Vault Credits.";
 
     return "";
 }

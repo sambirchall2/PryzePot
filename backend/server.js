@@ -513,7 +513,13 @@ async function awardXpToUser(username, xpAmount) {
 return updateResult.data;
 }
 
-async function adjustBalance(username, delta) {
+// reason/referenceType/referenceId are optional - every call site keeps
+// working unmodified if omitted (reason just defaults to "unspecified" in
+// the ledger row). This is the single choke point every balance mutation
+// in the whole app funnels through, so logging here makes balance_ledger
+// (see 2026-08-17-add-staking-escrow-and-ledger.sql) a complete,
+// platform-wide transaction record with no other write path to touch.
+async function adjustBalance(username, delta, reason, referenceType, referenceId) {
     const result = await supabase.rpc("adjust_balance", {
         p_username: username,
         p_delta: delta
@@ -522,6 +528,20 @@ async function adjustBalance(username, delta) {
     if (result.error) {
         console.log("ADJUST BALANCE ERROR:", username, delta, result.error.message);
         return { success: false, message: result.error.message };
+    }
+
+    const ledgerInsert = await supabase.from("balance_ledger").insert({
+        username: username,
+        delta: delta,
+        balance_after: result.data,
+        reason: reason || "unspecified",
+        reference_type: referenceType || null,
+        reference_id: referenceId || null,
+        created_at: Date.now()
+    });
+
+    if (ledgerInsert.error) {
+        console.log("BALANCE LEDGER INSERT ERROR:", username, delta, reason, ledgerInsert.error.message);
     }
 
     return { success: true, balance: result.data };
@@ -1024,10 +1044,10 @@ async function expireOldMatches() {
             .single();
 
         if (!updated.error && updated.data) {
-            await adjustBalance(match.creator_username, Number(match.entry_fee) || 0);
+            await adjustBalance(match.creator_username, Number(match.entry_fee) || 0, "entry_fee_refund_expired", "match", match.id);
 
             if (match.staking_enabled) {
-                await refundMatchStakes(match.id);
+                await refundMatchStakes(match.id, "match_expired");
             }
         }
     }
@@ -1050,11 +1070,11 @@ async function expireOldMatches() {
         if (!updated.error && updated.data) {
             const fee = Number(match.entry_fee) || 0;
 
-            await adjustBalance(match.creator_username, fee);
-            await adjustBalance(match.opponent_username, fee);
+            await adjustBalance(match.creator_username, fee, "entry_fee_refund_expired", "match", match.id);
+            await adjustBalance(match.opponent_username, fee, "entry_fee_refund_expired", "match", match.id);
 
             if (match.staking_enabled) {
-                await refundMatchStakes(match.id);
+                await refundMatchStakes(match.id, "match_expired");
             }
         }
     }
@@ -1067,7 +1087,7 @@ async function expireOldMatches() {
 // refund: it was never a second charge, just a record of how much of a
 // participant's own (already-being-refunded) entry fee they'd claimed -
 // mirrors refundMatchStakes exactly.
-async function refundTournamentStakes(tournamentId) {
+async function refundTournamentStakes(tournamentId, reason) {
     const stakesResult = await supabase
         .from("tournament_stakes")
         .select("id, staker_username, amount")
@@ -1075,16 +1095,26 @@ async function refundTournamentStakes(tournamentId) {
         .is("refunded_at", null);
 
     for (const stake of stakesResult.data || []) {
-        const refund = await adjustBalance(stake.staker_username, Number(stake.amount) || 0);
+        const refund = await adjustBalance(
+            stake.staker_username, Number(stake.amount) || 0,
+            "stake_refund", "tournament_stake", stake.id
+        );
 
         if (!refund.success) {
             console.log("TOURNAMENT STAKE REFUND ERROR:", tournamentId, stake.staker_username, refund.message);
             continue;
         }
 
+        const now = Date.now();
+
         await supabase
             .from("tournament_stakes")
-            .update({ refunded_at: Date.now() })
+            .update({
+                refunded_at: now,
+                status: "refunded",
+                resolved_at: now,
+                refund_reason: reason || "unspecified"
+            })
             .eq("id", stake.id)
             .is("refunded_at", null);
     }
@@ -1103,7 +1133,7 @@ async function cancelAndRefundTournament(tournamentId, fromStatus) {
         return null;
     }
 
-    await refundTournamentStakes(tournamentId);
+    await refundTournamentStakes(tournamentId, "tournament_cancelled");
 
     const fee = Number(updated.data.entry_fee) || 0;
 
@@ -1117,7 +1147,7 @@ async function cancelAndRefundTournament(tournamentId, fromStatus) {
         .eq("tournament_id", tournamentId);
 
     for (const player of players.data || []) {
-        await adjustBalance(player.username, fee);
+        await adjustBalance(player.username, fee, "entry_fee_refund_cancelled", "tournament", tournamentId);
     }
 
     return updated.data;
@@ -1584,13 +1614,13 @@ async function advanceTournamentRoundIfReady(tournamentId, roundNumber) {
                 Number((parentTournament.data && parentTournament.data.max_players) || 0);
 
             if (prizePool > 0) {
-                const payout = await adjustBalance(winners[0].username, prizePool);
+                const payout = await adjustBalance(winners[0].username, prizePool, "tournament_prize_payout", "tournament", tournamentId);
 
                 if (!payout.success) {
                     console.log("TOURNAMENT PAYOUT ERROR:", winners[0].username, payout.message);
                 }
 
-                await recordTournamentStakingPayoutBreakdown(
+                await resolveStakesForCompletedTournament(
                     tournamentId,
                     parentTournament.data && parentTournament.data.entry_fee,
                     winners[0].username,
@@ -2515,38 +2545,87 @@ async function attachTournamentStakeSummary(tournaments) {
     });
 }
 
-// Computes and durably stores the staking payout breakdown once a
-// staked match resolves with the staked-on player (the creator) as the
-// winner. Staking in this app only backs the creator's entry (see the
-// Step 5/6 design notes), so there is nothing to compute if the
-// opponent won instead - their stakers just lose the bet, same as any
-// other prediction market, and there is no payout row for that side.
+// Escrow settlement for every "held" stake on a match that just reached
+// a real, verified result (win, lose, or disqualification - never a
+// draw/cancellation, those go through refundMatchStakes instead). Legal
+// review requires the staked player to receive their stakers' money
+// regardless of who won, EXCEPT when the staked player themselves is the
+// one disqualified/forfeiting - in that case their stakers get refunded
+// instead, exactly like a cancelled match. Only on top of a legitimate
+// win does a staker additionally earn their purchased percentage of the
+// total prize (calculatePayoutBreakdown, unchanged - same shared math
+// tournaments use), paid for real now instead of only ever recorded on
+// paper in match_payouts.
 //
-// Deliberately never throws out to the caller: the real money movement
+// Deliberately never throws out to the caller: the real prize payout
 // (adjustBalance just above where this is called) must complete
-// regardless of whether the staking breakdown succeeds. A calculation
-// or storage failure here is logged loudly and skipped, not allowed to
-// block match verification.
-async function recordStakingPayoutBreakdown(match, winnerUsername, totalWinnings) {
+// regardless of whether stake settlement succeeds. A failure here is
+// logged loudly and skipped, not allowed to block match verification.
+async function resolveStakesForCompletedMatch(match, winnerUsername, disqualifiedUsername) {
     if (!match.staking_enabled) return;
-    if (winnerUsername !== match.creator_username) return;
 
     try {
         const stakesResult = await supabase
             .from("match_stakes")
-            .select("username, amount")
-            .eq("match_id", match.id);
+            .select("*")
+            .eq("match_id", match.id)
+            .eq("status", "held");
+
+        const heldStakes = stakesResult.data || [];
+        const now = Date.now();
+
+        if (disqualifiedUsername && disqualifiedUsername === match.creator_username) {
+            for (const stake of heldStakes) {
+                const refund = await adjustBalance(
+                    stake.username, Number(stake.amount) || 0,
+                    "stake_refund_disqualification", "match_stake", stake.id
+                );
+
+                if (!refund.success) {
+                    console.log("STAKE DISQUALIFICATION REFUND ERROR:", match.id, stake.username, refund.message);
+                    continue;
+                }
+
+                await supabase.from("match_stakes").update({
+                    status: "refunded",
+                    resolved_at: now,
+                    refunded_at: now,
+                    refund_reason: "disqualification"
+                }).eq("id", stake.id).eq("status", "held");
+            }
+            return;
+        }
+
+        for (const stake of heldStakes) {
+            const release = await adjustBalance(
+                match.creator_username, Number(stake.amount) || 0,
+                "stake_release", "match_stake", stake.id
+            );
+
+            if (!release.success) {
+                console.log("STAKE RELEASE ERROR:", match.id, stake.username, release.message);
+                continue;
+            }
+
+            await supabase.from("match_stakes").update({
+                status: "released_to_creator",
+                resolved_at: now,
+                released_amount: stake.amount
+            }).eq("id", stake.id).eq("status", "held");
+        }
+
+        if (winnerUsername !== match.creator_username) return;
+
+        const totalWinnings = Number(match.entry_fee) * 2;
 
         const breakdown = calculatePayoutBreakdown(
             match.entry_fee,
             match.creator_username,
             match.creator_stake_amount,
             match.creator_fallback_amount,
-            stakesResult.data || [],
+            heldStakes,
             totalWinnings
         );
-
-        const now = Date.now();
 
         const rows = breakdown.map(function (entry) {
             return {
@@ -2564,69 +2643,181 @@ async function recordStakingPayoutBreakdown(match, winnerUsername, totalWinnings
         if (insertResult.error) {
             console.log("MATCH PAYOUT BREAKDOWN INSERT ERROR:", match.id, insertResult.error);
         }
+
+        for (const entry of breakdown) {
+            if (entry.username === match.creator_username) continue;
+            if (!(entry.amount > 0)) continue;
+
+            const stakeRow = heldStakes.find(function (s) { return s.username === entry.username; });
+
+            const debit = await adjustBalance(
+                match.creator_username, -entry.amount,
+                "stake_win_share_debit", "match_stake", stakeRow ? stakeRow.id : null
+            );
+
+            if (!debit.success) {
+                console.log("STAKE WIN SHARE DEBIT ERROR:", match.id, entry.username, debit.message);
+                continue;
+            }
+
+            const credit = await adjustBalance(
+                entry.username, entry.amount,
+                "stake_win_share_credit", "match_stake", stakeRow ? stakeRow.id : null
+            );
+
+            if (!credit.success) {
+                console.log("STAKE WIN SHARE CREDIT ERROR:", match.id, entry.username, credit.message);
+            }
+
+            if (stakeRow) {
+                await supabase.from("match_stakes").update({ win_share_amount: entry.amount }).eq("id", stakeRow.id);
+            }
+
+            await supabase.from("match_payouts").update({ paid_at: Date.now() })
+                .eq("match_id", match.id).eq("username", entry.username);
+        }
+
+        // The creator's own share of the prize was already paid via the
+        // adjustBalance(winnerUsername, totalWinnings) call made just
+        // before this function runs (see completeMaddenMatch / the
+        // Clash+Chess verify route) - just stamp paid_at for record-
+        // keeping consistency with the staker rows above.
+        await supabase.from("match_payouts").update({ paid_at: now })
+            .eq("match_id", match.id).eq("username", match.creator_username).is("paid_at", null);
     } catch (error) {
-        console.log("MATCH PAYOUT BREAKDOWN CALCULATION ERROR:", match.id, error.message);
+        console.log("STAKE RESOLUTION ERROR:", match.id, error.message);
     }
 }
 
-// Same idea as recordStakingPayoutBreakdown above, but for a tournament
-// champion. Only the winner's own staking record matters here - everyone
-// else's stakes (on participants who didn't win) just lose the bet, same
-// as staking the losing side of a 1v1 match. Called from
-// advanceTournamentRoundIfReady once a champion is decided and paid the
-// prize pool; deliberately never throws out to the caller for the same
-// reason recordStakingPayoutBreakdown doesn't - the real prize payout must
-// complete regardless of whether this bookkeeping succeeds.
-async function recordTournamentStakingPayoutBreakdown(tournamentId, entryFee, winnerUsername, totalWinnings) {
+// Tournament counterpart of resolveStakesForCompletedMatch above - same
+// escrow rule, applied at the moment a champion is decided (which is the
+// one point a tournament as a whole reaches a legitimate, verified
+// result). Unlike the old recordTournamentStakingPayoutBreakdown this
+// replaces, this now settles EVERY participant's held stakes, not just
+// the champion's: every staked-on participant gets their stakers'
+// principal released regardless of where they finished, and only the
+// champion's stakers additionally earn a share of the prize pool. There
+// is currently no tournament-level disqualification/removal flow in this
+// codebase (see chat) - if one gets built later, it needs to pass a
+// disqualified-username list through here the same way
+// resolveStakesForCompletedMatch takes one, so that player's stakers
+// refund instead of release.
+//
+// Deliberately never throws out to the caller: the real prize payout
+// must complete regardless of whether stake settlement succeeds.
+async function resolveStakesForCompletedTournament(tournamentId, entryFee, winnerUsername, totalWinnings) {
     try {
-        const winnerPlayerResult = await supabase
-            .from("tournament_players")
-            .select("staking_enabled, own_stake_amount, fallback_amount")
-            .eq("tournament_id", tournamentId)
-            .eq("username", winnerUsername)
-            .maybeSingle();
-
-        if (!winnerPlayerResult.data || !winnerPlayerResult.data.staking_enabled) return;
-
         const stakesResult = await supabase
             .from("tournament_stakes")
-            .select("staker_username, amount")
+            .select("*")
             .eq("tournament_id", tournamentId)
-            .eq("staked_username", winnerUsername);
+            .eq("status", "held");
 
-        const stakerRecords = (stakesResult.data || []).map(function (stake) {
-            return { username: stake.staker_username, amount: stake.amount };
-        });
-
-        const breakdown = calculatePayoutBreakdown(
-            entryFee,
-            winnerUsername,
-            winnerPlayerResult.data.own_stake_amount,
-            winnerPlayerResult.data.fallback_amount,
-            stakerRecords,
-            totalWinnings
-        );
-
+        const heldStakes = stakesResult.data || [];
         const now = Date.now();
 
-        const rows = breakdown.map(function (entry) {
-            return {
-                tournament_id: tournamentId,
-                username: entry.username,
-                share: entry.share,
-                amount: entry.amount,
-                created_at: now,
-                paid_at: null
-            };
-        });
+        const stakedUsernames = Array.from(new Set(heldStakes.map(function (s) { return s.staked_username; })));
 
-        const insertResult = await supabase.from("tournament_payouts").insert(rows);
+        for (const stakedUsername of stakedUsernames) {
+            const playerResult = await supabase
+                .from("tournament_players")
+                .select("staking_enabled, own_stake_amount, fallback_amount")
+                .eq("tournament_id", tournamentId)
+                .eq("username", stakedUsername)
+                .maybeSingle();
 
-        if (insertResult.error) {
-            console.log("TOURNAMENT PAYOUT BREAKDOWN INSERT ERROR:", tournamentId, insertResult.error);
+            if (!playerResult.data || !playerResult.data.staking_enabled) continue;
+
+            const ownStakes = heldStakes.filter(function (s) { return s.staked_username === stakedUsername; });
+
+            for (const stake of ownStakes) {
+                const release = await adjustBalance(
+                    stakedUsername, Number(stake.amount) || 0,
+                    "stake_release", "tournament_stake", stake.id
+                );
+
+                if (!release.success) {
+                    console.log("TOURNAMENT STAKE RELEASE ERROR:", tournamentId, stake.staker_username, release.message);
+                    continue;
+                }
+
+                await supabase.from("tournament_stakes").update({
+                    status: "released_to_creator",
+                    resolved_at: now,
+                    released_amount: stake.amount
+                }).eq("id", stake.id).eq("status", "held");
+            }
+
+            if (stakedUsername !== winnerUsername) continue;
+
+            const stakerRecords = ownStakes.map(function (stake) {
+                return { username: stake.staker_username, amount: stake.amount };
+            });
+
+            const breakdown = calculatePayoutBreakdown(
+                entryFee,
+                winnerUsername,
+                playerResult.data.own_stake_amount,
+                playerResult.data.fallback_amount,
+                stakerRecords,
+                totalWinnings
+            );
+
+            const rows = breakdown.map(function (entry) {
+                return {
+                    tournament_id: tournamentId,
+                    username: entry.username,
+                    share: entry.share,
+                    amount: entry.amount,
+                    created_at: now,
+                    paid_at: null
+                };
+            });
+
+            const insertResult = await supabase.from("tournament_payouts").insert(rows);
+
+            if (insertResult.error) {
+                console.log("TOURNAMENT PAYOUT BREAKDOWN INSERT ERROR:", tournamentId, insertResult.error);
+            }
+
+            for (const entry of breakdown) {
+                if (entry.username === winnerUsername) continue;
+                if (!(entry.amount > 0)) continue;
+
+                const stakeRow = ownStakes.find(function (s) { return s.staker_username === entry.username; });
+
+                const debit = await adjustBalance(
+                    winnerUsername, -entry.amount,
+                    "stake_win_share_debit", "tournament_stake", stakeRow ? stakeRow.id : null
+                );
+
+                if (!debit.success) {
+                    console.log("TOURNAMENT STAKE WIN SHARE DEBIT ERROR:", tournamentId, entry.username, debit.message);
+                    continue;
+                }
+
+                const credit = await adjustBalance(
+                    entry.username, entry.amount,
+                    "stake_win_share_credit", "tournament_stake", stakeRow ? stakeRow.id : null
+                );
+
+                if (!credit.success) {
+                    console.log("TOURNAMENT STAKE WIN SHARE CREDIT ERROR:", tournamentId, entry.username, credit.message);
+                }
+
+                if (stakeRow) {
+                    await supabase.from("tournament_stakes").update({ win_share_amount: entry.amount }).eq("id", stakeRow.id);
+                }
+
+                await supabase.from("tournament_payouts").update({ paid_at: Date.now() })
+                    .eq("tournament_id", tournamentId).eq("username", entry.username);
+            }
+
+            await supabase.from("tournament_payouts").update({ paid_at: now })
+                .eq("tournament_id", tournamentId).eq("username", winnerUsername).is("paid_at", null);
         }
     } catch (error) {
-        console.log("TOURNAMENT PAYOUT BREAKDOWN CALCULATION ERROR:", tournamentId, error.message);
+        console.log("TOURNAMENT STAKE RESOLUTION ERROR:", tournamentId, error.message);
     }
 }
 
@@ -2641,8 +2832,11 @@ async function recordTournamentStakingPayoutBreakdown(tournamentId, entryFee, wi
 //
 // Guards on refunded_at IS NULL so this is safe to call more than once
 // for the same match (e.g. if a future change ever calls it from two
-// places for the same match) without double-paying anyone.
-async function refundMatchStakes(matchId) {
+// places for the same match) without double-paying anyone. `reason` is a
+// short machine-readable tag describing why (e.g. "match_cancelled",
+// "match_expired", "match_draw", "dispute_refund") - stored on both the
+// stake row (refund_reason) and every balance_ledger entry it produces.
+async function refundMatchStakes(matchId, reason) {
     const stakesResult = await supabase
         .from("match_stakes")
         .select("id, username, amount")
@@ -2650,16 +2844,26 @@ async function refundMatchStakes(matchId) {
         .is("refunded_at", null);
 
     for (const stake of stakesResult.data || []) {
-        const refund = await adjustBalance(stake.username, Number(stake.amount) || 0);
+        const refund = await adjustBalance(
+            stake.username, Number(stake.amount) || 0,
+            "stake_refund", "match_stake", stake.id
+        );
 
         if (!refund.success) {
             console.log("STAKE REFUND ERROR:", matchId, stake.username, refund.message);
             continue;
         }
 
+        const now = Date.now();
+
         await supabase
             .from("match_stakes")
-            .update({ refunded_at: Date.now() })
+            .update({
+                refunded_at: now,
+                status: "refunded",
+                resolved_at: now,
+                refund_reason: reason || "unspecified"
+            })
             .eq("id", stake.id)
             .is("refunded_at", null);
     }
@@ -2760,7 +2964,20 @@ app.post("/api/matches", requireAuth, async function (req, res) {
         return;
     }
 
-    const debit = await adjustBalance(username, -entryFee);
+    // Legal requirement: the creator may never offer more than 75% of
+    // their action to others, i.e. must always retain at least 25% of
+    // their own entry (creatorStakeAmount is the retained portion - see
+    // the schedule-match.js form label "how much of your entry are you
+    // putting up").
+    if (stakingEnabled && creatorStakeAmount < entryFee * 0.25) {
+        res.json({
+            success: false,
+            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
+        });
+        return;
+    }
+
+    const debit = await adjustBalance(username, -entryFee, "entry_fee_debit", "match", null);
 
     if (!debit.success) {
         res.json({
@@ -2959,8 +3176,18 @@ app.post("/api/tournaments", requireAuth, async function (req, res) {
         return;
     }
 
+    // Legal requirement: same 75%-offered / 25%-retained floor as match
+    // staking - see POST /api/matches.
+    if (stakingEnabled && creatorStakeAmount < tournamentEntryFee * 0.25) {
+        res.json({
+            success: false,
+            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
+        });
+        return;
+    }
+
     if (tournamentEntryFee > 0) {
-        const debit = await adjustBalance(username, -tournamentEntryFee);
+        const debit = await adjustBalance(username, -tournamentEntryFee, "entry_fee_debit", "tournament", null);
 
         if (!debit.success) {
             res.json({
@@ -3134,11 +3361,13 @@ app.get("/api/tournaments/:id", async function (req, res) {
     .order("round_number", { ascending: true })
     .order("id", { ascending: true });
 
+    // No longer filtered to refunded_at IS NULL - the frontend now needs
+    // to see refunded/released stakes too, to render their status (Held/
+    // Released/Refunded) instead of them silently disappearing.
     const stakesResult = await supabase
         .from("tournament_stakes")
         .select("*")
-        .eq("tournament_id", tournamentId)
-        .is("refunded_at", null);
+        .eq("tournament_id", tournamentId);
 
     const payoutsResult = await supabase
         .from("tournament_payouts")
@@ -3244,8 +3473,18 @@ app.post("/api/tournaments/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
+    // Legal requirement: same 75%-offered / 25%-retained floor as match
+    // staking - see POST /api/matches.
+    if (stakingEnabled && ownStakeAmount < tournamentEntryFee * 0.25) {
+        res.json({
+            success: false,
+            message: "You must retain at least 25% of your own entry - you can offer at most 75% to others."
+        });
+        return;
+    }
+
     if (tournamentEntryFee > 0) {
-        const debit = await adjustBalance(username, -tournamentEntryFee);
+        const debit = await adjustBalance(username, -tournamentEntryFee, "entry_fee_debit", "tournament", tournamentId);
 
         if (!debit.success) {
             res.json({
@@ -3418,7 +3657,7 @@ app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
     const entryFee = Number(tournament.entry_fee) || 0;
     const ownStake = Number(playerResult.data.own_stake_amount) || 0;
 
-    const debit = await adjustBalance(username, -amount);
+    const debit = await adjustBalance(username, -amount, "stake_hold", "tournament", tournamentId);
 
     if (!debit.success) {
         res.json({
@@ -3435,6 +3674,7 @@ app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
             staked_username: stakedUsername,
             staker_username: username,
             amount: amount,
+            status: "held",
             created_at: Date.now()
         })
         .select()
@@ -3443,7 +3683,7 @@ app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
     if (insertResult.error || !insertResult.data) {
         console.log("CREATE TOURNAMENT STAKE ERROR:", insertResult.error);
 
-        await adjustBalance(username, amount);
+        await adjustBalance(username, amount, "stake_hold_rollback", "tournament", tournamentId);
 
         res.json({
             success: false,
@@ -3471,7 +3711,7 @@ app.post("/api/tournaments/:id/stakes", requireAuth, async function (req, res) {
             .delete()
             .eq("id", insertResult.data.id);
 
-        await adjustBalance(username, amount);
+        await adjustBalance(username, amount, "stake_hold_rollback", "tournament", tournamentId);
 
         res.json({
             success: false,
@@ -3804,7 +4044,7 @@ async function logMatchVerificationEvent(matchVerificationId, eventType, options
 // Madden, so a synthetic-but-unique "madden-match-<id>" fills that column
 // instead, satisfying its UNIQUE constraint without colliding with real
 // Clash battle ids / Chess game uuids.
-async function completeMaddenMatch(match, winnerUsername) {
+async function completeMaddenMatch(match, winnerUsername, disqualifiedUsername) {
     const isCreatorWinner = winnerUsername === match.creator_username;
     const loserUsername = isCreatorWinner ? match.opponent_username : match.creator_username;
     const winnerTag = isCreatorWinner ? match.creator_tag : match.opponent_tag;
@@ -3845,13 +4085,13 @@ async function completeMaddenMatch(match, winnerUsername) {
     }
 
     const totalWinnings = Number(completed.data.entry_fee) * 2;
-    const payout = await adjustBalance(winnerUsername, totalWinnings);
+    const payout = await adjustBalance(winnerUsername, totalWinnings, "match_prize_payout", "match", match.id);
 
     if (!payout.success) {
         console.log("MADDEN MATCH PAYOUT ERROR:", winnerUsername, payout.message);
     }
 
-    await recordStakingPayoutBreakdown(completed.data, winnerUsername, totalWinnings);
+    await resolveStakesForCompletedMatch(completed.data, winnerUsername, disqualifiedUsername);
 
     await awardXpToUser(winnerUsername, getMatchXpForResult("win"));
     await awardXpToUser(loserUsername, getMatchXpForResult("loss"));
@@ -4280,7 +4520,7 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
     const entryFee = Number(match.entry_fee) || 0;
     const creatorStake = Number(match.creator_stake_amount) || 0;
 
-    const debit = await adjustBalance(username, -amount);
+    const debit = await adjustBalance(username, -amount, "stake_hold", "match", matchId);
 
     if (!debit.success) {
         res.json({
@@ -4296,6 +4536,7 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
             match_id: matchId,
             username: username,
             amount: amount,
+            status: "held",
             created_at: Date.now()
         })
         .select()
@@ -4304,7 +4545,7 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
     if (insertResult.error || !insertResult.data) {
         console.log("CREATE STAKE ERROR:", insertResult.error);
 
-        await adjustBalance(username, amount);
+        await adjustBalance(username, amount, "stake_hold_rollback", "match", matchId);
 
         res.json({
             success: false,
@@ -4332,7 +4573,7 @@ app.post("/api/matches/:id/stakes", requireAuth, async function (req, res) {
             .delete()
             .eq("id", insertResult.data.id);
 
-        await adjustBalance(username, amount);
+        await adjustBalance(username, amount, "stake_hold_rollback", "match", matchId);
 
         res.json({
             success: false,
@@ -4720,8 +4961,16 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
 
             const drawFee = Number(drawUpdate.data.entry_fee) || 0;
 
-            await adjustBalance(drawUpdate.data.creator_username, drawFee);
-            await adjustBalance(drawUpdate.data.opponent_username, drawFee);
+            await adjustBalance(drawUpdate.data.creator_username, drawFee, "entry_fee_refund_draw", "match", matchId);
+            await adjustBalance(drawUpdate.data.opponent_username, drawFee, "entry_fee_refund_draw", "match", matchId);
+
+            // A draw has no winner to release held stakes to - refund
+            // them to the staker, same as a cancelled/expired match (see
+            // resolveStakesForCompletedMatch's docstring for why this is
+            // never conditioned on who "won").
+            if (drawUpdate.data.staking_enabled) {
+                await refundMatchStakes(matchId, "match_draw");
+            }
 
             res.json({
                 success: true,
@@ -4824,13 +5073,13 @@ app.post("/api/matches/:id/verify", requireAuth, async function (req, res) {
         }
 
         const totalWinnings = Number(completed.data.entry_fee) * 2;
-        const payout = await adjustBalance(winnerUsername, totalWinnings);
+        const payout = await adjustBalance(winnerUsername, totalWinnings, "match_prize_payout", "match", matchId);
 
         if (!payout.success) {
             console.log("MATCH PAYOUT ERROR:", winnerUsername, payout.message);
         }
 
-        await recordStakingPayoutBreakdown(completed.data, winnerUsername, totalWinnings);
+        await resolveStakesForCompletedMatch(completed.data, winnerUsername, null);
 
         const winnerXpEarned = getMatchXpForResult("win");
 const loserXpEarned = getMatchXpForResult("loss");
@@ -4912,10 +5161,10 @@ app.post("/api/matches/:id/cancel", requireAuth, async function (req, res) {
         return;
     }
 
-    await adjustBalance(username, Number(cancelled.data.entry_fee));
+    await adjustBalance(username, Number(cancelled.data.entry_fee), "entry_fee_refund_cancelled", "match", matchId);
 
     if (cancelled.data.staking_enabled) {
-        await refundMatchStakes(matchId);
+        await refundMatchStakes(matchId, "match_cancelled");
     }
 
     res.json({
@@ -4948,7 +5197,7 @@ app.get("/api/matches/:id", async function (req, res) {
     if (match.stakingEnabled) {
         const stakesResult = await supabase
             .from("match_stakes")
-            .select("username, amount, created_at")
+            .select("username, amount, created_at, status")
             .eq("match_id", matchId)
             .order("created_at", { ascending: true });
 
@@ -7567,13 +7816,23 @@ app.post("/api/admin/disputes/:id/resolve", requireAdminSession, async function 
     if (action === "refund_both") {
         for (const participant of disputeMatch.participants) {
             if (participant) {
-                await adjustBalance(participant, disputeMatch.entryFee);
+                await adjustBalance(participant, disputeMatch.entryFee, "entry_fee_refund_dispute", dispute.match_type, dispute.match_id);
             }
+        }
+
+        // Entry fees being fully returned means the match never
+        // legitimately resolved - held stakes go back to the staker too,
+        // same rule as a cancellation. Only wired up for plain matches
+        // today: tournament_match disputes are one bracket match, not
+        // the whole tournament staking window, so there's no equivalent
+        // single-call refund path yet (see chat - flagged as a follow-up).
+        if (dispute.match_type === "match" && disputeMatch.row.staking_enabled) {
+            await refundMatchStakes(disputeMatch.row.id, "dispute_refund");
         }
     }
 
     if (action === "award_disputer") {
-        await adjustBalance(dispute.disputing_username, disputeMatch.entryFee);
+        await adjustBalance(dispute.disputing_username, disputeMatch.entryFee, "entry_fee_award_dispute", dispute.match_type, dispute.match_id);
     }
 
     if (action === "manual") {
@@ -7585,7 +7844,7 @@ app.post("/api/admin/disputes/:id/resolve", requireAdminSession, async function 
             return;
         }
 
-        await adjustBalance(manualUsername, manualAmount);
+        await adjustBalance(manualUsername, manualAmount, "admin_dispute_manual_adjustment", dispute.match_type, dispute.match_id);
     }
 
     await supabase
@@ -7975,7 +8234,7 @@ app.post("/api/admin/match-verifications/:id/forfeit-and-ban", requireAdminSessi
         ? match.opponent_username
         : match.creator_username;
 
-    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+    const completedMatch = await completeMaddenMatch(match, winnerUsername, offendingUsername);
 
     if (!completedMatch) {
         res.json({ success: false, message: "Could not resolve this match - it may have changed state. Reload and try again." });
@@ -8146,7 +8405,7 @@ app.post("/api/admin/grant-currency", requireAdminSession, async function (req, 
         return;
     }
 
-    const result = await adjustBalance(targetUsername, amount);
+    const result = await adjustBalance(targetUsername, amount, "admin_currency_grant", "admin_action", null);
 
     if (!result.success) {
         res.json({

@@ -116,7 +116,7 @@
                 fallbackAmount: p.fallback_amount === null ? null : Number(p.fallback_amount),
                 otherStakes: (data.stakes || [])
                     .filter(function (stake) { return stake.staked_username === p.username; })
-                    .map(function (stake) { return { username: stake.staker_username, amount: Number(stake.amount) }; })
+                    .map(function (stake) { return { username: stake.staker_username, amount: Number(stake.amount), status: stake.status || "held" }; })
             };
         });
 
@@ -137,6 +137,55 @@
                 return { username: payout.username, amount: Number(payout.amount), share: Number(payout.share) };
             })
         };
+    }
+
+    // Same idea as match-detail.js's checkStakeStatusTransitions - tracked
+    // in memory across loadTournament() polls, not persisted. A tournament
+    // can have the current user staked on by others AND staking on other
+    // participants at the same time, so this tracks both directions:
+    // asStaked (are you the one being staked on, and did it just release)
+    // and asStaker (per staked-on participant, did your own stake just
+    // resolve).
+    let lastTournamentStakeNotifyState = null;
+
+    function checkTournamentStakeStatusTransitions(t) {
+        const state = { asStaked: false, asStaker: {} };
+
+        const ownStaking = t.staking[tCurrentUsername];
+
+        if (ownStaking) {
+            const withMoney = ownStaking.otherStakes.filter(function (s) { return s.amount > 0; });
+            state.asStaked = withMoney.length > 0 && withMoney.every(function (s) {
+                return s.status === "released_to_creator";
+            });
+        }
+
+        Object.keys(t.staking).forEach(function (stakedUsername) {
+            t.staking[stakedUsername].otherStakes.forEach(function (stake) {
+                if (stake.username === tCurrentUsername) {
+                    state.asStaker[stakedUsername] = stake.status;
+                }
+            });
+        });
+
+        if (lastTournamentStakeNotifyState) {
+            if (state.asStaked && !lastTournamentStakeNotifyState.asStaked) {
+                showToast("Stake received.", "success");
+            }
+
+            Object.keys(state.asStaker).forEach(function (stakedUsername) {
+                const prevStatus = lastTournamentStakeNotifyState.asStaker[stakedUsername];
+                const newStatus = state.asStaker[stakedUsername];
+
+                if (prevStatus === "held" && newStatus === "released_to_creator") {
+                    showToast("Your stake on " + stakedUsername + " was released.", "success");
+                } else if (prevStatus === "held" && newStatus === "refunded") {
+                    showToast("Your stake on " + stakedUsername + " was refunded.", "success");
+                }
+            });
+        }
+
+        lastTournamentStakeNotifyState = state;
     }
 
     let currentTournament = null;
@@ -266,6 +315,7 @@
                 if (isNaN(amount)) error = "Enter a valid amount.";
                 else if (amount <= 0) error = "Stake must be more than 0.";
                 else if (amount > entryFee) error = "Stake can't exceed " + formatCredits(entryFee) + " Vault Credits.";
+                else if (amount < entryFee * 0.25) error = "You must retain at least 25% of your entry - keep at least " + formatCredits(entryFee * 0.25) + " Vault Credits.";
             }
         }
 
@@ -303,15 +353,26 @@
 
         let currentUserAmount = 0;
         let othersTotal = 0;
+        let currentUserStatus = null;
 
         otherStakes.forEach(function (stake) {
-            if (stake.username === tCurrentUsername) currentUserAmount += stake.amount;
-            else othersTotal += stake.amount;
+            if (stake.username === tCurrentUsername) {
+                currentUserAmount += stake.amount;
+                currentUserStatus = stake.status;
+            } else {
+                othersTotal += stake.amount;
+            }
         });
 
         const remaining = Math.max(entryFee - ownStake - othersTotal - currentUserAmount, 0);
 
-        return { ownStake: ownStake, othersTotal: othersTotal, currentUserAmount: currentUserAmount, remaining: remaining };
+        return {
+            ownStake: ownStake,
+            othersTotal: othersTotal,
+            currentUserAmount: currentUserAmount,
+            currentUserStatus: currentUserStatus,
+            remaining: remaining
+        };
     }
 
     function wireParticipantStakeForm(card, username, entryFee, remaining, safeId) {
@@ -405,10 +466,13 @@
         const alreadyStaked = b.currentUserAmount > 0;
         const canStakeMore = !stakingClosed && b.remaining > 0 && !alreadyStaked;
 
+        const youStatusSuffix = b.currentUserStatus === "released_to_creator" ? " — Released"
+            : (b.currentUserStatus === "refunded" ? " — Refunded" : "");
+
         const youRowHtml = alreadyStaked
             ? '<div class="stake-breakdown-row you-row">' +
                 '<span>You Staked</span>' +
-                '<strong>' + coinHtml(b.currentUserAmount) + ' (' + formatPercent(pctOf(b.currentUserAmount, t.entryFee)) + ')</strong>' +
+                '<strong>' + coinHtml(b.currentUserAmount) + ' (' + formatPercent(pctOf(b.currentUserAmount, t.entryFee)) + ')' + youStatusSuffix + '</strong>' +
               '</div>'
             : "";
 
@@ -564,6 +628,7 @@
         renderSlots(currentTournament);
         renderCancelSection(currentTournament);
         renderJoinSection(currentTournament);
+        checkTournamentStakeStatusTransitions(currentTournament);
         renderStakingSection(currentTournament);
         renderPayoutSection(currentTournament);
         refreshStatus();

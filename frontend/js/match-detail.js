@@ -125,7 +125,7 @@ function normalizeRealMatch(data) {
         opponentUsername: match.opponentUsername,
         creatorStaked: match.creatorStakeAmount || 0,
         otherStakes: (data.stakes || []).map(function (stake) {
-            return { username: stake.username, amount: Number(stake.amount) };
+            return { username: stake.username, amount: Number(stake.amount), status: stake.status || "held" };
         }),
         fallbackResolved: !!match.stakeResolvedAt,
         status: match.status,
@@ -337,19 +337,80 @@ function getStakeBreakdown(match) {
 
     let currentUserAmount = 0;
     let othersTotal = 0;
+    let currentUserStatus = null;
 
     otherStakes.forEach(function (stake) {
         if (stake.username === currentUsername) {
             currentUserAmount += stake.amount;
+            currentUserStatus = stake.status;
         } else {
             othersTotal += stake.amount;
         }
     });
 
+    const othersWithMoney = otherStakes.filter(function (stake) {
+        return stake.username !== currentUsername && stake.amount > 0;
+    });
+
+    const othersAllReleased = othersWithMoney.length > 0 && othersWithMoney.every(function (stake) {
+        return stake.status === "released_to_creator";
+    });
+
+    const othersAllRefunded = othersWithMoney.length > 0 && othersWithMoney.every(function (stake) {
+        return stake.status === "refunded";
+    });
+
     const totalStaked = creatorStaked + othersTotal + currentUserAmount;
     const remaining = Math.max(match.entryFee - totalStaked, 0);
 
-    return { creatorStaked: creatorStaked, othersTotal: othersTotal, currentUserAmount: currentUserAmount, remaining: remaining };
+    return {
+        creatorStaked: creatorStaked,
+        othersTotal: othersTotal,
+        currentUserAmount: currentUserAmount,
+        currentUserStatus: currentUserStatus,
+        othersAllReleased: othersAllReleased,
+        othersAllRefunded: othersAllRefunded,
+        remaining: remaining
+    };
+}
+
+// Fires the "your stake was settled" notifications the escrow feature
+// needs (see chat): the staked player (creator) gets told when their
+// stakers' held money is released to them, and a staker gets told when
+// their own held stake resolves (released or refunded). Tracked in
+// memory across loadMatch() polls rather than persisted anywhere - a
+// page refresh just re-establishes the current state as the new
+// baseline, which is fine since the goal is "notice it happening live",
+// not a durable notification history.
+let lastStakeNotifyState = null;
+
+function checkStakeStatusTransitions(match) {
+    if (!match.stakingEnabled) return;
+
+    const b = getStakeBreakdown(match);
+    const isCreator = currentUsername === match.creatorUsername;
+
+    const state = {
+        othersAllReleased: b.othersAllReleased,
+        othersAllRefunded: b.othersAllRefunded,
+        currentUserStatus: b.currentUserStatus
+    };
+
+    if (lastStakeNotifyState) {
+        if (isCreator && !lastStakeNotifyState.othersAllReleased && state.othersAllReleased) {
+            showToast("Stake received.", "success");
+        }
+
+        if (b.currentUserAmount > 0 && lastStakeNotifyState.currentUserStatus === "held") {
+            if (state.currentUserStatus === "released_to_creator") {
+                showToast("Your stake was released.", "success");
+            } else if (state.currentUserStatus === "refunded") {
+                showToast("Your stake was refunded.", "success");
+            }
+        }
+    }
+
+    lastStakeNotifyState = state;
 }
 
 function pctOfEntry(amount) {
@@ -417,14 +478,18 @@ function renderStakingSection() {
         stakeCreatorLabel.textContent = (currentMatch.creatorUsername || "Creator") + " Staked";
     }
 
+    const othersStatusSuffix = b.othersAllReleased ? " — Released" : (b.othersAllRefunded ? " — Refunded" : "");
+    const youStatusSuffix = b.currentUserStatus === "released_to_creator" ? " — Released"
+        : (b.currentUserStatus === "refunded" ? " — Refunded" : "");
+
     stakeTotalEntry.innerHTML = coinHtml(currentMatch.entryFee);
     stakeCreatorAmount.innerHTML = coinHtml(b.creatorStaked) + " (" + formatPercent(pctOfEntry(b.creatorStaked)) + ")";
-    stakeOthersAmount.innerHTML = coinHtml(b.othersTotal) + " (" + formatPercent(pctOfEntry(b.othersTotal)) + ")";
+    stakeOthersAmount.innerHTML = coinHtml(b.othersTotal) + " (" + formatPercent(pctOfEntry(b.othersTotal)) + ")" + othersStatusSuffix;
     stakeRemainingAmount.innerHTML = coinHtml(b.remaining) + " (" + formatPercent(pctOfEntry(b.remaining)) + ")";
 
     if (b.currentUserAmount > 0) {
         stakeYouRow.classList.remove("hidden");
-        stakeYouAmount.innerHTML = coinHtml(b.currentUserAmount) + " (" + formatPercent(pctOfEntry(b.currentUserAmount)) + ")";
+        stakeYouAmount.innerHTML = coinHtml(b.currentUserAmount) + " (" + formatPercent(pctOfEntry(b.currentUserAmount)) + ")" + youStatusSuffix;
     } else {
         stakeYouRow.classList.add("hidden");
     }
@@ -535,6 +600,7 @@ function renderAll() {
     renderPlayers(currentMatch);
     renderJoinSection(currentMatch);
     renderCancelSection(currentMatch);
+    checkStakeStatusTransitions(currentMatch);
     renderStakingSection();
     renderPayoutSection();
     refreshStatus();
