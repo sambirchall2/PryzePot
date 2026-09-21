@@ -58,6 +58,15 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+// Crypto webhook needs the raw request body (see crypto-wallet-routes.js)
+// so it MUST be registered before the express.json() below - once
+// express.json() has run, the raw bytes are gone. adjustBalance isn't
+// defined until further down this file, but it's a hoisted function
+// declaration so referencing it here is safe.
+const { registerCryptoWalletWebhook, registerCryptoWalletRoutes } = require("./crypto-wallet-routes");
+registerCryptoWalletWebhook(app, { adjustBalance: adjustBalance });
+
 app.use(express.json());
 
 const JWT_EXPIRES_IN = "30d";
@@ -546,6 +555,18 @@ async function adjustBalance(username, delta, reason, referenceType, referenceId
 
     return { success: true, balance: result.data };
 }
+
+// The rest of the crypto wallet routes (deposit address, withdrawals,
+// admin approve/reject) - unlike the webhook above, these don't care
+// about express.json() vs raw body, so registering them here (right
+// after adjustBalance, the function they all funnel through) is just
+// for readability, not a requirement.
+registerCryptoWalletRoutes(app, {
+    requireAuth: requireAuth,
+    requireAdminSession: requireAdminSession,
+    adjustBalance: adjustBalance
+});
+
 function dbMatchToFrontend(match) {
     return {
         id: match.id,
@@ -596,7 +617,10 @@ function dbMatchToFrontend(match) {
 
         creatorReadyAt: match.creator_ready_at,
         opponentReadyAt: match.opponent_ready_at,
-        matchStartedAt: match.match_started_at
+        matchStartedAt: match.match_started_at,
+
+        rlRoomName: match.rl_room_name,
+        rlRoomPassword: match.rl_room_password
     };
 }
 
@@ -997,20 +1021,27 @@ async function getMatchCandidates(game, playerOneHandle, playerTwoHandle, cutoff
     });
 }
 
-// Compare two player handles for a given game (Chess/Madden = case-
-// insensitive username/EA name; Clash = normalized tag).
+// Games with no public match-result API - self-reported win/loss decides the
+// match on agreement; a disagreement goes straight to the generic
+// POST /api/disputes queue every game already has, not a per-game
+// screenshot/verification subsystem (Madden is the one exception that still
+// has its own screenshot/bot-OCR path on top of this, kept as-is).
+const MANUAL_REPORT_GAMES = ["Madden NFL", "Street Fighter 6", "Rocket League", "League of Legends"];
+
+// Compare two player handles for a given game (Chess/Madden/SF6/RL/LoL = case-
+// insensitive username/ID; Clash = normalized tag).
 function handlesMatch(game, a, b) {
-    if (game === "Chess.com" || game === "Madden NFL") {
+    if (game !== "Clash Royale") {
         return String(a).toLowerCase() === String(b).toLowerCase();
     }
 
     return cleanTag(a) === cleanTag(b);
 }
 
-// Normalize a raw player handle for storage (Chess/Madden = trimmed
-// username/EA name; Clash = "#TAG").
+// Normalize a raw player handle for storage (Chess/Madden/SF6/RL/LoL =
+// trimmed username/ID; Clash = "#TAG").
 function formatPlayerHandle(game, raw) {
-    if (game === "Chess.com" || game === "Madden NFL") {
+    if (game !== "Clash Royale") {
         return String(raw).trim();
     }
 
@@ -1019,6 +1050,7 @@ function formatPlayerHandle(game, raw) {
 
 // The link shown to an opponent so they can start the game with this player.
 // Clash uses a friend-invite link; Chess uses the player's profile page.
+// Madden/SF6/RL/LoL have no URL concept - the ID alone is enough.
 function buildChessProfileLink(username) {
     return "https://www.chess.com/member/" + encodeURIComponent(String(username).trim());
 }
@@ -1026,6 +1058,9 @@ function buildChessProfileLink(username) {
 function normalizeGame(rawGame) {
     if (rawGame === "Chess.com") return "Chess.com";
     if (rawGame === "Madden NFL") return "Madden NFL";
+    if (rawGame === "Street Fighter 6") return "Street Fighter 6";
+    if (rawGame === "Rocket League") return "Rocket League";
+    if (rawGame === "League of Legends") return "League of Legends";
     return "Clash Royale";
 }
 
@@ -2492,6 +2527,84 @@ app.post("/api/users/save-madden", requireAuth, async function (req, res) {
     });
 });
 
+// Street Fighter 6 / Rocket League / League of Legends have no public
+// account API to verify against either (same reasoning as save-madden
+// above) - these just persist the ID the player typed.
+app.post("/api/users/save-streetfighter", requireAuth, async function (req, res) {
+    const username = req.username;
+    const capcomId = req.body.capcomId ? String(req.body.capcomId).trim() : "";
+
+    if (!capcomId) {
+        res.json({ success: false, message: "Please enter your Capcom ID." });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({ capcom_id: capcomId })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE STREET FIGHTER ERROR:", result.error);
+        res.json({ success: false, message: "Could not save Capcom ID." });
+        return;
+    }
+
+    res.json({ success: true, message: "Capcom ID saved." });
+});
+
+app.post("/api/users/save-rocketleague", requireAuth, async function (req, res) {
+    const username = req.username;
+    const rlId = req.body.rlId ? String(req.body.rlId).trim() : "";
+
+    if (!rlId) {
+        res.json({ success: false, message: "Please enter your Rocket League ID." });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({ rl_id: rlId })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE ROCKET LEAGUE ERROR:", result.error);
+        res.json({ success: false, message: "Could not save Rocket League ID." });
+        return;
+    }
+
+    res.json({ success: true, message: "Rocket League ID saved." });
+});
+
+app.post("/api/users/save-lol", requireAuth, async function (req, res) {
+    const username = req.username;
+    const riotId = req.body.riotId ? String(req.body.riotId).trim() : "";
+
+    if (!riotId) {
+        res.json({ success: false, message: "Please enter your Riot ID." });
+        return;
+    }
+
+    const result = await supabase
+        .from("users")
+        .update({ riot_id: riotId })
+        .eq("username", username)
+        .select()
+        .single();
+
+    if (result.error) {
+        console.log("SAVE LOL ERROR:", result.error);
+        res.json({ success: false, message: "Could not save Riot ID." });
+        return;
+    }
+
+    res.json({ success: true, message: "Riot ID saved." });
+});
+
 // Attaches { totalStaked, remainingToStake } to each match's frontend shape
 // by summing match_stakes in one grouped query rather than one query per
 // match. Only meaningful for staking_enabled matches; harmless no-op amount
@@ -2720,7 +2833,7 @@ async function resolveStakesForCompletedMatch(match, winnerUsername, disqualifie
 
         // The creator's own share of the prize was already paid via the
         // adjustBalance(winnerUsername, totalWinnings) call made just
-        // before this function runs (see completeMaddenMatch / the
+        // before this function runs (see completeManualReportMatch / the
         // Clash+Chess verify route) - just stamp paid_at for record-
         // keeping consistency with the staker rows above.
         await supabase.from("match_payouts").update({ paid_at: now })
@@ -2952,18 +3065,26 @@ app.post("/api/matches", requireAuth, async function (req, res) {
     const game = normalizeGame(req.body.game);
     const isChess = game === "Chess.com";
     const isMadden = game === "Madden NFL";
+    const isManualReport = MANUAL_REPORT_GAMES.includes(game);
 
     const creatorHandle = formatPlayerHandle(game, playerTag);
     const friendLink = isChess
         ? buildChessProfileLink(playerTag)
-        : (isMadden ? null : req.body.friendLink);
+        : (isManualReport ? null : req.body.friendLink);
 
-    const mode = isChess ? "10 Min Rapid" : (isMadden ? "Madden NFL 1v1" : "1v1 Friendly Battle");
+    const MODE_LABELS = {
+        "Madden NFL": "Madden NFL 1v1",
+        "Street Fighter 6": "Street Fighter 6 1v1",
+        "Rocket League": "Rocket League 1v1",
+        "League of Legends": "League of Legends 1v1"
+    };
+    const mode = isChess ? "10 Min Rapid" : (MODE_LABELS[game] || "1v1 Friendly Battle");
 
-    // Madden has no separate "friend link" concept (see deviation #1 in
-    // 2026-08-16-add-madden.sql) - the EA name alone (creatorHandle/
-    // playerTag) is enough to post a match, so friendLink isn't required.
-    if (!username || !playerTag || (!isMadden && !friendLink) || !(entryFee > 0)) {
+    // Madden/SF6/RL/LoL have no separate "friend link" concept (see
+    // deviation #1 in 2026-08-16-add-madden.sql) - the account ID alone
+    // (creatorHandle/playerTag) is enough to post a match, so friendLink
+    // isn't required for any manual-report game.
+    if (!username || !playerTag || (!isManualReport && !friendLink) || !(entryFee > 0)) {
         res.json({
             success: false,
             message: "Missing match information."
@@ -2982,6 +3103,12 @@ app.post("/api/matches", requireAuth, async function (req, res) {
         });
         return;
     }
+
+    // Rocket League only - the host often hasn't created the actual Private
+    // Match in-game yet at post time, so these are optional here and can be
+    // filled in/updated later via POST /api/matches/:id/room-info.
+    const rlRoomName = (game === "Rocket League" && req.body.rlRoomName) ? String(req.body.rlRoomName).trim() : null;
+    const rlRoomPassword = (game === "Rocket League" && req.body.rlRoomPassword) ? String(req.body.rlRoomPassword).trim() : null;
 
     const matchType = req.body.matchType === "scheduled" ? "scheduled" : "instant";
     const scheduledTime = matchType === "scheduled" ? Number(req.body.scheduledTime) : null;
@@ -3064,7 +3191,10 @@ app.post("/api/matches", requireAuth, async function (req, res) {
             platform: platform,
             skill_difficulty: skillDifficulty,
             edition: edition,
-            verification_method: isMadden ? "manual_report" : "api"
+            verification_method: isManualReport ? "manual_report" : "api",
+
+            rl_room_name: rlRoomName,
+            rl_room_password: rlRoomPassword
         })
         .select()
         .single();
@@ -3810,11 +3940,12 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     const game = foundMatch.game || "Clash Royale";
     const isChess = game === "Chess.com";
     const isMadden = game === "Madden NFL";
+    const isManualReport = MANUAL_REPORT_GAMES.includes(game);
 
     const opponentHandle = formatPlayerHandle(game, playerTag);
     const friendLink = isChess
         ? buildChessProfileLink(playerTag)
-        : (isMadden ? null : req.body.friendLink);
+        : (isManualReport ? null : req.body.friendLink);
 
     if (foundMatch.status !== "Waiting for opponent") {
         res.json({
@@ -3832,7 +3963,7 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
         return;
     }
 
-    if (!isMadden && !friendLink) {
+    if (!isManualReport && !friendLink) {
         res.json({
             success: false,
             message: "Missing account link."
@@ -3904,6 +4035,58 @@ app.post("/api/matches/:id/join", requireAuth, async function (req, res) {
     res.json({
         success: true,
         message: "Match joined!",
+        match: dbMatchToFrontend(update.data)
+    });
+});
+
+// Rocket League-only: the host usually hasn't created the actual Private
+// Match in-game until an opponent is known, so this is a separate,
+// creator-only, re-callable step (not part of POST /api/matches) rather than
+// a one-time value required at creation.
+app.post("/api/matches/:id/room-info", requireAuth, async function (req, res) {
+    const matchId = Number(req.params.id);
+    const username = req.username;
+    const rlRoomName = (req.body.rlRoomName || "").trim();
+    const rlRoomPassword = (req.body.rlRoomPassword || "").trim();
+
+    const found = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
+
+    if (!found.data) {
+        res.json({ success: false, message: "Match not found." });
+        return;
+    }
+
+    const match = found.data;
+
+    if (match.game !== "Rocket League") {
+        res.json({ success: false, message: "Not available for this game." });
+        return;
+    }
+
+    if (username !== match.creator_username) {
+        res.json({ success: false, message: "Only the match creator can set the room info." });
+        return;
+    }
+
+    if (!rlRoomName || !rlRoomPassword) {
+        res.json({ success: false, message: "Please enter both a Private Match name and password." });
+        return;
+    }
+
+    const update = await supabase
+        .from("matches")
+        .update({ rl_room_name: rlRoomName, rl_room_password: rlRoomPassword })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+    if (update.error || !update.data) {
+        res.json({ success: false, message: "Could not save the room info." });
+        return;
+    }
+
+    res.json({
+        success: true,
         match: dbMatchToFrontend(update.data)
     });
 });
@@ -4186,7 +4369,7 @@ async function logMatchVerificationEvent(matchVerificationId, eventType, options
 // Madden, so a synthetic-but-unique "madden-match-<id>" fills that column
 // instead, satisfying its UNIQUE constraint without colliding with real
 // Clash battle ids / Chess game uuids.
-async function completeMaddenMatch(match, winnerUsername, disqualifiedUsername) {
+async function completeManualReportMatch(match, winnerUsername, disqualifiedUsername) {
     const isCreatorWinner = winnerUsername === match.creator_username;
     const loserUsername = isCreatorWinner ? match.opponent_username : match.creator_username;
     const winnerTag = isCreatorWinner ? match.creator_tag : match.opponent_tag;
@@ -4215,7 +4398,10 @@ async function completeMaddenMatch(match, winnerUsername, disqualifiedUsername) 
         .from("match_results")
         .insert({
             match_id: match.id,
-            external_match_id: "madden-match-" + match.id,
+            // match.id is globally unique across every game (one shared
+            // matches table/sequence), so this stays collision-free for
+            // every manual-report game, not just Madden.
+            external_match_id: "manual-match-" + match.id,
             winner_username: winnerUsername,
             winner_tag: winnerTag,
             loser_username: loserUsername,
@@ -4223,14 +4409,14 @@ async function completeMaddenMatch(match, winnerUsername, disqualifiedUsername) 
         });
 
     if (resultInsert.error) {
-        console.log("MADDEN MATCH RESULT INSERT ERROR:", resultInsert.error);
+        console.log("MANUAL REPORT MATCH RESULT INSERT ERROR:", resultInsert.error);
     }
 
     const totalWinnings = Number(completed.data.entry_fee) * 2;
     const payout = await adjustBalance(winnerUsername, totalWinnings, "match_prize_payout", "match", match.id);
 
     if (!payout.success) {
-        console.log("MADDEN MATCH PAYOUT ERROR:", winnerUsername, payout.message);
+        console.log("MANUAL REPORT MATCH PAYOUT ERROR:", winnerUsername, payout.message);
     }
 
     await resolveStakesForCompletedMatch(completed.data, winnerUsername, disqualifiedUsername);
@@ -4260,7 +4446,7 @@ app.post("/api/matches/:id/report-result", requireAuth, async function (req, res
 
     const match = found.data;
 
-    if (match.game !== "Madden NFL") {
+    if (!MANUAL_REPORT_GAMES.includes(match.game)) {
         res.json({ success: false, message: "Not available for this game." });
         return;
     }
@@ -4273,7 +4459,10 @@ app.post("/api/matches/:id/report-result", requireAuth, async function (req, res
         return;
     }
 
-    if (!match.setup_ready_at) {
+    // setup_ready_at only exists for Madden's team-select step - the other
+    // manual-report games have no post-join setup, so only Madden needs this
+    // gate at all.
+    if (match.game === "Madden NFL" && !match.setup_ready_at) {
         res.json({ success: false, message: "Match setup isn't complete yet." });
         return;
     }
@@ -4367,14 +4556,16 @@ app.post("/api/matches/:id/report-result", requireAuth, async function (req, res
             success: true,
             bothReported: true,
             resolved: false,
-            message: "Your reports don't match. Both players need to upload a screenshot."
+            message: match.game === "Madden NFL"
+                ? "Your reports don't match. Both players need to upload a screenshot."
+                : "Your reports don't match. Please file a dispute so an admin can look into it."
         });
         return;
     }
 
     const winnerUsername = creatorReport.reported_result === "win" ? match.creator_username : match.opponent_username;
 
-    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+    const completedMatch = await completeManualReportMatch(match, winnerUsername);
 
     await supabase
         .from("match_verifications")
@@ -4528,7 +4719,7 @@ app.post("/api/matches/:id/screenshot", requireAuth, function (req, res, next) {
             const botResult = await runMaddenScreenshotVerification(verification.id);
 
             if (botResult.resolved) {
-                await completeMaddenMatch(match, botResult.winnerUsername);
+                await completeManualReportMatch(match, botResult.winnerUsername);
                 botResolved = true;
             }
         } catch (error) {
@@ -4562,7 +4753,7 @@ app.get("/api/matches/:id/result-status", requireAuth, async function (req, res)
 
     const match = found.data;
 
-    if (match.game !== "Madden NFL") {
+    if (!MANUAL_REPORT_GAMES.includes(match.game)) {
         res.json({ success: false, message: "Not available for this game." });
         return;
     }
@@ -4595,7 +4786,7 @@ app.get("/api/matches/:id/result-status", requireAuth, async function (req, res)
     let myScreenshotUploaded = false;
     let theirScreenshotUploaded = false;
 
-    if (verification) {
+    if (verification && match.game === "Madden NFL") {
         const shotsResult = await supabase
             .from("match_screenshots")
             .select("player_username")
@@ -4604,6 +4795,23 @@ app.get("/api/matches/:id/result-status", requireAuth, async function (req, res)
         const shots = shotsResult.data || [];
         myScreenshotUploaded = shots.some(function (s) { return s.player_username === username; });
         theirScreenshotUploaded = shots.some(function (s) { return s.player_username !== username; });
+    }
+
+    // Street Fighter 6 / Rocket League / League of Legends skip screenshots
+    // entirely - a disagreement is resolved by filing straight into the
+    // existing generic dispute queue (POST /api/disputes) instead, so the
+    // frontend just needs to know whether that's already happened.
+    let disputeFiled = false;
+
+    if (match.game !== "Madden NFL") {
+        const disputeResult = await supabase
+            .from("disputes")
+            .select("id")
+            .eq("match_type", "match")
+            .eq("match_id", matchId)
+            .maybeSingle();
+
+        disputeFiled = !!disputeResult.data;
     }
 
     res.json({
@@ -4615,7 +4823,8 @@ app.get("/api/matches/:id/result-status", requireAuth, async function (req, res)
         theirReportSubmitted: !!theirReport,
         verificationStatus: verification ? verification.status : null,
         myScreenshotUploaded: myScreenshotUploaded,
-        theirScreenshotUploaded: theirScreenshotUploaded
+        theirScreenshotUploaded: theirScreenshotUploaded,
+        disputeFiled: disputeFiled
     });
 });
 
@@ -6160,7 +6369,10 @@ app.get("/api/leaderboard", async function (req, res) {
 
     const LEADERBOARD_GAME_NAMES = {
         clash: "Clash Royale",
-        chess: "Chess.com"
+        chess: "Chess.com",
+        streetfighter: "Street Fighter 6",
+        rocketleague: "Rocket League",
+        leagueoflegends: "League of Legends"
     };
 
     if (game !== "all" && !LEADERBOARD_GAME_NAMES[game]) {
@@ -6394,7 +6606,7 @@ app.get("/api/users/:username/profile", async function (req, res) {
     const result = await supabase
         .from("users")
         .select(
-            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, clash_tag, clash_name, clash_friend_link, clash_trophies, clash_exp_level, clash_verified, clash_friend_link_updated_at, ea_name"
+            "username, balance, profile_picture, profile_banner, profile_completed, xp, level, created_at, last_seen, equipped_avatar, equipped_banner, equipped_frame, equipped_badge, equipped_title, clash_tag, clash_name, clash_friend_link, clash_trophies, clash_exp_level, clash_verified, clash_friend_link_updated_at, ea_name, capcom_id, rl_id, riot_id, dispute_strikes, account_under_review"
         )
         .eq("username", username)
         .maybeSingle();
@@ -7101,11 +7313,33 @@ app.post("/api/friends/remove", requireAuth, async function (req, res) {
         message: "Friend removed."
     });
 });
+// Which users column holds a player's persistent in-game ID/tag for a given
+// game - used by Friends-mode challenges, which (unlike POST /api/matches)
+// don't take the ID directly in the request body, so it has to be looked up
+// from the account. Clash Royale is the only game with a separate stored
+// friend-link column (clash_friend_link); Chess.com's is derived
+// (buildChessProfileLink); every manual-report game has none at all.
+function getGameProfileColumn(game) {
+    if (game === "Chess.com") return "chess_username";
+    if (game === "Madden NFL") return "ea_name";
+    if (game === "Street Fighter 6") return "capcom_id";
+    if (game === "Rocket League") return "rl_id";
+    if (game === "League of Legends") return "riot_id";
+    return "clash_tag";
+}
+
+function getGameFriendLink(game, row) {
+    if (game === "Clash Royale") return row ? row.clash_friend_link : null;
+    if (game === "Chess.com" && row && row.chess_username) return buildChessProfileLink(row.chess_username);
+    return null;
+}
+
 app.post("/api/friends/challenge", requireAuth, async function (req, res) {
 
     const challengerUsername = req.username;
     const receiverUsername = req.body.receiverUsername;
     const entryFee = Number(req.body.entryFee);
+    const game = normalizeGame(req.body.game);
 
     if (!challengerUsername || !receiverUsername || !(entryFee > 0)) {
         res.json({
@@ -7143,17 +7377,36 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
         return;
     }
 
+    const profileColumn = getGameProfileColumn(game);
+    const selectColumns = Array.from(new Set([profileColumn, "clash_friend_link", "chess_username"])).join(", ");
+
     const challenger = await supabase
         .from("users")
-        .select("clash_tag, clash_friend_link")
+        .select(selectColumns)
         .eq("username", challengerUsername)
         .maybeSingle();
 
     const receiver = await supabase
         .from("users")
-        .select("clash_tag, clash_friend_link")
+        .select(selectColumns)
         .eq("username", receiverUsername)
         .maybeSingle();
+
+    if (!challenger.data || !challenger.data[profileColumn]) {
+        res.json({
+            success: false,
+            message: "Connect your " + game + " account before challenging a friend."
+        });
+        return;
+    }
+
+    if (!receiver.data || !receiver.data[profileColumn]) {
+        res.json({
+            success: false,
+            message: "Your friend hasn't connected a " + game + " account yet."
+        });
+        return;
+    }
 
     const debit = await adjustBalance(challengerUsername, -entryFee);
 
@@ -7170,13 +7423,13 @@ app.post("/api/friends/challenge", requireAuth, async function (req, res) {
         .insert({
             challenger_username: challengerUsername,
             receiver_username: receiverUsername,
-            game: "Clash Royale",
+            game: game,
             entry_fee: entryFee,
             status: "pending",
-            challenger_tag: challenger.data?.clash_tag,
-            challenger_friend_link: challenger.data?.clash_friend_link,
-            receiver_tag: receiver.data?.clash_tag,
-            receiver_friend_link: receiver.data?.clash_friend_link
+            challenger_tag: challenger.data[profileColumn],
+            challenger_friend_link: getGameFriendLink(game, challenger.data),
+            receiver_tag: receiver.data[profileColumn],
+            receiver_friend_link: getGameFriendLink(game, receiver.data)
         })
         .select()
         .single();
@@ -7436,10 +7689,13 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
 
     const now = Date.now();
 
+    const challengeGame = challenge.game || "Clash Royale";
+    const isManualReportChallenge = MANUAL_REPORT_GAMES.includes(challengeGame);
+
     const matchResult = await supabase
         .from("matches")
         .insert({
-            game: "Clash Royale",
+            game: challengeGame,
             mode: "Friend Challenge",
             entry_fee: challenge.entry_fee,
 
@@ -7455,13 +7711,18 @@ app.post("/api/friends/challenges/:id/accept", requireAuth, async function (req,
 
             created_at: now,
             expires_at: null,
-            verify_expires_at: now + 30 * 60 * 1000,
+            // Manual-report games have no API verification window to speak
+            // of (see POST /api/matches, which also leaves this null for
+            // them) - only Clash/Chess's automated polling uses it.
+            verify_expires_at: isManualReportChallenge ? null : now + 30 * 60 * 1000,
 
             winner_username: null,
             winner_tag: null,
             loser_username: null,
             loser_tag: null,
-            verified_at: null
+            verified_at: null,
+
+            verification_method: isManualReportChallenge ? "manual_report" : "api"
         })
         .select()
         .single();
@@ -7882,14 +8143,15 @@ app.post("/api/disputes", requireAuth, function (req, res, next) {
     }
 
     // A dispute always overrides whatever match_verifications already says
-    // for a Madden match - agreement, bot auto-resolve, or nothing yet -
-    // by flipping it to status='disputed'/queue_tag='dispute'. This is a
-    // flag for admin review only: it does NOT touch matches.status/
-    // winner_username or reverse any payout that already happened. Actually
-    // refunding or re-awarding, if warranted, stays entirely inside the
-    // existing POST /api/admin/disputes/:id/resolve flow below - same as
-    // every other game's disputes.
-    if (matchType === "match" && disputeMatch.row.game === "Madden NFL") {
+    // for a manual-report match (Madden, Street Fighter 6, Rocket League,
+    // League of Legends) - agreement or nothing yet - by flipping it to
+    // status='disputed'/queue_tag='dispute'. This is a flag for admin review
+    // only: it does NOT touch matches.status/winner_username or reverse any
+    // payout that already happened. Actually refunding or re-awarding, if
+    // warranted, stays entirely inside the existing
+    // POST /api/admin/disputes/:id/resolve flow below - same as every other
+    // game's disputes.
+    if (matchType === "match" && MANUAL_REPORT_GAMES.includes(disputeMatch.row.game)) {
         const existingVerification = await supabase
             .from("match_verifications")
             .select("id")
@@ -8033,35 +8295,46 @@ app.get("/api/admin/disputes/:id", requireAdminSession, async function (req, res
         }
     }
 
-    // Madden context an admin would otherwise have to dig up across
-    // report-result.html/match-room.html manually - team picks, rules ack,
-    // and any screenshots already uploaded for the bot pass - surfaced
-    // here so this one screen has the full picture. No-op for every other
-    // game (disputeMatch.row.game is never "Madden NFL" for them).
-    let maddenVerification = null;
-    let maddenScreenshots = [];
+    // Manual-report context (Madden, Street Fighter 6, Rocket League, League
+    // of Legends) an admin would otherwise have to dig up across
+    // report-result.html/match-room.html manually - each player's
+    // self-reported win/loss claim, plus (Madden only) any screenshots
+    // already uploaded for the bot pass - surfaced here so this one screen
+    // has the full picture. No-op for API-verified games (Clash/Chess).
+    let manualReportVerification = null;
+    let manualReportScreenshots = [];
+    let manualReportReports = [];
 
-    if (disputeMatch && disputeMatch.row.game === "Madden NFL") {
+    if (disputeMatch && MANUAL_REPORT_GAMES.includes(disputeMatch.row.game)) {
         const verificationResult = await supabase
             .from("match_verifications")
             .select("*")
             .eq("match_id", dispute.match_id)
             .maybeSingle();
 
-        maddenVerification = verificationResult.data || null;
+        manualReportVerification = verificationResult.data || null;
 
-        if (maddenVerification) {
+        const reportsResult = await supabase
+            .from("match_result_reports")
+            .select("*")
+            .eq("match_id", dispute.match_id);
+
+        manualReportReports = (reportsResult.data || []).map(function (r) {
+            return { playerUsername: r.player_username, reportedResult: r.reported_result };
+        });
+
+        if (manualReportVerification && disputeMatch.row.game === "Madden NFL") {
             const screenshotsResult = await supabase
                 .from("match_screenshots")
                 .select("*")
-                .eq("match_verification_id", maddenVerification.id);
+                .eq("match_verification_id", manualReportVerification.id);
 
             for (const shot of screenshotsResult.data || []) {
                 const signedShot = await supabase.storage
                     .from("match-screenshots")
                     .createSignedUrl(shot.storage_path, 300);
 
-                maddenScreenshots.push({
+                manualReportScreenshots.push({
                     playerUsername: shot.player_username,
                     botReadStatus: shot.bot_read_status,
                     botExtractedTeam1: shot.bot_extracted_team_1,
@@ -8075,14 +8348,36 @@ app.get("/api/admin/disputes/:id", requireAdminSession, async function (req, res
         }
     }
 
+    // Surfaces each participant's dispute-strike history right on this
+    // screen (see chat - "if you disagree/appeal more than once your
+    // account goes under review") so the admin doesn't have to separately
+    // look up either player before deciding.
+    const participantFlags = {};
+
+    if (disputeMatch) {
+        const flagsResult = await supabase
+            .from("users")
+            .select("username, dispute_strikes, account_under_review")
+            .in("username", disputeMatch.participants.filter(Boolean));
+
+        for (const row of flagsResult.data || []) {
+            participantFlags[row.username] = {
+                disputeStrikes: row.dispute_strikes,
+                accountUnderReview: row.account_under_review
+            };
+        }
+    }
+
     res.json({
         success: true,
         dispute: dispute,
         match: disputeMatch ? disputeMatch.row : null,
         entryFee: disputeMatch ? disputeMatch.entryFee : 0,
         evidenceUrls: evidenceUrls,
-        maddenVerification: maddenVerification,
-        maddenScreenshots: maddenScreenshots
+        participantFlags: participantFlags,
+        manualReportVerification: manualReportVerification,
+        manualReportScreenshots: manualReportScreenshots,
+        manualReportReports: manualReportReports
     });
 });
 
@@ -8159,6 +8454,35 @@ app.post("/api/admin/disputes/:id/resolve", requireAdminSession, async function 
 
     if (action === "award_disputer") {
         await adjustBalance(dispute.disputing_username, disputeMatch.entryFee, "entry_fee_award_dispute", dispute.match_type, dispute.match_id);
+
+        // Awarding the disputer means their opponent's side of the story
+        // (self-report or in-game claim) didn't hold up - that's the one
+        // resolution action with a clear "this specific person was wrong"
+        // signal, so it's the only one that adds a strike (see chat: "if
+        // you disagree/appeal more than once your account goes under
+        // review"). "manual" resolutions are too open-ended (any username,
+        // any amount) to safely infer fault from, so they don't add one.
+        const atFaultUsername = disputeMatch.participants.find(function (p) {
+            return p && p !== dispute.disputing_username;
+        });
+
+        if (atFaultUsername) {
+            const atFaultUser = await supabase
+                .from("users")
+                .select("dispute_strikes")
+                .eq("username", atFaultUsername)
+                .maybeSingle();
+
+            const nextStrikes = (atFaultUser.data ? Number(atFaultUser.data.dispute_strikes) || 0 : 0) + 1;
+
+            await supabase
+                .from("users")
+                .update({
+                    dispute_strikes: nextStrikes,
+                    account_under_review: nextStrikes >= 2
+                })
+                .eq("username", atFaultUsername);
+        }
     }
 
     if (action === "manual") {
@@ -8383,7 +8707,7 @@ app.get("/api/admin/manual-report-disputes/:id", requireAdminSession, async func
 });
 
 // Shared by both tabs above - "select winner" means the same thing
-// regardless of which queue the item came from. Reuses completeMaddenMatch
+// regardless of which queue the item came from. Reuses completeManualReportMatch
 // (the exact same completion recipe the bot/agreement paths already use -
 // matches row -> Completed, match_results row, payout, staking breakdown,
 // XP), so an admin pick behaves identically to every other resolution
@@ -8428,7 +8752,7 @@ app.post("/api/admin/match-verifications/:id/resolve", requireAdminSession, asyn
         return;
     }
 
-    // completeMaddenMatch only updates a match whose status is still
+    // completeManualReportMatch only updates a match whose status is still
     // "Match ready" - if it's already "Completed" (a payout already went
     // out, e.g. before this dispute was filed), this deliberately does NOT
     // try to reverse it. Reversing an already-paid-out match is real money
@@ -8442,7 +8766,7 @@ app.post("/api/admin/match-verifications/:id/resolve", requireAdminSession, asyn
         return;
     }
 
-    const completedMatch = await completeMaddenMatch(match, winnerUsername);
+    const completedMatch = await completeManualReportMatch(match, winnerUsername);
 
     if (!completedMatch) {
         res.json({ success: false, message: "Could not resolve this match - it may have changed state. Reload and try again." });
@@ -8490,7 +8814,7 @@ app.post("/api/admin/match-verifications/:id/resolve", requireAdminSession, asyn
 // might not both happen.
 //
 // Deliberately invents nothing new for either half: "forfeit" reuses the
-// exact same completeMaddenMatch payout recipe every other resolution path
+// exact same completeManualReportMatch payout recipe every other resolution path
 // in this file uses (agreement/bot/plain admin resolve above all call it -
 // selecting the non-offending player as winner IS what a forfeiture is,
 // there is no separate forfeiture-specific money movement anywhere on this
@@ -8560,7 +8884,7 @@ app.post("/api/admin/match-verifications/:id/forfeit-and-ban", requireAdminSessi
         ? match.opponent_username
         : match.creator_username;
 
-    const completedMatch = await completeMaddenMatch(match, winnerUsername, offendingUsername);
+    const completedMatch = await completeManualReportMatch(match, winnerUsername, offendingUsername);
 
     if (!completedMatch) {
         res.json({ success: false, message: "Could not resolve this match - it may have changed state. Reload and try again." });

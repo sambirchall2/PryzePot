@@ -11,11 +11,21 @@ const tournamentSize = localStorage.getItem("tournamentSize");
 const GAME_LABELS = {
     clash: "Clash Royale",
     chess: "Chess.com",
-    madden: "Madden NFL"
+    madden: "Madden NFL",
+    streetfighter: "Street Fighter 6",
+    rocketleague: "Rocket League",
+    leagueoflegends: "League of Legends"
 };
+
+// Friends-or-1v1-only games (see chat) - no scheduled-match sub-mode.
+const NO_SCHEDULE_GAMES = ["streetfighter", "rocketleague", "leagueoflegends"];
 
 if (!createGame) {
     window.location.href = "games.html";
+}
+
+if (scheduleBtn && NO_SCHEDULE_GAMES.includes(createGame)) {
+    scheduleBtn.hidden = true;
 }
 
 const isTournament = createType === "tournament" && tournamentSize;

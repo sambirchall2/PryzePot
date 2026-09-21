@@ -19,10 +19,19 @@ const entryFee = Number(localStorage.getItem("entryFee")) || 0;
 const GAME_LABELS = {
     clash: "Clash Royale",
     chess: "Chess.com",
-    madden: "Madden NFL"
+    madden: "Madden NFL",
+    streetfighter: "Street Fighter 6",
+    rocketleague: "Rocket League",
+    leagueoflegends: "League of Legends"
 };
 
-if (!createGame) {
+// Street Fighter 6 / Rocket League / League of Legends are Friends-or-1v1
+// only (see chat) - no scheduled-match sub-mode, so this page shouldn't be
+// reachable for them even if someone lands here directly (play-mode.js
+// already hides the Schedule button for these games).
+const NO_SCHEDULE_GAMES = ["streetfighter", "rocketleague", "leagueoflegends"];
+
+if (!createGame || NO_SCHEDULE_GAMES.includes(createGame)) {
     window.location.href = "games.html";
 }
 

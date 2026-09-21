@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Room | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="match-room.css">
+    <link rel="stylesheet" href="../css/profile-system.css">
+    <link rel="stylesheet" href="../css/coin-icon.css">
+    <link rel="stylesheet" href="../css/toast.css">
+    <link rel="stylesheet" href="../css/schedule-match.css">
+</head>
+
+<body>
+
+<button id="backBtn" class="back-btn">‹</button>
+
+<main class="room-page">
+
+    <div id="statusBadge" class="status-badge waiting">
+        Searching For Opponent
+    </div>
+
+    <h1 id="roomTitle">Match Room</h1>
+
+    <p id="roomSubtitle" class="subtitle">
+        Waiting for another player to join.
+    </p>
+
+    <section class="hero-card">
+
+        <div id="gameLabel" class="game-label">Rocket League</div>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Entry</span>
+                <strong id="entryDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+
+            <div class="info-pill">
+                <span>Prize Pool</span>
+                <strong id="prizeDisplay"><img class="coin-icon" src="../assets/p-coin-small.png" alt="Vault Credits">0</strong>
+            </div>
+        </div>
+
+        <div class="timer-block">
+            <span id="timerLabel">Time Left To Join</span>
+            <strong id="timerDisplay">--:--</strong>
+        </div>
+
+        <div class="versus-area">
+
+            <div id="playerOneCard" class="profile-player-card"></div>
+
+            <div class="vs-badge">VS</div>
+
+            <div id="playerTwoCard" class="profile-player-card waiting-card"></div>
+
+        </div>
+
+    </section>
+
+    <section id="instructionsCard" class="instructions-card hidden">
+
+        <h2>Match Instructions</h2>
+
+        <div class="match-info-row">
+            <div class="info-pill">
+                <span>Your Rocket League ID</span>
+                <strong id="myTagDisplay">—</strong>
+            </div>
+            <div class="info-pill">
+                <span>Opponent's Rocket League ID</span>
+                <strong id="opponentTagDisplay">—</strong>
+            </div>
+        </div>
+
+        <div class="instruction-step">1. The host creates a Private Match in Rocket League and enters its Name and Password below</div>
+        <div class="instruction-step">2. The joining player selects Join Private Match in Rocket League and enters that Name and Password (works across platforms, no Epic friends link needed)</div>
+        <div class="instruction-step">3. Play 1v1 Duel, Standard mode, 5-minute matches, best of 3</div>
+        <div class="instruction-step">4. Report your result below once you're done</div>
+
+        <div id="roomInfoCard" class="match-info-row">
+            <div class="info-pill">
+                <span>Private Match Name</span>
+                <strong id="roomNameDisplay">—</strong>
+            </div>
+            <div class="info-pill">
+                <span>Private Match Password</span>
+                <strong id="roomPasswordDisplay">—</strong>
+            </div>
+        </div>
+
+        <div id="roomInfoFormWrap" class="stake-form-wrap hidden">
+            <label class="stake-amount-label">Enter the Private Match name and password you created in Rocket League</label>
+
+            <input type="text" id="roomNameInput" class="room-info-input" placeholder="Private Match name" autocomplete="off">
+            <input type="text" id="roomPasswordInput" class="room-info-input" placeholder="Private Match password" autocomplete="off">
+
+            <button id="saveRoomInfoBtn" class="secondary-btn">SAVE ROOM INFO</button>
+        </div>
+
+        <div id="offerActionCard">
+            <h2>Staking</h2>
+            <p id="offerActionStatusLine"></p>
+
+            <div id="offerActionWrap" class="stake-form-wrap hidden">
+                <label class="stake-amount-label" for="offerActionAmountInput" id="offerActionAmountLabel"></label>
+
+                <div class="stake-amount-row">
+                    <div class="stake-amount-input-wrap">
+                        <img class="coin-icon stake-amount-icon" src="../assets/p-coin-small.png" alt="Vault Credits">
+                        <input type="number" id="offerActionAmountInput" class="stake-amount-input" min="0.01" step="0.01" placeholder="0.00" inputmode="decimal">
+                    </div>
+                    <span id="offerActionPercentLabel" class="stake-percent-label"></span>
+                </div>
+
+                <p id="offerActionError" class="stake-error hidden"></p>
+
+                <button id="offerActionBtn" class="secondary-btn" disabled>OFFER ACTION</button>
+            </div>
+        </div>
+
+        <h2>Begin Match</h2>
+        <p>
+            Only hit ready once you've both found each other in Rocket League using the
+            Rocket League IDs above and you're both actually ready to start the game. If that isn't
+            the case yet, don't hit ready.
+        </p>
+        <p id="readyStatusLine"></p>
+        <button id="readyBtn" class="main-btn">READY</button>
+
+    </section>
+
+</main>
+
+<script src="../js/api.js"></script>
+<script src="../js/toast.js"></script>
+<script src="../js/profile-system.js"></script>
+<script src="match-room.js"></script>
+
+</body>
+</html>

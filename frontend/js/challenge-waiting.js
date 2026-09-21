@@ -48,6 +48,19 @@ function updateCountdown() {
     countdownText.textContent = formatTime(remaining) + " remaining";
 }
 
+// Where each game's "confirm your account, then land in the match" step
+// lives - every connect-<game>.js already knows how to handle
+// ?friendChallenge=1&matchId=... (see connect-chess.js, which this pattern
+// was generalized from). Madden isn't included - it's not wired into
+// Friends mode (see chat).
+const FRIEND_CHALLENGE_CONNECT_PAGES = {
+    "Clash Royale": "../clash/connect-clash.html",
+    "Chess.com": "../chess/connect-chess.html",
+    "Street Fighter 6": "../streetfighter/connect-streetfighter.html",
+    "Rocket League": "../rocketleague/connect-rocketleague.html",
+    "League of Legends": "../leagueoflegends/connect-lol.html"
+};
+
 function handleAccepted(challenge) {
     clearInterval(pollInterval);
     clearInterval(countdownInterval);
@@ -60,9 +73,11 @@ statusIcon.className = "status-logo-wrap accepted";
     localStorage.setItem("currentMatchId", challenge.match_id);
     localStorage.removeItem("pendingChallengeId");
 
+    const connectPage = FRIEND_CHALLENGE_CONNECT_PAGES[challenge.game] || FRIEND_CHALLENGE_CONNECT_PAGES["Clash Royale"];
+
     setTimeout(function () {
         window.location.href =
-            "../clash/connect-clash.html?friendChallenge=1&matchId=" +
+            connectPage + "?friendChallenge=1&matchId=" +
             challenge.match_id;
     }, 1200);
 }

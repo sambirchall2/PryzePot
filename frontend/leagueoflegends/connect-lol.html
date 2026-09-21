@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Riot ID | PryzePot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="connect-lol.css">
+</head>
+<body>
+
+    <button id="backBtn" class="back-btn">‹</button>
+
+    <main class="connect-page">
+
+        <h1>Connect Riot ID</h1>
+
+        <p class="subtitle">
+            Enter your Riot ID so opponents can add you in League of Legends.
+        </p>
+
+        <div class="connect-box">
+
+            <label for="riotIdInput">Riot ID</label>
+            <input
+                id="riotIdInput"
+                type="text"
+                placeholder="your-riot-id"
+                autocomplete="off"
+                spellcheck="false"
+            >
+
+            <button id="saveBtn" class="verify-btn">
+                SAVE & CONTINUE
+            </button>
+
+            <p id="statusText" class="status-text">
+                Not connected
+            </p>
+
+        </div>
+
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="connect-lol.js"></script>
+
+</body>
+</html>

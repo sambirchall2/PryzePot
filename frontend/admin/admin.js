@@ -207,8 +207,21 @@ function renderDisputeDetail(data) {
             : `<img src="${url}" alt="Evidence">`;
     }).join("");
 
+    function flagBadge(playerUsername) {
+        const flag = (data.participantFlags || {})[playerUsername];
+
+        if (!flag) return "";
+
+        const strikesText = flag.disputeStrikes + " prior dispute" + (flag.disputeStrikes === 1 ? "" : "s") + " against them";
+
+        return flag.accountUnderReview
+            ? ` <span class="detail-value" style="color:#e05252;">⚠ UNDER REVIEW (${strikesText})</span>`
+            : (flag.disputeStrikes > 0 ? ` <span class="detail-value">(${strikesText})</span>` : "");
+    }
+
     const matchSummary = match
-        ? `Entry fee: ${entryFee.toLocaleString()} · Status: ${match.status} · Winner: ${match.winner_username || "—"}`
+        ? `Entry fee: ${entryFee.toLocaleString()} · Status: ${match.status} · Winner: ${match.winner_username || "—"}<br>
+           ${match.creator_username}${flagBadge(match.creator_username)} vs ${match.opponent_username}${flagBadge(match.opponent_username)}`
         : "Match not found.";
 
     const resolvedHtml = dispute.status === "resolved"
@@ -218,10 +231,15 @@ function renderDisputeDetail(data) {
            </div>`
         : "";
 
+    const MANUAL_REPORT_GAMES = ["Madden NFL", "Street Fighter 6", "Rocket League", "League of Legends"];
+    const isManualReportMatch = match && MANUAL_REPORT_GAMES.includes(match.game);
+
     // Madden-only context (team picks, rules ack, and the bot's own
-    // screenshot reading) so this one screen has everything needed to
-    // decide - see chat. Empty string for every other game.
-    const maddenHtml = (match && match.game === "Madden NFL") ? `
+    // screenshot reading). Empty string for every other game - Street
+    // Fighter 6/Rocket League/League of Legends have no per-match setup
+    // step and never upload screenshots (see chat: admins look up match
+    // history themselves rather than relying on player-submitted photos).
+    const maddenOnlyHtml = (match && match.game === "Madden NFL") ? `
         <div class="detail-section">
             <p class="detail-label">Madden Match Details</p>
             <p class="detail-value">
@@ -233,21 +251,11 @@ function renderDisputeDetail(data) {
             </p>
         </div>
 
-        ${data.maddenVerification ? `
-            <div class="detail-section">
-                <p class="detail-label">Match Verification</p>
-                <p class="detail-value">
-                    Status: ${data.maddenVerification.status} · Queue: ${data.maddenVerification.queue_tag || "—"}<br>
-                    Resolution method: ${data.maddenVerification.resolution_method || "—"} · Winner: ${data.maddenVerification.winner_username || "—"}
-                </p>
-            </div>
-        ` : ""}
-
-        ${(data.maddenScreenshots || []).length > 0 ? `
+        ${(data.manualReportScreenshots || []).length > 0 ? `
             <div class="detail-section">
                 <p class="detail-label">Uploaded Screenshots</p>
                 <div class="evidence-grid">
-                    ${data.maddenScreenshots.map(function (shot) {
+                    ${data.manualReportScreenshots.map(function (shot) {
                         return `<div>
                             ${shot.url ? `<img src="${shot.url}" alt="Screenshot from ${shot.playerUsername}">` : "<p class='detail-value'>Could not load image.</p>"}
                             <p class="detail-value" style="font-size:12px;">
@@ -261,6 +269,32 @@ function renderDisputeDetail(data) {
         ` : ""}
     ` : "";
 
+    // Self-reported win/loss claims - the one piece of manual-report context
+    // every one of these 4 games has (Madden included), regardless of
+    // whether screenshots exist.
+    const reportsHtml = (data.manualReportReports || []).length > 0 ? `
+        <div class="detail-section">
+            <p class="detail-label">Self-Reported Results</p>
+            <p class="detail-value">
+                ${data.manualReportReports.map(function (r) {
+                    return r.playerUsername + ": " + (r.reportedResult === "win" ? "said they won" : "said they lost");
+                }).join("<br>")}
+            </p>
+        </div>
+    ` : "";
+
+    const verificationHtml = data.manualReportVerification ? `
+        <div class="detail-section">
+            <p class="detail-label">Match Verification</p>
+            <p class="detail-value">
+                Status: ${data.manualReportVerification.status} · Queue: ${data.manualReportVerification.queue_tag || "—"}<br>
+                Resolution method: ${data.manualReportVerification.resolution_method || "—"} · Winner: ${data.manualReportVerification.winner_username || "—"}
+            </p>
+        </div>
+    ` : "";
+
+    const manualHtml = isManualReportMatch ? (maddenOnlyHtml + reportsHtml + verificationHtml) : "";
+
     disputeDetail.innerHTML = `
         <div class="detail-section">
             <p class="detail-label">Disputing player</p>
@@ -272,7 +306,7 @@ function renderDisputeDetail(data) {
             <p class="detail-value">${matchSummary}</p>
         </div>
 
-        ${maddenHtml}
+        ${manualHtml}
 
         <div class="detail-section">
             <p class="detail-label">Reason</p>

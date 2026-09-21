@@ -92,6 +92,30 @@ if (maddenPlayBtn) {
     });
 }
 
+const streetfighterPlayBtn = document.getElementById("streetfighterPlayBtn");
+
+if (streetfighterPlayBtn) {
+    streetfighterPlayBtn.addEventListener("click", function () {
+        window.location.href = "../streetfighter/online.html";
+    });
+}
+
+const rocketleaguePlayBtn = document.getElementById("rocketleaguePlayBtn");
+
+if (rocketleaguePlayBtn) {
+    rocketleaguePlayBtn.addEventListener("click", function () {
+        window.location.href = "../rocketleague/online.html";
+    });
+}
+
+const leagueoflegendsPlayBtn = document.getElementById("leagueoflegendsPlayBtn");
+
+if (leagueoflegendsPlayBtn) {
+    leagueoflegendsPlayBtn.addEventListener("click", function () {
+        window.location.href = "../leagueoflegends/online.html";
+    });
+}
+
 const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {

@@ -8,6 +8,9 @@ const backButton = document.getElementById("backButton");
 const clashCard = document.getElementById("clashCard");
 const chessCard = document.getElementById("chessCard");
 const maddenCard = document.getElementById("maddenCard");
+const streetfighterCard = document.getElementById("streetfighterCard");
+const rocketleagueCard = document.getElementById("rocketleagueCard");
+const leagueoflegendsCard = document.getElementById("leagueoflegendsCard");
 
 if (backButton) {
     backButton.addEventListener("click", function () {
@@ -30,6 +33,24 @@ if (chessCard) {
 if (maddenCard) {
     maddenCard.addEventListener("click", function () {
         window.location.href = "../madden/online.html";
+    });
+}
+
+if (streetfighterCard) {
+    streetfighterCard.addEventListener("click", function () {
+        window.location.href = "../streetfighter/online.html";
+    });
+}
+
+if (rocketleagueCard) {
+    rocketleagueCard.addEventListener("click", function () {
+        window.location.href = "../rocketleague/online.html";
+    });
+}
+
+if (leagueoflegendsCard) {
+    leagueoflegendsCard.addEventListener("click", function () {
+        window.location.href = "../leagueoflegends/online.html";
     });
 }
 
