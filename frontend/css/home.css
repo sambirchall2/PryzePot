@@ -238,6 +238,13 @@ body {
     overflow-x: auto;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
+    cursor: grab;
+}
+
+.games-container.dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
 }
 
 .games-container::-webkit-scrollbar {

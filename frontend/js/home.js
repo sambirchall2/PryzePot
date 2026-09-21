@@ -116,6 +116,61 @@ if (leagueoflegendsPlayBtn) {
     });
 }
 
+// The Featured Games row only scrolls sideways via touch swipe by default -
+// a mouse has no built-in way to move a horizontal-overflow container (no
+// horizontal wheel, and the scrollbar itself is hidden), so PC users were
+// stuck seeing just the first few cards (see chat). This adds two mouse-only
+// ways to move it: converting an ordinary vertical wheel scroll into
+// horizontal movement while hovering the row, and click-and-drag.
+const gamesContainer = document.querySelector(".games-container");
+
+if (gamesContainer) {
+    gamesContainer.addEventListener("wheel", function (event) {
+        if (event.deltaY === 0) return;
+
+        gamesContainer.scrollLeft += event.deltaY;
+        event.preventDefault();
+    }, { passive: false });
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartScrollLeft = 0;
+    let didDrag = false;
+
+    gamesContainer.addEventListener("mousedown", function (event) {
+        isDragging = true;
+        didDrag = false;
+        dragStartX = event.pageX;
+        dragStartScrollLeft = gamesContainer.scrollLeft;
+        gamesContainer.classList.add("dragging");
+    });
+
+    window.addEventListener("mousemove", function (event) {
+        if (!isDragging) return;
+
+        const delta = event.pageX - dragStartX;
+
+        if (Math.abs(delta) > 4) didDrag = true;
+
+        gamesContainer.scrollLeft = dragStartScrollLeft - delta;
+    });
+
+    // Suppress the click that would otherwise fire on a game-card's PLAY NOW
+    // button right after a drag - capture phase so it runs before the
+    // button's own click listener.
+    gamesContainer.addEventListener("click", function (event) {
+        if (didDrag) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+    }, true);
+
+    window.addEventListener("mouseup", function () {
+        isDragging = false;
+        gamesContainer.classList.remove("dragging");
+    });
+}
+
 const joinTournamentBtn = document.getElementById("joinTournamentBtn");
 
 if (joinTournamentBtn) {
