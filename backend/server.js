@@ -59,13 +59,12 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Crypto webhook needs the raw request body (see crypto-wallet-routes.js)
-// so it MUST be registered before the express.json() below - once
-// express.json() has run, the raw bytes are gone. adjustBalance isn't
-// defined until further down this file, but it's a hoisted function
-// declaration so referencing it here is safe.
-const { registerCryptoWalletWebhook, registerCryptoWalletRoutes } = require("./crypto-wallet-routes");
-registerCryptoWalletWebhook(app, { adjustBalance: adjustBalance });
+// Crypto wallet support (Circle-backed) is written but held back for now -
+// not decided yet whether to launch it (see chat). The code stays in
+// backend/circle-wallets.js / backend/crypto-wallet-routes.js, just not
+// wired in below, so turning it on later is uncommenting these three spots.
+// const { registerCryptoWalletWebhook, registerCryptoWalletRoutes } = require("./crypto-wallet-routes");
+// registerCryptoWalletWebhook(app, { adjustBalance: adjustBalance });
 
 app.use(express.json());
 
@@ -557,15 +556,12 @@ async function adjustBalance(username, delta, reason, referenceType, referenceId
 }
 
 // The rest of the crypto wallet routes (deposit address, withdrawals,
-// admin approve/reject) - unlike the webhook above, these don't care
-// about express.json() vs raw body, so registering them here (right
-// after adjustBalance, the function they all funnel through) is just
-// for readability, not a requirement.
-registerCryptoWalletRoutes(app, {
-    requireAuth: requireAuth,
-    requireAdminSession: requireAdminSession,
-    adjustBalance: adjustBalance
-});
+// admin approve/reject) - held back along with the webhook above (see chat).
+// registerCryptoWalletRoutes(app, {
+//     requireAuth: requireAuth,
+//     requireAdminSession: requireAdminSession,
+//     adjustBalance: adjustBalance
+// });
 
 function dbMatchToFrontend(match) {
     return {
